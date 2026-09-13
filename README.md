@@ -109,6 +109,21 @@ Kaggle does at submission time.
 make play-local GAME=ls20 RENDER=terminal
 ```
 
+**Read it back afterward instead of watching live** — a render is fine for
+a first look, but painful for actually debugging a run. `scripts/play_local.py`
+writes one JSON line per step (action taken, its stated reasoning, and how
+many cells the *previous* action's effect touched) to
+`recordings/<run-timestamp>/<game_id>.jsonl` by default:
+
+```bash
+.venv/bin/python scripts/play_local.py --game ls20
+cat recordings/<the-run-timestamp>/ls20.jsonl | tail -20
+```
+
+Disable it with `--no-log` if you don't want the files. (This is separate
+from the framework's own `record=True` option, which only logs raw frames —
+not which action was taken or why, so it's not used here.)
+
 ---
 
 ## The one file you edit: `agent/my_agent.py`

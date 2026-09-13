@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -27,6 +30,47 @@ sys.path.insert(0, str(VENDOR))
 
 import arc_agi
 from arc_agi import OperationMode
+
+
+def _wrap_with_step_logging(choose_action: Callable, log_path: Path) -> Callable:
+    """Wrap an agent's bound `choose_action` to append one JSON line per step.
+
+    NOTE: this exists instead of the framework's built-in `record=True`
+    recorder because that recorder's `FrameData.action_input` is always
+    left at its default (see `_convert_raw_frame_data` in
+    vendor/ARC-AGI-3-Agents/agents/agent.py) — it never actually records
+    which action was taken or why, only the raw frame. This wrapper
+    captures the useful part: what the agent chose, its stated reasoning,
+    and how many cells the *previous* action's effect touched.
+    """
+    log_file = log_path.open("a", encoding="utf-8")
+
+    def wrapped(frames, latest_frame):
+        action = choose_action(frames, latest_frame)
+
+        diff_cells = None
+        if len(frames) >= 2 and frames[-2].frame and latest_frame.frame:
+            prev_grid, latest_grid = frames[-2].frame[0], latest_frame.frame[0]
+            diff_cells = sum(
+                1
+                for prev_row, latest_row in zip(prev_grid, latest_grid)
+                for prev_val, latest_val in zip(prev_row, latest_row)
+                if prev_val != latest_val
+            )
+
+        entry = {
+            "step": len(frames),
+            "state": str(latest_frame.state),
+            "levels_completed": latest_frame.levels_completed,
+            "prev_action_diff_cells": diff_cells,
+            "action": action.name,
+            "reasoning": getattr(action, "reasoning", None),
+        }
+        log_file.write(json.dumps(entry) + "\n")
+        log_file.flush()
+        return action
+
+    return wrapped
 
 
 def load_my_agent_class():
@@ -59,6 +103,12 @@ def main() -> None:
                         "in this shell, paced to the game's FPS), 'terminal-fast' "
                         "(same, no pacing delay), or 'human' (a live matplotlib "
                         "window — needs a real display, not headless SSH).")
+    p.add_argument("--log", action=argparse.BooleanOptionalAction, default=True,
+                   help="Write one JSON line per step (action, reasoning, "
+                        "previous action's diff-cell count) to "
+                        "recordings/<run-timestamp>/<game_id>.jsonl. On by "
+                        "default; disable with --no-log. Use this instead of "
+                        "watching a live render for debugging after the fact.")
     args = p.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -93,6 +143,12 @@ def main() -> None:
     if hasattr(MyAgentCls, "MAX_ACTIONS"):
         MyAgentCls.MAX_ACTIONS = min(MyAgentCls.MAX_ACTIONS, args.max_steps)
 
+    log_dir = None
+    if args.log:
+        log_dir = ROOT / "recordings" / datetime.now().strftime("%Y%m%d-%H%M%S")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Logging one JSON line per step to {log_dir}/<game_id>.jsonl\n")
+
     per_game = []
     for i, game_id in enumerate(game_ids, 1):
         print(f"=== [{i}/{len(game_ids)}] {game_id} ===")
@@ -110,6 +166,10 @@ def main() -> None:
             arc_env=env,
             tags=["local-dev"],
         )
+        if log_dir is not None:
+            agent.choose_action = _wrap_with_step_logging(
+                agent.choose_action, log_dir / f"{game_id}.jsonl"
+            )
         agent.main()
 
         final = agent.frames[-1]
@@ -124,6 +184,8 @@ def main() -> None:
         print(f"  {gid:8} levels={levels:3}  actions={actions:5}  state={state}")
     score_val = sc.score if hasattr(sc, "score") else sc
     print(f"\nAggregate scorecard score: {score_val}")
+    if log_dir is not None:
+        print(f"Per-step logs written to {log_dir}/")
 
 
 if __name__ == "__main__":
