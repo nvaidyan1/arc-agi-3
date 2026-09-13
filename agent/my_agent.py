@@ -123,6 +123,41 @@ VANISH_WEIGHT = 8.0
 # against. Below this, drops are churn: ka59 shows 244 one-cell drops.
 MIN_VANISH_CELLS = 8
 
+# Incentive salience (region-of-interest) map: locations gain "wanting" by
+# association with change that wasn't us or the budget meter, weighted
+# higher for better evidence (mere residual < vanish < an actual
+# level-up), and decaying so stale hotspots fade. Berridge & Robinson,
+# "What is the role of dopamine in reward: hedonic impact, reward
+# learning, or incentive salience?", 1998. Screened 2026-09-13 (see
+# docs/history.md): sites cluster tightly (Clark-Evans R 0.39-0.52,
+# 1.0=random) rather than spreading uniformly, so a map of them is more
+# informative than "somewhere on the board".
+INTEREST_DECAY = 0.98
+INTEREST_PRUNE_FLOOR = 0.05
+INTEREST_RESIDUAL_WEIGHT = 1.0
+INTEREST_VANISH_WEIGHT = 4.0
+INTEREST_LEVEL_UP_WEIGHT = 15.0
+# How many of the best-known cells to offer as click targets.
+INTEREST_TOP_K = 5
+
+# Router: BFS over displacement space toward the best interest cell, using
+# `learned_moves` as edges and `_blocked_moves` as removed edges. This is
+# what makes the interest map (above) actually actionable on the movement
+# games, rather than only steering ACTION6 clicks. Bounded rather than
+# exhaustive: displacement magnitude is naturally capped by the 64x64
+# board, but capping node expansion keeps a worst case bounded and cheap
+# regardless. If the exact target cell isn't reachable (e.g. it doesn't
+# sit on the move map's stride lattice), settles for the closest reachable
+# node found within the cap rather than refusing to move at all — the
+# same graceful-degrade-to-best-effort stance as the rest of this file.
+ROUTE_MAX_NODES = 4000
+
+
+def _chebyshev(a: tuple[int, int], b: tuple[int, int]) -> int:
+    """Chessboard distance — matches grid movement better than Euclidean,
+    since a diagonal-capable move set shouldn't be penalised for it."""
+    return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
+
 
 class MyAgent(Agent):
     """Explores by favoring actions/regions that visibly change the frame."""
@@ -181,6 +216,13 @@ class MyAgent(Agent):
         self._blocked_moves: dict[tuple[tuple[int, int], GameAction], int] = {}
         self._move_attempts: dict[tuple[tuple[int, int], GameAction], int] = {}
         self._map_level = 0
+        # Incentive salience: per-pixel "wanting" accumulated from change
+        # that wasn't us or the meter (see INTEREST_* above). Persists
+        # across RESET within a level — same layout, so a spot that
+        # mattered last attempt plausibly matters this one — cleared on
+        # level change alongside the obstacle map, since a new level is a
+        # new layout.
+        self._interest: dict[tuple[int, int], float] = {}
         # Resource-meter detection. Per colour: the value it starts each
         # attempt at, and how often it fell vs rose. Spans attempts by
         # necessity — the sawtooth is only visible across a RESET.
@@ -292,6 +334,20 @@ class MyAgent(Agent):
         # per attempt because the level restarts from its own origin.
         self._displacement = (0, 0)
         self._visited_displacements: set[tuple[int, int]] = {(0, 0)}
+        # Absolute board position of the controlled shape (None until the
+        # first translation is observed this attempt). Same offsets as
+        # `_displacement`, different origin — this is what lets the router
+        # compare against `_interest`, which is keyed in absolute pixels.
+        self._anchor: tuple[int, int] | None = None
+        # Queued actions toward the current router target, the target
+        # itself (for reasoning/logging), and the displacement the plan
+        # expects to be at right now — if reality doesn't match (a step
+        # hit an obstacle the plan didn't know about), the remaining
+        # actions were computed for positions we never reached, so the
+        # plan is dropped rather than followed off course.
+        self._route_plan: list[GameAction] = []
+        self._route_target: tuple[int, int] | None = None
+        self._route_expected_position: tuple[int, int] | None = None
 
     @property
     def name(self) -> str:
@@ -335,11 +391,17 @@ class MyAgent(Agent):
             self._map_level = latest_frame.levels_completed
             self._blocked_moves.clear()
             self._move_attempts.clear()
+            self._interest.clear()
             self._displacement = (0, 0)
             self._visited_displacements = {(0, 0)}
+            self._anchor = None
+            self._route_plan = []
+            self._route_target = None
+            self._route_expected_position = None
 
         if len(frames) >= 2 and self._last_action is not None:
             prev_frame = frames[-2]
+            self._decay_interest()
             diff_cells = self._diff_cells(prev_frame, latest_frame)
             moved = None
             # Position the last action was taken *from* — captured before
@@ -359,7 +421,7 @@ class MyAgent(Agent):
                 # so, attribute the movement to the action that caused it.
                 moved = self._detect_translation(prev_frame, latest_frame)
                 if moved is not None:
-                    _color, _size, offset = moved
+                    _color, _size, offset, pre_move_anchor = moved
                     self._controlled_size = max(self._controlled_size, _size)
                     offsets = self._action_offsets.setdefault(self._last_action, {})
                     offsets[offset] = offsets.get(offset, 0) + 1
@@ -368,6 +430,16 @@ class MyAgent(Agent):
                         self._displacement[1] + offset[1],
                     )
                     self._visited_displacements.add(self._displacement)
+                    # Absolute board position of the controlled shape,
+                    # re-derived from ground truth every time (rather than
+                    # purely accumulated) so it can't silently drift: the
+                    # router needs this to translate an `_interest` pixel
+                    # target into the same relative-displacement space
+                    # `learned_moves`/`_blocked_moves` already use.
+                    self._anchor = (
+                        pre_move_anchor[0] + offset[0],
+                        pre_move_anchor[1] + offset[1],
+                    )
                     if (
                         self._last_action in self.learned_moves
                         and self._last_action not in self._announced_moves
@@ -389,28 +461,43 @@ class MyAgent(Agent):
             observed_offset = (
                 moved[2] if moved else self.learned_moves.get(self._last_action)
             )
-            # Only meaningful once we know what our *own* effect is: with
-            # no move map there is no self to subtract, so "residual" would
-            # just be "anything changed" — double-counting frame-change.
-            residual = (
-                self._residual_cells(
-                    prev_frame, latest_frame, diff_cells, observed_offset
-                )
-                if observed_offset is not None
-                else []
+            # Computed unconditionally: with no known self (observed_offset
+            # is None) there is nothing to subtract, so this *is* the whole
+            # diff minus the meter — exactly right for a game with no
+            # controllable movement, where every change is "other than
+            # self" by construction. Gating this behind a move map, as
+            # before, left the region-of-interest map structurally blind
+            # on exactly the copy/match family: measured 0.0% on
+            # ft09/sb26/cd82/tn36 (docs/history.md, 2026-09-13).
+            residual = self._residual_cells(
+                prev_frame, latest_frame, diff_cells, observed_offset
             )
-            if residual:
+            # The *reward* term stays gated on knowing our own movement —
+            # crediting "changed something" before subtracting self would
+            # double-count ordinary frame-change on games with a move map.
+            if residual and observed_offset is not None:
                 self._action_interactions[self._last_action] = (
                     self._action_interactions.get(self._last_action, 0) + 1
                 )
                 self._interaction_sites[origin] = (
                     self._interaction_sites.get(origin, 0) + 1
                 )
+            if residual:
+                self._bump_interest(residual, INTEREST_RESIDUAL_WEIGHT)
 
             if self._pending_vanish:
                 self._action_vanishes[self._last_action] = (
                     self._action_vanishes.get(self._last_action, 0) + 1
                 )
+                # Position proxy: the vanished cells are, by construction,
+                # part of `residual` (they are neither self nor the meter).
+                # Not exact — a vanish coinciding with our own movement in
+                # the same step could be missed — acceptable for a
+                # screening-level signal, and consistent with how
+                # `_action_vanishes` above already credits the whole
+                # action rather than isolating which cells vanished.
+                if residual:
+                    self._bump_interest(residual, INTEREST_VANISH_WEIGHT)
 
             # Environment layer: an action with a known effect that failed
             # to produce it. Deliberately covers both "nothing changed"
@@ -442,6 +529,11 @@ class MyAgent(Agent):
                     self._last_action.name,
                     latest_frame.levels_completed,
                 )
+                # Strongest possible credit, at whatever changed — falling
+                # back to the raw diff (rather than residual) covers a
+                # level-up reached by pure movement, where residual can be
+                # empty because the whole change is explained as self.
+                self._bump_interest(residual or diff_cells, INTEREST_LEVEL_UP_WEIGHT)
 
             if self._last_action is GameAction.ACTION6 and self._last_click is not None:
                 self._click_tries[self._last_click] = (
@@ -481,13 +573,65 @@ class MyAgent(Agent):
             not in self._visited_displacements
         ]
 
+        # Router: once there is no unvisited single-step move left to take
+        # (coverage's own frontier is exhausted) AND nothing has proven
+        # itself valuable yet (see the gate just below), spend a
+        # multi-step plan heading toward the best-known region of interest
+        # instead of falling straight to blind weighted-random. History:
+        # a first version placed this below frontier with no further
+        # gate, reasoning it would only replace the "weakest" existing
+        # option — wrong, and measured wrong (see docs/history.md,
+        # 2026-09-13): that fallback branch is the only one carrying
+        # LEVEL_UP_WEIGHT/VANISH_WEIGHT, so the router preempted the only
+        # channel that had ever produced a real completion.
+        if self._route_plan and (
+            self._route_plan[0] not in candidate_actions
+            or self._displacement != self._route_expected_position
+        ):
+            # Either the next planned action is no longer legal, or a
+            # prior step didn't land where the plan assumed (a newly
+            # discovered obstacle) — either way the rest of the plan was
+            # computed for positions we never reached.
+            self._route_plan = []
+        # Route only while we have no proven-valuable action yet. Once
+        # something has ever earned a level-up or vanish credit, that
+        # signal must win the weighted branch below every time — those are
+        # the only channels that have ever produced a real completion, and
+        # an unconditional router was measured crowding them out entirely
+        # (a regression: every one of 25 games scored 0, including sp80,
+        # which completed in 4 of 5 runs before this gate existed).
+        proven_action_exists = bool(
+            self._action_level_ups or self._action_vanishes
+        )
+        if proven_action_exists and self._route_plan:
+            self._route_plan = []  # evidence arrived mid-plan; stop routing
+        if not novel_moves and not self._route_plan and not proven_action_exists:
+            self._route_plan = self._plan_route() or []
+            if self._route_plan:
+                self._route_target = self._top_interest_cells[0]
+
         if random.random() < EXPLORATION_EPSILON:
+            self._route_plan = []
             action = random.choice(candidate_actions)
         elif novel_moves:
+            self._route_plan = []
             action = random.choice(novel_moves)
             action.reasoning = (
                 f"frontier: {action.name} moves {moves[action]} to unvisited "
                 f"displacement from {self._displacement}"
+            )
+            self._last_click = None
+            self._last_action = action
+            return action
+        elif self._route_plan:
+            action = self._route_plan.pop(0)
+            self._route_expected_position = (
+                self._displacement[0] + moves[action][0],
+                self._displacement[1] + moves[action][1],
+            )
+            action.reasoning = (
+                f"router: {action.name} heading to interest cell "
+                f"{self._route_target}, {len(self._route_plan)} steps left"
             )
             self._last_click = None
             self._last_action = action
@@ -598,19 +742,33 @@ class MyAgent(Agent):
                 else:
                     self._meter_up[colour] = self._meter_up.get(colour, 0) + 1
 
-        # Sub-goal signal: a whole object disappearing. Occlusion by our
-        # own shape can hide at most `_controlled_size` cells, so a larger
-        # drop cannot be us covering something — it is a real deletion.
-        # That test is available online, with no lookahead.
+        # Sub-goal signal: a whole object disappearing. Two discriminators,
+        # both available online with no lookahead:
+        #   1. Occlusion by our own shape can hide at most
+        #      `_controlled_size` cells, so a larger drop cannot be us
+        #      covering something up.
+        #   2. A drop that some *other* colour absorbs is a recolour, not
+        #      a deletion — cardinality is preserved and nothing left the
+        #      board. Only what the background takes back has vanished.
+        # (2) was missing, and without it this fired on ordinary
+        # recolouring churn: measured at 78.6% of steps on ft09, 46.7% on
+        # s5i5, 44.5% on cd82, against the 0-1.5% it was documented at.
+        # The background is excluded from the drop loop for the mirror
+        # reason — background shrinking is content *appearing*.
         floor = max(self._controlled_size, MIN_VANISH_CELLS)
         meter_colour = self.meter_colour
-        self._pending_vanish = 0
+        background = max(counts, key=counts.get) if counts else None
+        total_drop = 0
         for colour, previous in self._colour_counts.items():
-            if colour == meter_colour:
-                continue  # the budget draining, not a sub-goal
+            if colour in (meter_colour, background):
+                continue  # the budget draining / content appearing
             drop = previous - counts.get(colour, 0)
             if drop > floor:
-                self._pending_vanish += drop
+                total_drop += drop
+        background_gain = counts.get(background, 0) - self._colour_counts.get(
+            background, 0
+        )
+        self._pending_vanish = max(0, min(total_drop, background_gain))
 
         # Keep zeros rather than dropping absent colours: a meter that
         # empties disappears from the histogram, and forgetting it here
@@ -682,20 +840,134 @@ class MyAgent(Agent):
             residual.append(cell)
         return residual
 
+    def _bump_interest(self, cells: list[tuple[int, int]], weight: float) -> None:
+        """Add incentive salience at `cells`. See INTEREST_* above."""
+        for cell in cells:
+            self._interest[cell] = self._interest.get(cell, 0.0) + weight
+
+    def _decay_interest(self) -> None:
+        """Age the interest map by one step; drop entries once negligible.
+
+        Called once per real step (not per bump) so hotspots fade with
+        time regardless of how many signals fired that step, and so the
+        map stays bounded (at most 4096 cells on a 64x64 grid either way,
+        but pruning keeps lookups and the top-K scan cheap).
+        """
+        dead = []
+        for cell, value in self._interest.items():
+            value *= INTEREST_DECAY
+            if value < INTEREST_PRUNE_FLOOR:
+                dead.append(cell)
+            else:
+                self._interest[cell] = value
+        for cell in dead:
+            del self._interest[cell]
+
+    @property
+    def _top_interest_cells(self) -> list[tuple[int, int]]:
+        """The best-known cells, highest salience first. Empty if none."""
+        if not self._interest:
+            return []
+        ranked = sorted(self._interest.items(), key=lambda kv: kv[1], reverse=True)
+        return [cell for cell, _ in ranked[:INTEREST_TOP_K]]
+
     def _is_blocked(self, action: GameAction) -> bool:
         """Is this action known not to work from where we currently are?"""
-        key = (self._displacement, action)
-        return self._blocked_moves.get(key, 0) >= BLOCKED_MIN_OBSERVATIONS
+        return self._blocked_at(self._displacement, action)
+
+    def _blocked_at(self, position: tuple[int, int], action: GameAction) -> bool:
+        """Is this action known not to work from an arbitrary position?
+
+        Same rule as `_is_blocked`, parameterised — the router needs to
+        ask this about positions it hasn't reached yet while planning.
+        """
+        return (
+            self._blocked_moves.get((position, action), 0)
+            >= BLOCKED_MIN_OBSERVATIONS
+        )
+
+    def _plan_route(self) -> list[GameAction] | None:
+        """BFS toward the best-known region of interest, in move-map space.
+
+        Returns a list of actions from the current `_displacement` toward
+        (or as close as reachable to) the pixel target, or None if there
+        is no target, no move map, or no known board position yet.
+
+        Bridges two coordinate systems that share the same offsets but
+        different origins: `_interest` is keyed in absolute board pixels,
+        while `learned_moves`/`_blocked_moves` are keyed relative to this
+        attempt's start. `_anchor - _displacement` recovers that shared
+        origin (the board position where `_displacement` was (0, 0)),
+        letting the pixel target be re-expressed in displacement space.
+        """
+        moves = self.learned_moves
+        if self._anchor is None or not moves or not self._interest:
+            return None
+
+        target_pixel = self._top_interest_cells[0]
+        origin_anchor = (
+            self._anchor[0] - self._displacement[0],
+            self._anchor[1] - self._displacement[1],
+        )
+        target = (
+            target_pixel[0] - origin_anchor[0],
+            target_pixel[1] - origin_anchor[1],
+        )
+
+        start = self._displacement
+        if start == target:
+            return None  # already there; nothing to route
+
+        # BFS, since edges are unweighted (every action costs one step).
+        # Tracks the best (closest-to-target) node seen in case the exact
+        # target sits off the reachable lattice.
+        frontier = deque([start])
+        came_from: dict[tuple[int, int], tuple[tuple[int, int], GameAction]] = {}
+        visited = {start}
+        best, best_dist = start, _chebyshev(start, target)
+        expanded = 0
+
+        while frontier and expanded < ROUTE_MAX_NODES:
+            node = frontier.popleft()
+            expanded += 1
+            if node == target:
+                best = node
+                break
+            for action, offset in moves.items():
+                nxt = (node[0] + offset[0], node[1] + offset[1])
+                if nxt in visited or self._blocked_at(node, action):
+                    continue
+                visited.add(nxt)
+                came_from[nxt] = (node, action)
+                frontier.append(nxt)
+                dist = _chebyshev(nxt, target)
+                if dist < best_dist:
+                    best, best_dist = nxt, dist
+
+        if best == start:
+            return None  # nothing reachable got any closer
+
+        path: list[GameAction] = []
+        node = best
+        while node in came_from:
+            node, action = came_from[node]
+            path.append(action)
+        path.reverse()
+        return path
 
     @staticmethod
     def _detect_translation(
         prev_frame: FrameData, latest_frame: FrameData
-    ) -> tuple[int, int, tuple[int, int]] | None:
+    ) -> tuple[int, int, tuple[int, int], tuple[int, int]] | None:
         """Is this frame-to-frame change one colored shape *moving*?
 
-        Returns (color, cell_count, (dx, dy)) if the entire set of cells
-        that lost colour C is exactly the set that gained colour C,
-        displaced by a single consistent offset — otherwise None.
+        Returns (color, cell_count, (dx, dy), anchor) if the entire set of
+        cells that lost colour C is exactly the set that gained colour C,
+        displaced by a single consistent offset — otherwise None. `anchor`
+        is the shape's pre-move reference cell (its lexicographically
+        smallest cell), which is what lets the caller reconstruct an
+        absolute board position from a chain of relative offsets — see
+        `self._anchor` in `choose_action`.
 
         This is the object layer, derived rather than assumed (Gestalt
         common fate: things that change together are one thing). Note it
@@ -726,7 +998,7 @@ class MyAgent(Agent):
             (sx, sy), (tx, ty) = min(source), min(target)
             offset = (tx - sx, ty - sy)
             if {(x + offset[0], y + offset[1]) for x, y in source} == target:
-                return color, len(source), offset
+                return color, len(source), offset, (sx, sy)
         return None
 
     @staticmethod
@@ -764,6 +1036,10 @@ class MyAgent(Agent):
     def _pick_coordinate(self, latest_frame: FrameData) -> tuple[int, int, str]:
         """Pick a click target and say why, most to least preferred:
 
+        0. A learned region of interest (`_top_interest_cells`) — places
+           incentive salience has accumulated across this level's
+           attempts (residual change, sub-goal vanishes, level-ups).
+           Empty until evidence exists, so this changes nothing early on.
         1. A cell that was part of a recent diff (something is happening
            there) and also differs from the current background color.
         2. Any recently-diffed cell.
@@ -794,17 +1070,24 @@ class MyAgent(Agent):
         }
         recent_active = [cell for diff in self._recent_diffs for cell in diff]
 
+        # Learned region of interest goes first regardless of the
+        # acts_locally split below: it is not about whether clicking
+        # affects what's under the cursor, it's about which locations have
+        # a track record of mattering (see INTEREST_* / _bump_interest).
+        ranked: list[tuple[list[tuple[int, int]], str]] = [
+            (self._top_interest_cells, "learned region of interest"),
+        ]
         if self.acts_locally is False:
             # Clicking here changes something *elsewhere*, so the cells
             # that changed are the effect, not the cause — aiming at them
             # is a category error. Cover new ground instead. (First place
             # the learned contingency signature changes what we do.)
-            ranked: list[tuple[list[tuple[int, int]], str]] = [
+            ranked += [
                 (list(color_salient), "non-background cell (acts at a distance)"),
                 (recent_active, "recently active cell"),
             ]
         else:
-            ranked = [
+            ranked += [
                 (
                     [c for c in recent_active if c in color_salient],
                     "recently active + non-background cell",

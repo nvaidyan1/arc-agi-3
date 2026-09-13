@@ -457,3 +457,222 @@ council originally deferred A*/pathfinding as premature "with no object
 identity or goal signal to search over". Those prerequisites now exist
 (object, move map, obstacle map, and win conditions that are mostly
 "reach a position"), so the condition they set for revisiting it is met.
+
+## 2026-09-13 — Region-of-interest screening: the substrate exists, is clustered, and is switched off where it matters most
+
+**Hypothesis.** Incentive salience (attend to places where something
+happened that was neither us nor the budget) is only worth building if
+those places actually *cluster*. If they are diffuse, a map of them
+carries no more information than "somewhere on the board".
+
+**Motivation.** The agent answers "what do I control" and "what resists
+me" but nothing answers "where should I go / what should I make". Framing
+correction from the user, which changed the design: a region of interest
+is not always a *destination*. In a copy/mirror task (replicate the heart
+on the left onto the right) the region on the left is a *specification*,
+not a place to travel to, and the obstacle map contributes nothing. So
+ROI serves two families and the router is the optional half, not the
+mandatory one. Confirmed in code: `_blocked_moves` is gated on
+`learned_moves`, so the 9 games where no move map forms already get
+nothing from the obstacle layer.
+
+**Method.** Subclassed `MyAgent` and overrode `_residual_cells` and
+`_track_meter` to keep the *positions* they already compute and discard.
+25 games x 400 actions. Clark-Evans nearest-neighbour index R (observed
+mean NN distance / expected under complete spatial randomness; R<1
+clustered, 1 random) plus half-mass (distinct cells carrying 50% of hits).
+
+**Observation 1 — clustered, strongly.** R < 1 on every game with data.
+Navigational family (move map forms, n=16) mean R = 0.52; constructive
+family (no move map, n=9) mean R = 0.39; vanish sites R ~ 0.45. The games
+we actually score on are extreme: **ls20 29 cells, sp80 28, sk48 8**
+carry half the residual mass, out of 4096. Not universal — re86 0.94,
+cn04 0.90, bp35 0.96 are indistinguishable from random. 18 of 21 clustered.
+
+**Observation 2 — the substrate is structurally disabled on exactly the
+family the user described.** `_residual_cells` is gated on
+`observed_offset is not None`: it must know its own movement before it
+can compute "not me". On **ft09, sb26, cd82, tn36 the residual layer
+fires on 0.0% of steps** — not rarely, never, across 400 actions. Family
+rates: navigational 30.9% of steps and a median 176 distinct cells;
+constructive 7.2% and a median 13. With no movement there is no self to
+subtract, so the whole ROI machinery cannot run in the copy/match family.
+
+**Observation 3 — template/workspace separation is real and large.**
+Share of static non-background cells lying *outside* the bounding box of
+everything that ever changed: constructive family mean **52%** (su15,
+sb26, cd82 at 100%); navigational mean 27% but with **sp80 at 93%**,
+tr87 66%, ls20 64%, dc22 60%. Constructive games average 926 static vs
+332 dynamic cells — mostly immutable structure around a small workspace.
+The agent never attends to the static part. Caveat: "static" means "never
+changed during our episode", which partly reflects our own coverage;
+trustworthy for the click games, where `_pick_coordinate` samples
+board-wide, weaker for the movement games.
+
+**Observation 4 (unplanned) — a documented figure was wrong.** The
+council entry above records the vanish detector as firing on "0-1.5% of
+steps". True where it was measured (ls20 2.3%, dc22 0.8%, ka59 0.8%) but
+not in general: **ft09 78.6%, s5i5 46.7%, cd82 44.5%, cn04 28.0%, bp35
+13.5%**. This probe requires a matching colour-drop, so those are lower
+bounds. On those games `VANISH_WEIGHT = 8.0` is being applied to ordinary
+churn rather than to a rare sub-goal. The original claim generalised from
+an unrepresentative subset — the same sampling error as the earlier
+retractions, in a new place.
+
+**Inference.** Build the incentive-salience map; the clustering justifies
+it. But the gate must change, and the reason is clean: the
+`observed_offset is not None` condition exists because residual-as-a-
+*reward* would double-count frame-change if "me" were not subtracted. A
+*map* does not double-count anything. So the gate is correct for the
+reward term and wrong for the spatial term — keep it on one, drop it on
+the other, and the constructive family gets an ROI map for the first
+time. Fix or scope `VANISH_WEIGHT` first; layering attention on top of a
+signal that fires 78% of the time would inherit the noise.
+
+## 2026-09-13 — Incentive-salience map built; vanish detector's false-positive fixed
+
+**Hypothesis.** Two fixes motivated by the screening above. (1) The vanish
+detector's documented rate (0-1.5%) was wrong in general (up to 78.6%) —
+it was missing a discriminator: a colour dropping because something else
+*recoloured into it* is not a deletion, only a drop the *background*
+absorbs is. (2) The residual-cells map should be split from the
+residual-cells reward: keep the `observed_offset is not None` gate on the
+reward (needed to avoid double-counting frame-change), drop it on the
+map (a map cannot double-count anything, and the gate was making the
+map read exactly 0.0% on the constructive family — ft09/sb26/cd82/tn36).
+
+**Motivation.** User: cues in the environment matter independent of
+whether we can walk to them; a copy/mirror task's "region of interest" is
+a specification (what to reproduce), not a destination, and the current
+obstacle-detector "does not really help" there. Confirmed in code before
+building anything: `_blocked_moves` requires `learned_moves`, so it
+already contributes nothing on those 9 games — the gap was real, not
+hypothetical.
+
+**Built.**
+1. `_track_meter`'s vanish loop now also requires the drop be absorbed by
+   the background (`background_gain = counts[bg] - previous[bg]`,
+   `pending_vanish = min(total_drop, background_gain)`), so a same-step
+   recolour between two non-background colours no longer counts.
+2. `_residual_cells` is now called unconditionally in `choose_action`
+   (previously `[] if observed_offset is None`). The existing
+   `_action_interactions` / `INTERACTION_WEIGHT` reward path stays gated
+   on `observed_offset is not None`, unchanged.
+3. New `_interest: dict[(x,y), float]` (incentive salience — Berridge &
+   Robinson 1998). Bumped at residual cells every step (weight 1),
+   further at the same cells when `_pending_vanish` fires (weight 4,
+   approximate — see code comment on why exact vanish positions aren't
+   isolated), and at `residual or diff_cells` on a level-up (weight 15,
+   falling back to the raw diff so a level-up reached by pure movement
+   with no separate residual still gets credit). Decays 0.98/step,
+   pruned below 0.05, cleared on level change like the obstacle map.
+4. Wired into `_pick_coordinate` as the new top-priority tier
+   (`_top_interest_cells`, top 5 by value) — the only path available to
+   the constructive family, since ACTION6 is the sole coordinate action.
+   Movement games get the map built but not yet consumed (needs the
+   router — separate, larger, not part of this change).
+
+**Observation.** Re-ran `scripts/roi_probe.py` (moved from a scratch
+script to make this reproducible) on ft09 alone: residual firing rate
+**0.0% -> 95.1%** of steps post-fix, 19 cells carrying half the mass,
+Clark-Evans R=0.31 (clustered). Traced a full play-local run's per-step
+log: interest evidence appears by step 16 ("learned region of interest
+(unclicked)"); by step ~390 selection has narrowed to
+"learned region of interest (revisit)" almost exclusively — the map is
+sticky once it finds a productive spot, since ft09's clicks never
+habituate (every click there changes 38 cells, so `_cell_is_spent` never
+trips). `EXPLORATION_EPSILON` still forces 25% uniform-random coverage
+regardless. One 25-game smoke sweep at 400 actions after both changes:
+0.0316, inside the existing 0.0006-0.1496 range (single run, not a
+replication — recorded as a sanity check, not evidence of a shift).
+
+Separately, verified the vanish fix directly against the production code
+(tapping `_pending_vanish` itself, not the probe's independent
+re-derivation): **ft09 78.6% -> 0.0%, s5i5 46.7% -> 0.5%** — both now
+inside the originally-claimed range. **cd82 44.5% -> 21.9%**: improved,
+not fixed. Read as a second, distinct false-positive family, same shape
+as the budget-meter's known one (dc22's fill-progress colour): cd82's
+core mechanic plausibly *is* frequent recolour-to-background
+(consumption/fill), which the new discriminator cannot tell apart from a
+real deletion since both are, correctly, "absorbed by the background".
+Not chased further — one-game residual, flagged in `plan.md`.
+
+**Inference.** The map is real, populated, clustered, and now reaches the
+one game family it was built for. It is not yet expected to move the
+score: it improves *where* the click game family looks, not *how it gets
+there* in the movement family, which is where our actual completions
+come from (sp80, ls20, lp85). The router (`plan.md`, "planning toward a
+target") is what would let this pay off on those games.
+
+## 2026-09-13 — Router built; caught and fixed a real regression before it shipped
+
+**Hypothesis.** The interest map is inert without something that acts on
+it in the movement family — build a router (BFS over displacement space,
+`learned_moves` as edges, `_blocked_moves` as removed edges) that plans a
+multi-step path to the best `_interest` cell and executes it.
+
+**Motivation.** User, closing the loop on the prior session's work: "the
+map can only be used if we react upon it to complete the levels." Router
+was the acknowledged missing half from the region-of-interest screening.
+
+**Built.** `self._anchor`: absolute board position of the controlled
+shape, re-derived from ground truth on every translation (not purely
+accumulated, so it can't silently drift) — needed because `_interest` is
+keyed in absolute pixels while `learned_moves`/`_blocked_moves` are keyed
+relative to the attempt's start; `_anchor - _displacement` recovers the
+shared origin to translate between the two. `_plan_route()`: bounded BFS
+(cap 4000 node expansions — cheap given the board's natural size) from
+the current displacement toward the target, falling back to the closest
+reachable node (Chebyshev distance) if the exact target isn't on the move
+map's stride lattice, rather than refusing to move. Plan execution
+inserted as a new tier in `choose_action`, validated online: dropped if
+the next queued action becomes illegal, or if `_displacement` doesn't
+match what the plan expected (a previously-unknown obstacle was just
+discovered, so the rest of the plan was computed for positions never
+reached). Verified offline first (6 synthetic unit tests: direct path,
+detour around a position-keyed obstacle, best-effort on an off-lattice
+target, and the three "no signal yet" None cases) before trusting it on
+live games.
+
+**Observation — a real regression, caught before commit.** First live
+placement put the router directly below the frontier (`novel_moves`)
+tier and above the reward-weighted fallback, reasoning that it only
+"replaces the weakest option." That reasoning was wrong: the fallback
+branch is not weak, it is the *only* channel carrying `LEVEL_UP_WEIGHT`
+(20x) and `VANISH_WEIGHT` (8x) — the sole mechanism that had ever produced
+a real completion. The router has something to say almost as soon as
+`_interest` is non-empty (fast — often within a few dozen steps) and
+`novel_moves` empties out with normal use, so it was preempting that
+fallback branch on ~30% of steps on ls20 in isolation. First full 25-game
+sweep post-integration: **every single game scored levels=0**, including
+sp80, which completed 4 of 5 runs before this change — replicated on a
+second full sweep, also all-zero. Not a hypothesis at that point; a
+measured, reproduced blackout.
+
+**Fix.** Gate router use on `not (self._action_level_ups or
+self._action_vanishes)` — route only while nothing has ever earned real
+credit; the moment any action proves itself, that evidence must win the
+weighted branch every time, and an in-progress plan is abandoned the
+instant it does. This is not a tuning knob, it's a priority *inversion*
+fix: directed search toward a correlational cue should never outrank a
+causally-confirmed action.
+
+**Re-verification, replicated.** sp80 alone, 15 runs post-fix: 9/15
+complete (60%), against the flat-zero result immediately before the fix
+and a documented 4/5 (80%) baseline from before the router existed at
+all — noisy but recovered, not still broken. Three full 25-game sweeps
+post-fix: 0.0110, 0.0, 0.0072 (mean ~0.0061) against the five-sweep
+pre-router baseline of 0.0006-0.1496 (mean ~0.063). The blackout is
+clearly gone (multiple non-zero sweeps, sp80/lp85/cn04 completing
+again), but this post-fix mean sits noticeably below the pre-router one
+on only 3 samples against 5, and this exact quantity has already shown a
+250x span (0.0006 to 0.1496) across its own baseline — not enough to
+call a further, smaller regression either way. Left open rather than
+either claimed fixed or flagged as still-broken.
+
+**Inference.** The router is built, individually unit-tested, and no
+longer catastrophically regresses score. Its *net* effect on score is
+still genuinely unmeasured — would need several more replicated sweeps
+to separate from this environment's inherent variance, and that's a
+reasonable next check before or shortly after committing, not a reason
+to hold the commit.

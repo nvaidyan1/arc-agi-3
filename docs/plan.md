@@ -16,6 +16,18 @@ the naming convention used for feature names below.
 
 ## Agent strategy (`agent/my_agent.py`)
 
+**Where the score stands (2026-09-13).** Pre-router: 5/5 full 25-game
+sweeps at 400 actions scored non-zero, 0.0006–0.1496 (mean ~0.063).
+Post-router (fixed, see "planning toward a target" below): 3 sweeps,
+0.0110/0.0/0.0072 (mean ~0.0061) — not yet distinguishable from the same
+noise given the pre-router range already spans 250x on 5 samples; more
+replicates needed before reading this as better, worse, or unchanged.
+Scoring is `((baseline_actions / actions_taken) ** 2) * 100` on completion
+and **0.0** otherwise, counted per level — quadratic in *speed*, not
+linear in how many levels fall. Human level-1 baselines: vc33 7 actions,
+ls20 22, sp80 39, dc22 59. We take ~400. Closing that 10–50x is the whole
+remaining problem, and every item below is graded against it.
+
 - [x] **Affordance filtering** — only try actions `latest_frame.available_actions`
       reports as legal.
 - [x] **Contingency detection** — epsilon-greedy bandit over "does this
@@ -95,14 +107,50 @@ contingency awareness) for the full framing and `glossary.md` for terms.
 - [x] **sub-goal (vanish) signal** — a whole object disappearing, the
       only visible proxy for intra-level progress. Online discriminator:
       drops larger than `_controlled_size` cannot be self-occlusion.
-      Fires 0-1.5% of steps; correctly ignores ka59's 244 one-cell churn
-      drops. Weight 8. No score change (too rare to shape behaviour).
-- [ ] **planning toward a target** — the quantified gap: level 1 needs
-      ~7-59 actions, undirected search takes ~400. 10-50x is not
-      closable by reward shaping. Win conditions across all 24 games are
-      mostly "reach or match a position", and the prerequisites the
-      council required before revisiting A* (object identity, move map,
-      obstacle map) now exist.
+      Correctly ignores ka59's 244 one-cell churn drops. Weight 8. No
+      score change.
+- [x] **FIX: vanish false-positive from same-step recolouring.** Was
+      mis-measured as "0-1.5% of steps" (only held on the games it was
+      sampled from); really up to 78.6% (ft09). Missing discriminator: a
+      drop absorbed by *another non-background colour* is a recolour, not
+      a deletion — only a drop the *background* absorbs is real.
+      `_track_meter` now requires `pending_vanish = min(total_drop,
+      background_gain)`. Verified directly against the fixed production
+      code (not the probe's independent re-derivation): **ft09 78.6% ->
+      0.0%, s5i5 46.7% -> 0.5%**, both now inside the originally-claimed
+      range. **cd82 44.5% -> 21.9%** — improved but still elevated;
+      plausibly a game whose core mechanic *is* frequent
+      recolour-to-background (a consumption/fill mechanic, not a
+      sub-goal), the same shape of false positive already known for the
+      budget-meter detector (dc22's fill-progress colour). Not chased
+      further now — flagged, one-game residual, not blocking.
+- [x] **planning toward a target — router built** (`_plan_route`,
+      `_anchor`, `_route_plan`/`_route_target`/`_route_expected_position`
+      in `agent/my_agent.py`). Bounded BFS over displacement space,
+      `learned_moves` as edges, `_blocked_moves` as removed edges, target
+      = best `_interest` cell; falls back to the closest reachable node
+      (Chebyshev) if the exact target isn't on the move map's stride
+      lattice. Validated offline first (6 synthetic unit tests) before
+      live games. Online self-correction: an in-progress plan is dropped
+      if the next step becomes illegal or `_displacement` doesn't match
+      what the plan expected (a newly-discovered obstacle).
+      **Caught and fixed a real regression before it shipped**: the
+      router's first placement (below frontier, above the reward-weighted
+      fallback) preempted the *only* channel that has ever produced a
+      real completion (`LEVEL_UP_WEIGHT`/`VANISH_WEIGHT`). Measured: two
+      full 25-game sweeps scored **0.0 on every single game**, including
+      sp80 (4/5 baseline before the router existed). Fixed by gating
+      router use on `not (self._action_level_ups or
+      self._action_vanishes)` — route only while nothing has proven
+      itself yet; an in-progress route is abandoned the moment something
+      does. Re-verified: sp80 alone recovered to 9/15 (60%) post-fix from
+      a flat 0/25 immediately before it.
+      **Open**: net score effect vs. no router is not yet established —
+      3 post-fix sweeps (0.0110, 0.0, 0.0072, mean ~0.0061) sit below the
+      5-sweep pre-router baseline (mean ~0.063), but that baseline itself
+      spans 0.0006-0.1496 (250x), so 3 vs 5 samples cannot separate a real
+      effect from this environment's known variance. Needs more
+      replicates, not a blocking concern for the router's correctness.
 - [ ] **use of the budget signal** — deliberately NOT wired to behaviour:
       measured cost per action is flat (ls20 1.94-2.00 for every action),
       so cost-aware selection gains nothing. Needs a goal to be useful —
@@ -130,18 +178,58 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       obstacle signature, not model error. Cuts wasted moves (ls20
       63%→21%) and raises coverage (+27-56% on 4 of 5 games). No score
       change.
-- [ ] **thing I affect** — cluster that changes conditionally/indirectly.
-      Partially visible already (`acts_locally`, and vc33 occasionally
-      learning that a click displaces something by (-4,0)), but not yet
-      separated from "thing I control" as its own concept.
-- [ ] **environment** — changes independent of action, or never changes
+- [x] **thing I affect** *(duplicate — superseded by the residual-cells
+      item above, which is this concept built)*. Kept as the record of
+      where the idea started: `acts_locally`, and vc33 occasionally
+      learning that a click displaces something by (-4,0).
+- [ ] **environment** — changes independent of action, or never changes.
+      Not built; nothing so far has needed a true world-vs-self split
+      beyond what blocked-move detection already gives.
+- [x] **region of interest / attention (map + click wiring)** —
+      Every layer above answers *what do I control* and *what resists me*;
+      none answers *where should I go* or *what should I make*. Two uses,
+      not one: a **destination** in the navigational family, and a
+      **specification** in the constructive/matching family (mirror the
+      heart on the left onto the right — the left region is not a place
+      to travel to, and the obstacle map is irrelevant there).
+      Substrate already exists and is thrown away: `_residual_cells`
+      computes "changed, explained by neither self nor the budget meter"
+      every step, but only its **count** survives (as a reward weight) —
+      the **positions** are discarded. `_interaction_sites` keys on *our
+      own displacement*, not on where the change landed.
+      Screened 2026-09-13 (25 games x 400 actions, see `history.md`):
+      - sites **cluster** — Clark-Evans R 0.52 navigational / 0.39
+        constructive (1.0 = random); ls20 29 cells, sp80 28, sk48 8 carry
+        half the mass out of 4096. Random on re86/cn04/bp35 only.
+      - the layer is **structurally off** where it is needed most:
+        `observed_offset is not None` requires knowing our own movement,
+        so ft09/sb26/cd82/tn36 produce residual on **0.0%** of steps.
+        Resolution: that gate is right for the *reward* term (without it
+        residual double-counts frame-change) and wrong for a *map*, which
+        double-counts nothing. Keep the gate on one, drop it on the other.
+      - **template/workspace separation is real**: static non-background
+        cells lying outside the ever-changed bounding box average 52% in
+        the constructive family (su15/sb26/cd82 = 100%) and include
+        **sp80 at 93%**. Caveat: "static" = unchanged *during our
+        episode*, so it partly reflects our own coverage. Not yet acted
+        on — no consumer distinguishes template from workspace.
 
+      **Built** (`_interest`, `_bump_interest`, `_decay_interest`,
+      `_top_interest_cells`, `INTEREST_*`): bumped at residual cells
+      (ungated — see fix above), extra at vanish sites, most at level-up
+      sites; decays 0.98/step; wired into `_pick_coordinate` as the top
+      tier. Verified end-to-end on ft09: evidence by step 16, dominating
+      selection by step ~390. Only reaches ACTION6 (the constructive
+      family) — movement games get the map but nothing yet consumes it,
+      that is the router item below. One 25-game smoke sweep post-change:
+      0.0316, inside the existing 0.0006-0.1496 range (not a replication).
 
-- [ ] **Reliable level-ups** — two have occurred spontaneously (vc33 once,
-      sp80 once), each non-reproducible on retest (0/6 and 0/8). So levels
-      are *reachable by chance* but the hit rate is far too low to score.
-      The problem is hit-rate, not reachability — which is a more tractable
-      framing than "nothing ever works."
+- [x] **Reliable level-ups** — was: two spontaneous level-ups (vc33, sp80),
+      each non-reproducible on retest (0/6 and 0/8). Resolved by the budget
+      raise, though only on a minority of games: 5 of 5 sweeps at 400 now
+      score non-zero and sp80 completes in 4 of 5 runs, while most of the
+      25 still complete nothing. Levels are now reliably *reachable*; the
+      open problem moved from hit-rate to **speed**.
 
 ## Tooling
 
@@ -187,9 +275,14 @@ just sequenced behind having an actual object/goal signal:
 - [ ] **Convex-hull frontier probing** — RISKY: assumes a 2D navigable
       map; many ARC-style puzzles are symbolic/transformational with no
       spatial "unreachable area" concept.
-- [ ] **Local transition simulator + A\* search** — premature: nothing to
-      simulate or search over without object identity or a goal signal
-      first.
+- [ ] **Local transition simulator + A\* search** — was deferred as
+      premature: "nothing to simulate or search over without object
+      identity or a goal signal first." **That condition is now met** —
+      object identity (`_detect_translation`), a move map
+      (`learned_moves`), an obstacle map (`_blocked_moves`) and a
+      displacement-space cognitive map (`_visited_displacements`) all
+      exist. The remaining missing piece is the goal signal, which is
+      what the *region of interest* item is for. Unblocked, not built.
 - [ ] **Local coding-LLM fallback for transition-rule synthesis**
       (Qwen-Coder/Gemma) — CONDITIONAL, not rejected: fine only as a
       per-episode hypothesis, verified/discarded within that game, never
