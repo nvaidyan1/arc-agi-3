@@ -22,7 +22,8 @@ STEPS           ?= 200
 RENDER          ?=
 
 .PHONY: help setup play-local pull-sample notebook submit status verify-local \
-        test list-games verify-packaging backfill-summaries clean _check-kaggle
+        test list-games verify-packaging backfill-summaries analyse recap clean \
+        _check-kaggle
 
 _check-kaggle:
 	@if [ ! -s .kaggle/access_token ]; then \
@@ -72,6 +73,13 @@ test: ## Run the unit tests (fast, no game engine needed)
 
 backfill-summaries: ## Rebuild sweep summaries from any per-step logs still in recordings/
 	$(VENV_PY) scripts/backfill_summaries.py
+
+analyse: ## Summarise every recorded sweep: score spread, depth, completion timing
+	$(VENV_PY) scripts/analyse_sweeps.py $(if $(BY_GAME),--by-game)
+
+recap: ## Step through one run in the browser (GAME=cd82 [SEED=123] [STEPS=400])
+	$(VENV_PY) scripts/recap.py --game $(GAME) --max-steps $(STEPS) \
+	    $(if $(SEED),--seed $(SEED)) --open
 
 notebook: ## Splice every agent/*.py module into notebooks/submission.ipynb
 	$(VENV_PY) scripts/build_notebook.py

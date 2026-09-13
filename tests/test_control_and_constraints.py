@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "vendor" / "ARC-AGI-3-Agents"))
 
 from arcengine import GameAction  # noqa: E402
 
-from constraints import MeterDetector, ObstacleMap  # noqa: E402
+from constraints import StaminaDetector, ObstacleMap  # noqa: E402
 from control import MoveModel  # noqa: E402
 
 UP, DOWN = GameAction.ACTION1, GameAction.ACTION2
@@ -109,9 +109,9 @@ def test_obstacle_clear_forgets_the_layout():
     assert o.is_blocked((0, 0), RIGHT) is False
 
 
-# ── MeterDetector ───────────────────────────────────────────────────────
+# ── StaminaDetector ───────────────────────────────────────────────────────
 
-def _sawtooth(meter: MeterDetector, colour: int, full: int, cycles: int = 2):
+def _sawtooth(meter: StaminaDetector, colour: int, full: int, cycles: int = 2):
     """Deplete to zero and refill, the pattern a real budget makes."""
     for _ in range(cycles):
         for n in range(full, -1, -1):
@@ -120,33 +120,33 @@ def _sawtooth(meter: MeterDetector, colour: int, full: int, cycles: int = 2):
 
 
 def test_meter_detects_a_sawtooth():
-    m = MeterDetector()
+    m = StaminaDetector()
     _sawtooth(m, colour=7, full=40)
-    assert m.meter_colour == 7
+    assert m.stamina_colour == 7
 
 
 def test_meter_rejects_a_monotonic_drain():
     """dc22's fill-progress colour declines all run and never refills.
     Calling it a budget would have the agent conserving while winning."""
-    m = MeterDetector()
+    m = StaminaDetector()
     for n in range(400, -1, -1):
         m.update({7: n, 0: 4096 - n})
-    assert m.meter_colour is None
+    assert m.stamina_colour is None
 
 
 def test_meter_rejects_something_too_small_to_be_a_bar():
-    m = MeterDetector()
-    _sawtooth(m, colour=7, full=3)  # below METER_MIN_SIZE
-    assert m.meter_colour is None
+    m = StaminaDetector()
+    _sawtooth(m, colour=7, full=3)  # below STAMINA_MIN_SIZE
+    assert m.stamina_colour is None
 
 
-def test_budget_fraction_tracks_depletion():
-    m = MeterDetector()
+def test_stamina_fraction_tracks_depletion():
+    m = StaminaDetector()
     _sawtooth(m, colour=7, full=40)
-    assert m.budget_fraction == 1.0
+    assert m.stamina_fraction == 1.0
     m.update({7: 20, 0: 4076})
-    assert 0.4 < m.budget_fraction < 0.6
+    assert 0.4 < m.stamina_fraction < 0.6
 
 
-def test_budget_fraction_is_none_without_a_meter():
-    assert MeterDetector().budget_fraction is None
+def test_stamina_fraction_is_none_without_a_stamina_bar():
+    assert StaminaDetector().stamina_fraction is None

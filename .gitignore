@@ -18,6 +18,11 @@ recordings/
 !results/
 !results/sweeps/
 
+# Recap pages are ~1.5MB each and fully regenerable from (git sha, game,
+# seed) — the seed is in the sweep summary, so the page is a view, not a
+# record. Regenerate with `make recap GAME=<id> SEED=<n>`.
+results/recaps/
+
 # Generated artefacts
 notebooks/submission.ipynb
 reference/

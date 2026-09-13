@@ -173,7 +173,7 @@ Two different limits, both discovered:
 - **`ObstacleMap`** — where a known move fails. Keyed by *position and
   action*, which is also its own sanity check: a real wall blocks in
   specific places, while a broken move map would fail everywhere.
-- **`MeterDetector`** — finds an on-screen budget by its **sawtooth**: it
+- **`StaminaDetector`** — finds an on-screen budget by its **sawtooth**: it
   must fall during an attempt *and* return to the same starting value
   afterwards. Fires on ~9 of 25 games.
 

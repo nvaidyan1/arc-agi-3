@@ -9,7 +9,7 @@ that feature:
   _residual_cells  -> the POSITIONS of "changed, and explained by neither
                       self nor the budget meter" (the agent itself only
                       keeps a per-action count of this)
-  _track_meter     -> per-cell change counts + vanish positions, derived
+  _track_stamina     -> per-cell change counts + vanish positions, derived
                       the same way the agent's own vanish detector is
 
 Three questions, see docs/history.md (2026-09-13, "Region-of-interest
@@ -99,9 +99,9 @@ def make_probe_class(MyAgentCls):
                     self.p_residual[c] += 1
             return cells
 
-        def _track_meter(self, latest_frame):
+        def _track_stamina(self, latest_frame):
             prev = self._p_prev_grid
-            super()._track_meter(latest_frame)
+            super()._track_stamina(latest_frame)
             if not latest_frame.frame:
                 return
             grid = latest_frame.frame[-1]
@@ -121,13 +121,13 @@ def make_probe_class(MyAgentCls):
                 # Vanish positions: cells that lost a colour whose total
                 # count dropped by more than the agent's own self-occlusion
                 # floor. Independent re-derivation for measurement purposes
-                # only — the agent's own discriminator (in _track_meter)
+                # only — the agent's own discriminator (in _track_stamina)
                 # additionally requires the drop be absorbed by the
                 # background; this probe's job is to characterize the
                 # rawer signal, not to reproduce the production gate.
                 if self._pending_vanish:
                     floor = max(self._controlled_size, 8)
-                    meter = self.meter_colour
+                    meter = self.stamina_colour
                     dropped = {
                         c for c in prev_counts
                         if c != meter and prev_counts[c] - now_counts[c] > floor

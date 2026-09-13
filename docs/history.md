@@ -1216,3 +1216,72 @@ game count) and reports score spread, depth, and completion timing. Fixed a
 latent defect in `play_local.py`: second-granularity run ids collide when
 sweeps run concurrently, silently overwriting a summary; the pid now
 disambiguates.
+
+## 2026-09-13 — Stale cross-level state fixed; runs made replayable; a step-through view of the agent's reasoning
+
+**Motivation.** The level-2 investigation needs to inspect single runs, and
+three things made that impossible: knowledge from level 1 leaking into level 2,
+runs that could never be repeated, and decisions that left no trace of why they
+were made.
+
+**Observation 1 — two coordinate-keyed structures survived a level change.**
+`_reset_level` is documented as "a new level is a new layout, so position-keyed
+knowledge dies" and missed the two largest such structures: the per-cell click
+memory (`clicks._tries` / `._effect`), which was wiped only on death and so
+corrupted the first attempt of every level, and `_interaction_sites`, which was
+never cleared at all for the whole run. Fixed. What survives now is exactly
+what is keyed by *action* rather than *place* — the move map and the
+`acts_locally` signature, both properties of the controller, which the game
+does not rebuild between levels. `clicks.reset_attempt()` is the right call
+rather than a fresh object precisely because it keeps `acts_locally`.
+
+These are unlikely to be *the* reason level 2 fails — cd82 fails 15/15 with
+twelve times the budget it needs, which stale coordinates do not explain — but
+they would corrupt any deep-dive on a single game.
+
+**Observation 2 — no run could ever be replayed, despite a comment saying
+otherwise.** The seed was
+`int(time.time()*1e6) + hash(self.game_id) % 1e6`, commented "so replays of one
+game are reproducible". False twice over: wall-clock time, and `hash()` of a
+str is salted per process (measured: `hash('ls20')` gave 12004 / 128729 /
+134629 in three runs). So the sp80 run that cleared level 1 in **9 actions**
+can never be watched. Now the seed is explicit, drawn from `SystemRandom` when
+not given, always recorded in the sweep summary, and offset per game by a
+stable SHA-256 digest so games still explore independently while one number
+reproduces a whole sweep. Verified: same seed → byte-identical action sequence;
+different seed → divergence.
+
+**Observation 3 — two of five decision branches left no trace.** Only the
+frontier branch and the click path set `reasoning`; an epsilon coin-flip (25%
+of actions) and a deliberate weighted choice both surfaced as a bare
+`ACTION3`. A suspicious run could not be diagnosed even with a perfect viewer,
+because you could not tell whether the agent decided or flipped a coin. Every
+branch now records its tier, its candidates and its weights. Recording only,
+and **no RNG call was added**, so the action stream is unchanged.
+
+**Built — `scripts/recap.py` + `recap_template.html`.** Runs the agent
+in-process, snapshots the **live layer objects** at every decision (not a log —
+so it shows what the agent held, not what someone remembered to serialise), and
+writes a self-contained page stepped through one keypress at a time: the frame
+with the click target marked, every perception, per-action evidence, and the
+decision with weight bars. Jump keys for level-up / death / vanish / blocked /
+non-epsilon. `make recap GAME=cd82 SEED=4242`. Pages are ~1.5MB and gitignored:
+they are fully regenerable from (sha, game, seed), so the seed is the record
+and the page is a view.
+
+**First finding from it.** On cd82, 301 steps: **229 weighted, 70 epsilon, 0
+frontier, 0 route.** cd82 never forms a move map, so the frontier and router
+branches are structurally dead there — the entire agent on that game is a
+weighted bandit plus 23% noise. Worth knowing before the cd82 deep-dive: there
+is currently no channel through which a goal signal could act on that game
+except `_pick_coordinate`, which the interest map already feeds.
+
+**Also — naming.** "Budget" was carrying three unrelated meanings: our
+self-imposed `MAX_ACTIONS`, the game's per-attempt resource, and the human
+`baseline_actions` yardstick. The middle one is now `stamina_*`
+(`StaminaDetector`, `stamina_colour`, `stamina_fraction`, `STAMINA_*`).
+**`stamina` rather than `lives`**: in ls20/dc22 it is literally a lives
+counter, but in vc33 it is a step budget, so `lives` would assert discrete
+retries the evidence does not support — the governing principle forbids exactly
+that. `MAX_ACTIONS` keeps its name because the framework's `Agent.main()` reads
+that attribute. 61 tests pass; `make verify-packaging` still green.

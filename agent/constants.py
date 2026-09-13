@@ -44,15 +44,15 @@ BLOCKED_MIN_OBSERVATIONS = 1
 # moves monotonically all run because the player is filling the board in,
 # which is progress, not budget. That distinction is load-bearing: a
 # budget near zero means conserve, a drain near zero means nearly done.
-METER_MIN_ATTEMPTS = 1
-METER_DECLINE_RATIO = 5.0
-METER_START_TOLERANCE = 0.05
+STAMINA_MIN_ATTEMPTS = 1
+STAMINA_DECLINE_RATIO = 5.0
+STAMINA_START_TOLERANCE = 0.05
 # Guards against two false positives seen in testing: a 3-cell colour
 # oscillating (too small to be a meter), and a large background that
 # depletes as the board fills and refills on reset (it never empties,
 # whereas a real budget runs down to near zero before death).
-METER_MIN_SIZE = 8
-METER_MUST_EMPTY_TO = 0.25
+STAMINA_MIN_SIZE = 8
+STAMINA_MUST_EMPTY_TO = 0.25
 
 # ── Reward weighting ────────────────────────────────────────────────────
 # How much a level-up outweighs a mere frame change when weighting actions.

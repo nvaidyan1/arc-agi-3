@@ -21,7 +21,7 @@ second doesn't.
 This is not a new direction — it is the pattern every surviving component
 already follows. `_detect_translation` doesn't assert games contain moving
 things, it asks whether *this* change is a translation and returns `None`
-otherwise. `meter_colour` doesn't assert games have resource bars, it
+otherwise. `stamina_colour` doesn't assert games have resource bars, it
 tests for a sawtooth. `acts_locally` stays `None` until evidence exists.
 **`None` is a first-class outcome**, and that is the defence against
 building an agent that is excellent at the games we happened to look at.
@@ -174,7 +174,7 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       never returns (dc22 fill-progress, cd82 consumption), a budget
       *refills* each attempt. Only 2 of 25 games (lp85, cd82) showed a
       large drain the meter missed, and cd82's is the known consumption
-      mechanic. `meter_colour` is right to reject them — the refill test
+      mechanic. `stamina_colour` is right to reject them — the refill test
       is the whole distinction. Superseded unless a refilling counter
       turns up that the sawtooth misses.
 - [ ] **translation as a *component*** — `_detect_translation` still
@@ -186,7 +186,8 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       ls20/dc22 render a resource meter (fixed row, fixed transition,
       y-spread 0.0); wa30 shows interactions instead. Led to the meter
       detector below.
-- [x] **budget awareness** — `meter_colour` / `budget_fraction` detect a
+- [x] **stamina awareness** (renamed from "budget", see below) —
+      `stamina_colour` / `stamina_fraction` detect a
       rendered budget via its sawtooth (declines, then refills to a
       recurring max). Correctly rejects dc22's fill-progress colour, which
       declines but never refills. Fires on ~9 of 25 games. ls20: 84 units
@@ -395,6 +396,25 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       score non-zero and sp80 completes in 4 of 5 runs, while most of the
       25 still complete nothing. Levels are now reliably *reachable*; the
       open problem moved from hit-rate to **speed**.
+
+## Naming: three things were all called "budget"
+
+Renamed 2026-09-13 after the word turned out to be carrying three
+unrelated meanings, which made the docs actively misleading:
+
+| thing | name | whose rule |
+|---|---|---|
+| total moves we allow per game, across all levels | `MAX_ACTIONS` | **ours** — self-imposed |
+| the per-attempt resource that kills you at zero | `stamina_*` | **the game's** |
+| human moves for a level, used only for scoring | `baseline_actions` | **the yardstick** |
+
+`stamina` rather than `lives`: what the detector measures is a quantity
+that drains during an attempt and refills when it restarts. In ls20 and
+dc22 that is literally a lives counter; in vc33 it is a step budget, and
+"lives" would assert discrete retries the evidence doesn't support —
+exactly the kind of semantic slot the governing principle forbids.
+`MAX_ACTIONS` keeps its name because the framework's `Agent.main()` loop
+reads that exact attribute.
 
 ## Tooling
 

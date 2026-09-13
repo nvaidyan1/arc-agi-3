@@ -149,6 +149,7 @@ def build_summary(
     scorecard: Any = None,
     aggregate_score: Any = None,
     fingerprint: Mapping[str, Any] | None = None,
+    seed: int | None = None,
     notes: str | None = None,
 ) -> dict[str, Any]:
     """Assemble the summary document.
@@ -168,6 +169,10 @@ def build_summary(
         "config": {
             "max_steps": max_steps,
             "games_requested": list(games),
+            # The sweep seed. With it plus the git sha, any run in this
+            # file can be re-entered exactly — which is what makes a
+            # suspicious result investigable rather than merely noted.
+            "seed": seed,
             "git": dict(fingerprint) if fingerprint else None,
         },
         "aggregate_score": aggregate_score,

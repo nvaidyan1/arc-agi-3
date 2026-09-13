@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent recap</title>
+<style>
+  :root{
+    --bg:#12131a; --panel:#1a1c26; --edge:#2a2d3a; --ink:#e6e8f0;
+    --dim:#8b90a6; --accent:#6ea8fe; --warn:#ffb454; --good:#5ddba0;
+    --bad:#ff6b81; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:13px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+  header{position:sticky;top:0;z-index:10;background:var(--panel);
+         border-bottom:1px solid var(--edge);padding:10px 16px;
+         display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:14px;margin:0;font-weight:600}
+  header .sp{margin-left:auto}
+  .pill{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:99px;
+        background:var(--bg);border:1px solid var(--edge);color:var(--dim)}
+  .pill b{color:var(--ink);font-weight:600}
+  main{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:14px;padding:14px}
+  @media (max-width:860px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+        padding:12px 14px}
+  .card h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+           color:var(--dim);margin:0 0 10px;font-weight:600}
+  canvas{width:100%;height:auto;image-rendering:pixelated;border-radius:6px;
+         background:#000;display:block}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:1100px){.cols{grid-template-columns:1fr}}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  td{padding:3px 0;vertical-align:top}
+  td:first-child{color:var(--dim);width:42%;padding-right:10px}
+  .tier{display:inline-block;font-family:var(--mono);font-size:12px;font-weight:600;
+        padding:3px 10px;border-radius:6px;margin-bottom:10px}
+  .t-epsilon{background:#3a2b16;color:var(--warn)}
+  .t-weighted{background:#16283a;color:var(--accent)}
+  .t-frontier{background:#16321f;color:var(--good)}
+  .t-route_strong,.t-route_weak{background:#2c1f3a;color:#c39bff}
+  .t-none,.t-reset{background:var(--bg);color:var(--dim)}
+  .bar{position:relative;background:var(--bg);border-radius:4px;height:18px;
+       margin:3px 0;overflow:hidden}
+  .bar>span{position:absolute;inset:0 auto 0 0;background:#2b4a7a;border-radius:4px}
+  .bar>label{position:absolute;inset:0;display:flex;justify-content:space-between;
+             padding:0 7px;font-family:var(--mono);font-size:11px;line-height:18px}
+  .bar.pick>span{background:#2f6ad9}
+  .keys{font-family:var(--mono);font-size:11px;color:var(--dim);
+        padding:8px 16px;border-top:1px solid var(--edge);background:var(--panel)}
+  .keys b{color:var(--ink)}
+  .ev{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .ev b{color:var(--ink)}
+  .flag{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 6px;
+        border-radius:4px;margin-right:5px}
+  .f-up{background:#16321f;color:var(--good)}
+  .f-death{background:#3a1a1f;color:var(--bad)}
+  .f-vanish{background:#2c1f3a;color:#c39bff}
+  .f-block{background:#3a2b16;color:var(--warn)}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .empty{color:var(--dim);font-style:italic}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">recap</h1>
+  <span class="pill">step <b id="stepno">0</b>/<b id="stepmax">0</b></span>
+  <span class="pill">level <b id="level">0</b></span>
+  <span class="pill" id="statepill">—</span>
+  <span class="pill" id="flags"></span>
+  <span class="sp"></span>
+  <span class="pill" id="seedpill">—</span>
+</header>
+
+<div style="padding:0 14px"><input type="range" id="scrub" min="0" value="0"></div>
+
+<main>
+  <div>
+    <div class="card"><h2>Frame</h2><canvas id="grid"></canvas></div>
+    <div class="card" style="margin-top:14px"><h2>Decision</h2>
+      <div id="tier" class="tier t-none">—</div>
+      <div id="weights"></div>
+      <table id="dtable"></table>
+    </div>
+  </div>
+  <div class="cols">
+    <div class="card"><h2>Perceptions</h2><table id="ptable"></table></div>
+    <div class="card"><h2>Evidence per action</h2><div id="evidence"></div></div>
+  </div>
+</main>
+
+<div class="keys">
+  <b>space</b>/<b>&rarr;</b> next &nbsp; <b>&larr;</b> back &nbsp;
+  <b>j</b> jump to step &nbsp; <b>l</b> next level-up &nbsp; <b>d</b> next death &nbsp;
+  <b>v</b> next vanish &nbsp; <b>b</b> next blocked &nbsp;
+  <b>t</b> next non-epsilon &nbsp; <b>home</b>/<b>end</b> first/last
+</div>
+
+<script>
+const RUN = /*__RUN_DATA__*/null;
+
+// ARC colour indices 0-15.
+const PALETTE = ["#000000","#0074D9","#FF4136","#2ECC40","#FFDC00","#AAAAAA",
+                 "#F012BE","#FF851B","#7FDBFF","#870C25","#FFFFFF","#4B0082",
+                 "#00FFA0","#8B4513","#556B2F","#FF69B4"];
+
+const steps = RUN.steps || [];
+let i = 0;
+
+const $ = id => document.getElementById(id);
+const canvas = $("grid"), ctx = canvas.getContext("2d");
+
+$("title").textContent = `${RUN.game_id} — ${RUN.final_state.replace("GameState.","")}, `
+  + `${RUN.levels_completed} level(s) in ${RUN.actions} actions`;
+$("seedpill").innerHTML = `seed <b>${RUN.seed}</b>`;
+$("stepmax").textContent = Math.max(steps.length - 1, 0);
+$("scrub").max = Math.max(steps.length - 1, 0);
+
+// A step is "a death" when the state seen at that decision is GAME_OVER, and
+// "a level-up" when levels_completed rose since the previous step. Computed
+// once so the jump keys are instant.
+const isDeath  = s => (s.state || "").includes("GAME_OVER");
+const isUp     = (s, k) => k > 0 && s.levels_completed > steps[k-1].levels_completed;
+const isVanish = s => (s.perception.pending_vanish || 0) > 0;
+const isBlock  = s => (s.decision.n_blocked || 0) > 0;
+const isThink  = s => s.decision.tier && s.decision.tier !== "epsilon";
+
+function drawGrid(s){
+  const {rows, cols, grid} = s;
+  if(!rows || !cols){ canvas.width = canvas.height = 1; return; }
+  canvas.width = cols; canvas.height = rows;
+  const img = ctx.createImageData(cols, rows);
+  for(let p = 0; p < rows * cols; p++){
+    const c = PALETTE[parseInt(grid[p], 16)] || "#000";
+    img.data[p*4]   = parseInt(c.slice(1,3),16);
+    img.data[p*4+1] = parseInt(c.slice(3,5),16);
+    img.data[p*4+2] = parseInt(c.slice(5,7),16);
+    img.data[p*4+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  // Mark the click target so a coordinate action is visible on the board.
+  const pay = s.decision.payload;
+  if(pay && pay.x != null){
+    ctx.fillStyle = "rgba(255,255,255,.85)";
+    ctx.fillRect(pay.x, pay.y, 1, 1);
+  }
+}
+
+function rowsHtml(pairs){
+  return pairs.map(([k, v]) =>
+    `<tr><td>${k}</td><td>${v === "" || v == null
+      ? '<span class="empty">none</span>' : v}</td></tr>`).join("");
+}
+
+function render(){
+  const s = steps[i];
+  if(!s) return;
+  drawGrid(s);
+  $("stepno").textContent = s.step;
+  $("level").textContent = s.levels_completed;
+  $("statepill").textContent = (s.state || "").replace("GameState.","");
+  $("scrub").value = i;
+
+  const f = [];
+  if(isUp(s, i))  f.push('<span class="flag f-up">LEVEL UP</span>');
+  if(isDeath(s))  f.push('<span class="flag f-death">DEATH</span>');
+  if(isVanish(s)) f.push('<span class="flag f-vanish">VANISH</span>');
+  if(isBlock(s))  f.push(`<span class="flag f-block">${s.decision.n_blocked} BLOCKED</span>`);
+  $("flags").innerHTML = f.join("") || '<span style="color:var(--dim)">—</span>';
+
+  const p = s.perception;
+  const mv = Object.entries(p.moves).map(([a,o]) => `${a}(${o[0]},${o[1]})`).join(" ");
+  $("ptable").innerHTML = rowsHtml([
+    ["background", p.background],
+    ["displacement", `(${p.displacement[0]}, ${p.displacement[1]})`],
+    ["move map", mv],
+    ["visited", p.visited],
+    ["obstacles", p.obstacles],
+    ["stamina", p.stamina_fraction == null ? null
+        : `${(p.stamina_fraction*100).toFixed(0)}% (colour ${p.stamina_colour})`],
+    ["acts_locally", p.acts_locally === null ? null : String(p.acts_locally)],
+    ["interest", p.interest_cells
+        ? `${p.interest_cells} cells, peak ${p.interest_peak}` : null],
+    ["interest top", p.interest_top.slice(0,4).map(c=>`(${c[0]},${c[1]})`).join(" ")],
+    ["route", p.route_len || null],
+    ["available", s.available.join(" ")],
+  ]);
+
+  const d = s.decision;
+  const tier = d.tier || "none";
+  $("tier").className = "tier t-" + tier;
+  const note = {epsilon:"  — random, not a decision",
+                reset:"  — died, restarting the level"}[tier] || "";
+  $("tier").textContent = tier.toUpperCase().replace("_"," ") + note;
+
+  if(d.weights){
+    const max = Math.max(...Object.values(d.weights), 1e-9);
+    $("weights").innerHTML = Object.entries(d.weights).map(([a,w]) =>
+      `<div class="bar ${a===d.action?'pick':''}">
+         <span style="width:${(w/max*100).toFixed(1)}%"></span>
+         <label><i>${a}</i><i>${w}</i></label></div>`).join("");
+  } else {
+    $("weights").innerHTML = "";
+  }
+
+  $("dtable").innerHTML = rowsHtml([
+    ["action", `<b>${d.action}</b>`],
+    ["payload", d.payload ? `(${d.payload.x}, ${d.payload.y})` : null],
+    ["candidates", d.candidates.join(" ")],
+    ["novel", d.novel ? d.novel.join(" ") : null],
+    ["blocked here", d.n_blocked || null],
+    ["reasoning", typeof d.reasoning === "object" && d.reasoning
+        ? JSON.stringify(d.reasoning) : d.reasoning],
+  ]);
+
+  const e = s.evidence;
+  const acts = [...new Set([...Object.keys(e.tries), ...Object.keys(e.changes)])].sort();
+  $("evidence").innerHTML = acts.length ? acts.map(a =>
+    `<div class="ev"><b>${a}</b> &nbsp;tried ${e.tries[a]||0}
+      &nbsp;changed ${e.changes[a]||0}
+      &nbsp;inter ${e.interactions[a]||0}
+      &nbsp;vanish ${e.vanishes[a]||0}
+      &nbsp;<span style="color:var(--good)">up ${e.level_ups[a]||0}</span></div>`
+  ).join("") : '<span class="empty">no evidence yet</span>';
+}
+
+function go(n){ i = Math.max(0, Math.min(steps.length - 1, n)); render(); }
+function seek(pred){
+  for(let k = i + 1; k < steps.length; k++){
+    if(pred(steps[k], k)){ go(k); return; }
+  }
+}
+
+addEventListener("keydown", e => {
+  if(e.key === " " || e.key === "ArrowRight"){ e.preventDefault(); go(i+1); }
+  else if(e.key === "ArrowLeft"){ e.preventDefault(); go(i-1); }
+  else if(e.key === "Home"){ go(0); }
+  else if(e.key === "End"){ go(steps.length-1); }
+  else if(e.key === "l"){ seek(isUp); }
+  else if(e.key === "d"){ seek(isDeath); }
+  else if(e.key === "v"){ seek(isVanish); }
+  else if(e.key === "b"){ seek(isBlock); }
+  else if(e.key === "t"){ seek(isThink); }
+  else if(e.key === "j"){
+    const n = prompt(`Jump to step (0-${steps.length-1})`);
+    if(n !== null && n.trim() !== "") go(parseInt(n, 10) || 0);
+  }
+});
+$("scrub").addEventListener("input", ev => go(+ev.target.value));
+render();
+</script>
+</body>
+</html>

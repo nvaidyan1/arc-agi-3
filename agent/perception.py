@@ -244,7 +244,7 @@ def residual_cells(
     latest_frame: FrameData,
     changed: list[tuple[int, int]],
     offset: tuple[int, int] | None,
-    meter_colour: int | None,
+    stamina_colour: int | None,
 ) -> list[tuple[int, int]]:
     """Changed cells NOT explained by our own shape moving.
 
@@ -282,12 +282,12 @@ def residual_cells(
     for cell in changed:
         if cell in explained:
             continue
-        if meter_colour is not None and prev_frame.frame and latest_frame.frame:
+        if stamina_colour is not None and prev_frame.frame and latest_frame.frame:
             x, y = cell
             # Depletion recolours meter cells *away* from the meter
             # colour, so check both sides of the change, not just the new
             # value.
-            if meter_colour in (
+            if stamina_colour in (
                 prev_frame.frame[-1][y][x],
                 latest_frame.frame[-1][y][x],
             ):

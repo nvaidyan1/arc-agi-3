@@ -3,7 +3,7 @@
 Two constraints, discovered rather than declared:
 
   * `ObstacleMap`   — spatial. Where a known move fails to happen.
-  * `MeterDetector` — resource. A rendered budget that depletes and refills.
+  * `StaminaDetector` — resource. A rendered quantity that depletes and refills.
 
 They sit together because they answer one question — *what stops me, or
 runs out on me?* — not because they are the same mechanism.
@@ -15,7 +15,7 @@ assert a correspondence that isn't true. "Environment" also invites
 becoming a dumping ground for anything that isn't the agent, whereas
 "constraint" has a real boundary.
 
-Neither class asserts that games *have* walls or budgets. Both stay
+Neither class asserts that games *have* walls or stamina. Both stay
 silent until evidence arrives, and both are wrong on some games in ways
 that are documented rather than hidden.
 """
@@ -27,11 +27,11 @@ from arcengine import GameAction
 
 from constants import (
     BLOCKED_MIN_OBSERVATIONS,
-    METER_DECLINE_RATIO,
-    METER_MIN_ATTEMPTS,
-    METER_MIN_SIZE,
-    METER_MUST_EMPTY_TO,
-    METER_START_TOLERANCE,
+    STAMINA_DECLINE_RATIO,
+    STAMINA_MIN_ATTEMPTS,
+    STAMINA_MIN_SIZE,
+    STAMINA_MUST_EMPTY_TO,
+    STAMINA_START_TOLERANCE,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,8 +87,17 @@ class ObstacleMap:
         self._attempts.clear()
 
 
-class MeterDetector:
-    """A rendered resource budget, identified by its sawtooth.
+class StaminaDetector:
+    """A rendered per-attempt resource, identified by its sawtooth.
+
+    Named *stamina* rather than *lives* on purpose. What is measured is a
+    quantity that drains while an attempt runs and refills when it
+    restarts; in ls20 and dc22 that is literally a lives counter, but in
+    vc33 it is a step budget, and "lives" would assert discrete retries
+    the evidence does not support. Nor "budget", which this project uses
+    for the self-imposed `MAX_ACTIONS` cap — a different thing we choose,
+    not a rule the game enforces. (`MAX_ACTIONS` itself cannot be renamed:
+    the framework's `Agent.main()` loop reads that exact attribute.)
 
     Requires *both* halves: the colour must fall during an attempt **and**
     return to the same starting value afterwards. Decline alone is not
@@ -98,7 +107,7 @@ class MeterDetector:
     the agent conserving precisely when it is winning.
 
     The distinction in one line: a **drain** falls and never returns and
-    means *how much of the level is done*; a **budget** refills and means
+    means *how much of the level is done*; **stamina** refills and means
     *how much is left before death*. Only the second is a constraint.
 
     Fires on ~9 of 25 games. On ls20: 84 units at 2/action = 42 actions
@@ -120,23 +129,23 @@ class MeterDetector:
         return self._counts
 
     @property
-    def meter_colour(self) -> int | None:
-        """The colour that behaves like a depleting budget, if any."""
+    def stamina_colour(self) -> int | None:
+        """The colour that behaves like depleting stamina, if any."""
         best, best_start = None, 0
         for colour, starts in self._starts.items():
-            if len(starts) < METER_MIN_ATTEMPTS:
+            if len(starts) < STAMINA_MIN_ATTEMPTS:
                 continue
             down, up = self._down.get(colour, 0), self._up.get(colour, 0)
-            if down < METER_DECLINE_RATIO * max(up, 1):
+            if down < STAMINA_DECLINE_RATIO * max(up, 1):
                 continue
             mean_start = sum(starts) / len(starts)
-            if mean_start < METER_MIN_SIZE:
+            if mean_start < STAMINA_MIN_SIZE:
                 continue
             # Must actually run down, not merely fluctuate.
-            if self._min.get(colour, mean_start) > METER_MUST_EMPTY_TO * mean_start:
+            if self._min.get(colour, mean_start) > STAMINA_MUST_EMPTY_TO * mean_start:
                 continue
             spread = (max(starts) - min(starts)) / mean_start
-            if spread > METER_START_TOLERANCE:
+            if spread > STAMINA_START_TOLERANCE:
                 continue
             # Prefer the largest such meter — finer resolution.
             if mean_start > best_start:
@@ -144,15 +153,15 @@ class MeterDetector:
         return best
 
     @property
-    def budget_fraction(self) -> float | None:
-        """How much of the attempt's budget is left, 0-1, or None.
+    def stamina_fraction(self) -> float | None:
+        """How much of the attempt's stamina is left, 0-1, or None.
 
         Deliberately not wired to behaviour: measured cost per action is
         flat (ls20 1.94-2.00 for every action), so cost-aware selection
         gains nothing. Knowing time is short only helps if there is
         something worth rushing toward.
         """
-        colour = self.meter_colour
+        colour = self.stamina_colour
         if colour is None:
             return None
         starts = self._starts[colour]
@@ -191,9 +200,9 @@ class MeterDetector:
             for colour in set(counts) | set(self._counts)
         }
 
-        if not self._announced and self.meter_colour is not None:
+        if not self._announced and self.stamina_colour is not None:
             self._announced = True
-            colour = self.meter_colour
+            colour = self.stamina_colour
             logger.info(
                 "METER on %s: colour %d starts at ~%d each attempt and depletes",
                 game_id, colour,

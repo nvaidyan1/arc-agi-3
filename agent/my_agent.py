@@ -15,7 +15,7 @@ GOVERNING PRINCIPLE — NO SEMANTIC SLOTS WITHOUT EVIDENCE:
 
 Every detector here is a *lens*: it asks whether some specific
 explanation fits, and reports nothing when it doesn't. `detect_translation`
-does not assert that games contain moving objects; `meter_colour` does not
+does not assert that games contain moving objects; `stamina_colour` does not
 assert that games have resource bars; `acts_locally` stays None until
 evidence exists. **None is a first-class outcome** — it is what keeps a
 game we have never seen from being force-fit into the shape of the 25 we
@@ -45,11 +45,11 @@ Contract (enforced by the ARC-AGI-3-Agents framework):
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import random
 import sys
-import time
 from typing import Any
 
 # Make this file's own directory importable, so the sibling layer modules
@@ -78,7 +78,7 @@ from constants import (
     MIN_VANISH_CELLS,
     VANISH_WEIGHT,
 )
-from constraints import MeterDetector, ObstacleMap
+from constraints import StaminaDetector, ObstacleMap
 from control import MoveModel
 
 logger = logging.getLogger(__name__)
@@ -95,16 +95,34 @@ class MyAgent(Agent):
     # noise. At 400 both replicate runs produced completions.
     MAX_ACTIONS = 400
 
+    # Set to an int to make a run replayable; None draws a fresh seed and
+    # records it. See `seed` below.
+    SEED: int | None = None
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        # Seed per game_id so replays of one game are reproducible but
-        # different games explore independently.
-        random.seed(int(time.time() * 1_000_000) + hash(self.game_id) % 1_000_000)
+        # The previous line here claimed "replays of one game are
+        # reproducible" and was false twice over: it mixed in wall-clock
+        # time, and `hash()` of a str is salted per process (measured:
+        # hash('ls20') returned three different values in three runs). So
+        # no run could ever be replayed — including the sp80 run that
+        # cleared level 1 in 9 actions, which we cannot go back and watch.
+        #
+        # Now: the seed is an explicit number, drawn fresh when not given
+        # and always *recorded*, so any run can be re-entered later with
+        # `--seed`. Per-game offset keeps games exploring independently
+        # while one sweep seed reproduces the whole sweep. The offset uses
+        # a stable digest rather than hash() for exactly the reason above.
+        base = self.SEED if self.SEED is not None else random.SystemRandom().randrange(2**31)
+        digest = hashlib.sha256(self.game_id.encode()).digest()
+        self.seed = (base + int.from_bytes(digest[:4], "big")) % 2**31
+        self.rng_seed_base = base
+        random.seed(self.seed)
 
         # ── Layers ──────────────────────────────────────────────────────
         self.moves = MoveModel()
         self.obstacles = ObstacleMap()
-        self.meter = MeterDetector()
+        self.stamina = StaminaDetector()
         self.interest = InterestMap()
         self.clicks = ClickTargeting()
         self.route = navigation.Route()
@@ -142,6 +160,10 @@ class MyAgent(Agent):
 
     def _reset_attempt(self) -> None:
         """A fresh attempt: forget per-attempt state, keep game knowledge."""
+        # Recording only; `_select` overwrites it every step. Initialised
+        # here so anything reading it before the first decision (a test, a
+        # viewer attaching mid-run) sees an empty dict rather than raising.
+        self._decision: dict[str, Any] = {}
         self._action_tries: dict[GameAction, int] = {}
         self._action_changes: dict[GameAction, int] = {}
         self._last_action: GameAction | None = None
@@ -151,11 +173,28 @@ class MyAgent(Agent):
         self.route.clear()
 
     def _reset_level(self) -> None:
-        """A new level is a new layout, so position-keyed knowledge dies."""
+        """A new level is a new layout, so position-keyed knowledge dies.
+
+        What survives is deliberately everything keyed by *action* rather
+        than by *place*: the move map (ACTION1 moves me up) and the
+        `acts_locally` signature describe the controller, which the game
+        does not rebuild between levels. Cell coordinates describe the
+        layout, which it does.
+
+        Two structures used to be missed here, both coordinate-keyed, so
+        the agent entered a new layout holding a map of a vanished one:
+        the per-cell click memory (wiped on the next death, so it
+        corrupted the first attempt of every level) and
+        `_interaction_sites`, which was never cleared at all for the whole
+        run. `clicks.reset_attempt()` is the right call rather than a
+        fresh ClickTargeting, because it keeps `acts_locally`.
+        """
         self.obstacles.clear()
         self.interest.clear()
         self.moves.reset_position()
         self.route.clear()
+        self.clicks.reset_attempt()
+        self._interaction_sites.clear()
         self._background = None
 
     @property
@@ -174,6 +213,9 @@ class MyAgent(Agent):
     ) -> GameAction:
         if latest_frame.state in (GameState.NOT_PLAYED, GameState.GAME_OVER):
             self._reset_attempt()
+            # Recording only: name this path so a viewer shows "reset"
+            # rather than an absent decision, which reads like a bug.
+            self._decision = {"tier": "reset", "candidates": []}
             return GameAction.RESET
 
         candidates = self._legal_actions(latest_frame)
@@ -208,7 +250,7 @@ class MyAgent(Agent):
         counts = perception.colour_counts(latest_frame)
         if self._background is None and counts:
             self._background = max(counts, key=counts.get)
-        self.meter.update(counts, self.game_id)
+        self.stamina.update(counts, self.game_id)
 
     def _learn_from(
         self, prev_frame: FrameData, latest_frame: FrameData
@@ -246,7 +288,7 @@ class MyAgent(Agent):
             moved[2] if moved else self.moves.learned_moves.get(action)
         )
         residual = perception.residual_cells(
-            prev_frame, latest_frame, changed, observed_offset, self.meter.meter_colour
+            prev_frame, latest_frame, changed, observed_offset, self.stamina.stamina_colour
         )
 
         # Two consumers, two different gates. As a *reward* the residual
@@ -364,6 +406,7 @@ class MyAgent(Agent):
         # drop blocked actions while alternatives remain, so we never end
         # up with nothing to pick.
         unblocked = [a for a in candidates if not self.obstacles.is_blocked(position, a)]
+        n_blocked = len(candidates) - len(unblocked)
         if unblocked:
             candidates = unblocked
 
@@ -377,11 +420,30 @@ class MyAgent(Agent):
 
         strong_route = self._maintain_route(candidates, moves, position)
 
+        # Which branch fired is recorded on every path. Without it an
+        # epsilon coin-flip and a deliberate weighted choice both surface
+        # as a bare "ACTION3", so a suspicious run cannot be diagnosed
+        # even with a perfect viewer: you cannot tell whether the agent
+        # decided or flipped a coin. Recording only; nothing reads it to
+        # make a decision, and no RNG call is added, so the action stream
+        # is byte-identical to before.
+        self._decision = {
+            "tier": None,
+            "candidates": [a.name for a in candidates],
+            "position": position,
+            "n_blocked": n_blocked,
+            "all_blocked": not unblocked,
+        }
+
         if random.random() < EXPLORATION_EPSILON:
+            self._decision["tier"] = "epsilon"
             action = random.choice(candidates)
         elif strong_route:
+            self._decision["tier"] = "route_strong"
             return self._take_route(position, moves, well_evidenced=True)
         elif novel:
+            self._decision["tier"] = "frontier"
+            self._decision["novel"] = [a.name for a in novel]
             action = random.choice(novel)
             action.reasoning = (
                 f"frontier: {action.name} moves {moves[action]} to unvisited "
@@ -391,8 +453,10 @@ class MyAgent(Agent):
             self._last_action = action
             return action
         elif self.route:
+            self._decision["tier"] = "route_weak"
             return self._take_route(position, moves, well_evidenced=False)
         else:
+            self._decision["tier"] = "weighted"
             action = self._weighted_choice(candidates)
 
         return self._finish(action, latest_frame)
@@ -487,6 +551,11 @@ class MyAgent(Agent):
             / (self._action_tries.get(a, 0) + 2)
             for a in candidates
         ]
+        # Recording only — the per-action weights are the whole content of
+        # this decision, and without them the choice is unreadable after
+        # the fact.
+        self._decision["weights"] = {a.name: round(w, 4)
+                                     for a, w in zip(candidates, weights)}
         return random.choices(candidates, weights=weights, k=1)[0]
 
     def _finish(self, action: GameAction, latest_frame: FrameData) -> GameAction:
@@ -502,13 +571,13 @@ class MyAgent(Agent):
             }
             self._last_click = (x, y)
         else:
-            budget = self.meter.budget_fraction
+            stamina = self.stamina.stamina_fraction
             action.reasoning = (
                 f"exploration: {action.name} "
                 f"tried={self._action_tries.get(action, 0)} "
                 f"changed={self._action_changes.get(action, 0)} "
                 f"level_ups={self._action_level_ups.get(action, 0)}"
-                + (f" budget={budget:.2f}" if budget is not None else "")
+                + (f" stamina={stamina:.2f}" if stamina is not None else "")
             )
             self._last_click = None
         self._last_action = action

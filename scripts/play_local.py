@@ -16,6 +16,7 @@ import importlib.util
 import json
 import logging
 import os
+import random
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -129,6 +130,11 @@ def main() -> None:
                    help="Per-game cap on actions (overrides MyAgent.MAX_ACTIONS).")
     p.add_argument("--list", action="store_true",
                    help="List available games and exit.")
+    p.add_argument("--seed", type=int, default=None,
+                   help="Seed the agent's RNG so the run is replayable. "
+                        "Omitted, a fresh seed is drawn and recorded in the "
+                        "sweep summary, so any run can be re-entered later "
+                        "with --seed <that value>.")
     p.add_argument("--render", default=None,
                    choices=[None, "terminal", "terminal-fast", "human"],
                    help="Optional rendering each step: 'terminal' (ANSI colors "
@@ -177,6 +183,13 @@ def main() -> None:
         # class default (80), so asking for a LARGER budget did nothing
         # and every "bigger budget" experiment secretly ran at 80.
         MyAgentCls.MAX_ACTIONS = args.max_steps
+    # Drawn once per sweep rather than per game, so one number reproduces
+    # the whole sweep; each game still offsets it by a stable digest of its
+    # id, so games explore independently.
+    seed = args.seed if args.seed is not None else random.SystemRandom().randrange(2**31)
+    if hasattr(MyAgentCls, "SEED"):
+        MyAgentCls.SEED = seed
+    print(f"Seed: {seed}   (replay this exact run with --seed {seed})")
 
     # Second-granularity alone is not unique: two sweeps running in parallel
     # (or one following another quickly) can land on the same second, and the
@@ -227,6 +240,7 @@ def main() -> None:
         completions = completion_indices(levels_seen)
         observed[game_id] = {
             "state": str(final.state),
+            "seed": getattr(agent, "seed", None),
             "levels_completed": final.levels_completed,
             "actions": agent.action_counter,
             "completion_action_indices": completions,
@@ -253,6 +267,7 @@ def main() -> None:
                 run_id=run_id,
                 max_steps=args.max_steps,
                 games=game_ids,
+                seed=seed,
                 observed=observed,
                 scorecard=scorecard,
                 aggregate_score=score_val,
