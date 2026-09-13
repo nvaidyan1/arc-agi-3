@@ -82,6 +82,27 @@ RECENT_DIFF_STEPS = 5
 MIN_MOVE_OBSERVATIONS = 3
 MOVE_MAJORITY = 0.6
 
+# One failed attempt is enough to call a move blocked: these games are
+# deterministic, so the same action from the same position gives the same
+# result. Keyed by position, so if the move-map itself is wrong the damage
+# is confined to that spot rather than disabling the action everywhere.
+BLOCKED_MIN_OBSERVATIONS = 1
+
+# A colour is treated as a rendered resource meter only if it shows the
+# sawtooth: it falls during an attempt and returns to the same starting
+# value on RESET. Decline alone is not enough — dc22 has a colour that
+# moves monotonically all run because the player is filling the board in,
+# which is progress, not budget.
+METER_MIN_ATTEMPTS = 1
+METER_DECLINE_RATIO = 5.0
+METER_START_TOLERANCE = 0.05
+# Guards against two false positives seen in testing: a 3-cell colour
+# oscillating (too small to be a meter), and a large background that
+# depletes as the board fills and refills on reset (it never empties,
+# whereas a real budget runs down to near zero before death).
+METER_MIN_SIZE = 8
+METER_MUST_EMPTY_TO = 0.25
+
 # How much a level-up outweighs a mere frame change when weighting actions.
 # Frame change is the dense signal (fires most steps, teaches "this action
 # does *something*"); a level-up is the sparse one that actually matches
@@ -120,6 +141,65 @@ class MyAgent(Agent):
         # (a property of the game, not of one attempt).
         self._action_offsets: dict[GameAction, dict[tuple[int, int], int]] = {}
         self._announced_moves: set[GameAction] = set()
+        # Where a known move failed to happen, keyed by (position, action):
+        # the environment layer — things that resist us. Survives RESET
+        # (the level restarts from the same origin, so displacements stay
+        # comparable) but is cleared on level change, since a new level is
+        # a new layout. Position-keyed on purpose: a real obstacle blocks
+        # at specific places, whereas a wrong move-map fails everywhere —
+        # so the shape of this map is also its own validation.
+        self._blocked_moves: dict[tuple[tuple[int, int], GameAction], int] = {}
+        self._move_attempts: dict[tuple[tuple[int, int], GameAction], int] = {}
+        self._map_level = 0
+        # Resource-meter detection. Per colour: the value it starts each
+        # attempt at, and how often it fell vs rose. Spans attempts by
+        # necessity — the sawtooth is only visible across a RESET.
+        self._meter_starts: dict[int, list[int]] = {}
+        self._meter_down: dict[int, int] = {}
+        self._meter_up: dict[int, int] = {}
+        self._colour_counts: dict[int, int] = {}
+        self._meter_peak: dict[int, int] = {}
+        self._meter_min: dict[int, int] = {}
+        self._announced_meter = False
+        self._reset_exploration_state()
+
+    @property
+    def meter_colour(self) -> int | None:
+        """The colour that behaves like a depleting budget, if any.
+
+        Requires the sawtooth: consistently falls during an attempt *and*
+        returns to the same starting value on RESET.
+        """
+        best, best_start = None, 0
+        for colour, starts in self._meter_starts.items():
+            if len(starts) < METER_MIN_ATTEMPTS:
+                continue
+            down, up = self._meter_down.get(colour, 0), self._meter_up.get(colour, 0)
+            if down < METER_DECLINE_RATIO * max(up, 1):
+                continue
+            mean_start = sum(starts) / len(starts)
+            if mean_start < METER_MIN_SIZE:
+                continue
+            # Must actually run down, not merely fluctuate.
+            if self._meter_min.get(colour, mean_start) > METER_MUST_EMPTY_TO * mean_start:
+                continue
+            spread = (max(starts) - min(starts)) / mean_start
+            if spread > METER_START_TOLERANCE:
+                continue
+            # Prefer the largest such meter — finer resolution.
+            if mean_start > best_start:
+                best, best_start = colour, mean_start
+        return best
+
+    @property
+    def budget_fraction(self) -> float | None:
+        """How much of the attempt's budget is left, 0-1, or None."""
+        colour = self.meter_colour
+        if colour is None:
+            return None
+        starts = self._meter_starts[colour]
+        full = sum(starts) / len(starts)
+        return max(0.0, min(1.0, self._colour_counts.get(colour, 0) / full))
         self._reset_exploration_state()
 
     @property
@@ -173,6 +253,9 @@ class MyAgent(Agent):
         # be read back from the frame itself).
         self._last_action: GameAction | None = None
         self._last_click: tuple[int, int] | None = None
+        # Set on the first frame of a fresh attempt, so colour counts seen
+        # then are recorded as that attempt's starting values.
+        self._attempt_started = False
         # Where the controlled shape has got to, relative to where this
         # attempt started, accumulated from observed translations — a
         # compact symbolic state derived from the learned move map. Reset
@@ -194,6 +277,7 @@ class MyAgent(Agent):
         # First call or after a death → reset the level.
         if latest_frame.state in (GameState.NOT_PLAYED, GameState.GAME_OVER):
             self._reset_exploration_state()
+            self._attempt_started = True
             return GameAction.RESET
 
         # Only consider actions the game currently says are legal.
@@ -213,9 +297,23 @@ class MyAgent(Agent):
         # ourselves rather than reading `latest_frame.action_input` — the
         # local framework's `_convert_raw_frame_data()` never populates
         # that field, it's always left at its default (RESET, no data).
+        self._track_meter(latest_frame)
+
+        # A new level is a new layout, so the obstacle map and our position
+        # origin no longer mean anything.
+        if latest_frame.levels_completed != self._map_level:
+            self._map_level = latest_frame.levels_completed
+            self._blocked_moves.clear()
+            self._move_attempts.clear()
+            self._displacement = (0, 0)
+            self._visited_displacements = {(0, 0)}
+
         if len(frames) >= 2 and self._last_action is not None:
             prev_frame = frames[-2]
             diff_cells = self._diff_cells(prev_frame, latest_frame)
+            # Position the last action was taken *from* — captured before
+            # a successful move updates _displacement below.
+            origin = self._displacement
 
             self._action_tries[self._last_action] = (
                 self._action_tries.get(self._last_action, 0) + 1
@@ -251,6 +349,23 @@ class MyAgent(Agent):
                             offset,
                         )
 
+            # Environment layer: an action with a known effect that failed
+            # to produce it. Deliberately covers both "nothing changed"
+            # and "something changed but the shape didn't move" —
+            # measured at 16% and 44% of predicted moves, and on ls20 the
+            # latter dominates (bump a wall, the shape stays put and a
+            # counter ticks), so treating only silence as blocked would
+            # miss most of it. Checked outside the `if diff_cells` branch
+            # for exactly that reason.
+            expected = self.learned_moves.get(self._last_action)
+            if expected is not None:
+                key = (origin, self._last_action)
+                self._move_attempts[key] = self._move_attempts.get(key, 0) + 1
+                if not self._expected_move_occurred(
+                    prev_frame, latest_frame, expected
+                ):
+                    self._blocked_moves[key] = self._blocked_moves.get(key, 0) + 1
+
             # The signal that actually matches what's scored: did that
             # action complete a level? Rare enough that we surface it
             # loudly rather than letting it vanish into the stats.
@@ -285,6 +400,13 @@ class MyAgent(Agent):
         # where a move map was actually learned, so non-spatial games are
         # unaffected.
         moves = self.learned_moves
+        # Don't spend budget walking into something we've already learned
+        # resists us here. Only drop blocked actions while alternatives
+        # remain, so we never end up with nothing to pick.
+        unblocked = [a for a in candidate_actions if not self._is_blocked(a)]
+        if unblocked:
+            candidate_actions = unblocked
+
         novel_moves = [
             a
             for a in candidate_actions
@@ -340,13 +462,99 @@ class MyAgent(Agent):
             tries = self._action_tries.get(action, 0)
             changes = self._action_changes.get(action, 0)
             level_ups = self._action_level_ups.get(action, 0)
+            budget = self.budget_fraction
             action.reasoning = (
                 f"exploration: {action.name} tried={tries} "
                 f"changed={changes} level_ups={level_ups}"
+                + (f" budget={budget:.2f}" if budget is not None else "")
             )
             self._last_click = None
         self._last_action = action
         return action
+
+    @staticmethod
+    def _expected_move_occurred(
+        prev_frame: FrameData, latest_frame: FrameData, offset: tuple[int, int]
+    ) -> bool:
+        """Did *any* coloured component shift by exactly `offset`?
+
+        Deliberately weaker than `_detect_translation`, which demands the
+        entire diff be that one translation. Measured: the strict test
+        misses ~4% of real moves (because something else changed in the
+        same step), and every one of those would otherwise be recorded as
+        a false obstacle.
+        """
+        if not prev_frame.frame or not latest_frame.frame:
+            return False
+        dx, dy = offset
+        lost: dict[int, set[tuple[int, int]]] = {}
+        gained: dict[int, set[tuple[int, int]]] = {}
+        for y, (prev_row, latest_row) in enumerate(
+            zip(prev_frame.frame[-1], latest_frame.frame[-1])
+        ):
+            for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
+                if prev_val != latest_val:
+                    lost.setdefault(prev_val, set()).add((x, y))
+                    gained.setdefault(latest_val, set()).add((x, y))
+        for color, source in lost.items():
+            target = gained.get(color)
+            if target and any((x + dx, y + dy) in target for x, y in source):
+                return True
+        return False
+
+    def _track_meter(self, latest_frame: FrameData) -> None:
+        """Update per-colour cell counts and the rise/fall tallies."""
+        if not latest_frame.frame:
+            return
+        counts: dict[int, int] = {}
+        for row in latest_frame.frame[-1]:
+            for value in row:
+                counts[value] = counts.get(value, 0) + 1
+
+        # Look for the sawtooth in the series itself rather than keying off
+        # our own RESET: ls20 refills its meter internally (per life), with
+        # no GAME_OVER, so refills tied to RESET would never be seen.
+        for colour in set(counts) | set(self._colour_counts):
+            n = counts.get(colour, 0)
+            previous = self._colour_counts.get(colour)
+            if previous is None:
+                continue
+            peak = self._meter_peak.get(colour, previous)
+            self._meter_peak[colour] = max(peak, n)
+            self._meter_min[colour] = min(self._meter_min.get(colour, n), n)
+            if n < previous:
+                self._meter_down[colour] = self._meter_down.get(colour, 0) + 1
+            elif n > previous:
+                # A jump back up to near the observed peak is a refill —
+                # the second half of the sawtooth. Anything smaller is
+                # ordinary gameplay noise.
+                if peak and (n - previous) >= 0.5 * peak:
+                    self._meter_starts.setdefault(colour, []).append(n)
+                else:
+                    self._meter_up[colour] = self._meter_up.get(colour, 0) + 1
+
+        # Keep zeros rather than dropping absent colours: a meter that
+        # empties disappears from the histogram, and forgetting it here
+        # would make the refill that follows look like a first sighting.
+        self._colour_counts = {
+            colour: counts.get(colour, 0)
+            for colour in set(counts) | set(self._colour_counts)
+        }
+
+        if not self._announced_meter and self.meter_colour is not None:
+            self._announced_meter = True
+            colour = self.meter_colour
+            logger.info(
+                "METER on %s: colour %d starts at ~%d each attempt and depletes",
+                self.game_id,
+                colour,
+                sum(self._meter_starts[colour]) / len(self._meter_starts[colour]),
+            )
+
+    def _is_blocked(self, action: GameAction) -> bool:
+        """Is this action known not to work from where we currently are?"""
+        key = (self._displacement, action)
+        return self._blocked_moves.get(key, 0) >= BLOCKED_MIN_OBSERVATIONS
 
     @staticmethod
     def _detect_translation(
@@ -371,7 +579,7 @@ class MyAgent(Agent):
         lost: dict[int, set[tuple[int, int]]] = {}
         gained: dict[int, set[tuple[int, int]]] = {}
         for y, (prev_row, latest_row) in enumerate(
-            zip(prev_frame.frame[0], latest_frame.frame[0])
+            zip(prev_frame.frame[-1], latest_frame.frame[-1])
         ):
             for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
                 if prev_val != latest_val:
@@ -394,14 +602,20 @@ class MyAgent(Agent):
     def _diff_cells(
         prev_frame: FrameData, latest_frame: FrameData
     ) -> list[tuple[int, int]]:
-        """(x, y) cells that differ between two frames' first layer.
+        """(x, y) cells that differ between two frames' settled state.
 
-        Only layer 0 is compared — same simplification `_pick_coordinate`
-        already made when picking click targets.
+        `FrameData.frame` is NOT a stack of spatial layers — it's the
+        animation sub-frames produced *within* one action (the engine
+        loops step()+render until the action completes). So `frame[-1]`
+        is the settled state the action produced and `frame[0]` is
+        mid-animation. Measured: only ~10% of steps animate at all, but
+        on a heavily animated game (tu93, 61% of steps) reading frame[0]
+        drops move-map consistency to 21-29% versus 43-64% for frame[-1],
+        because it compares windows offset by a partial action.
         """
         if not prev_frame.frame or not latest_frame.frame:
             return []
-        prev_grid, latest_grid = prev_frame.frame[0], latest_frame.frame[0]
+        prev_grid, latest_grid = prev_frame.frame[-1], latest_frame.frame[-1]
         return [
             (x, y)
             for y, (prev_row, latest_row) in enumerate(zip(prev_grid, latest_grid))
@@ -434,7 +648,7 @@ class MyAgent(Agent):
         if not latest_frame.frame:
             return random.randint(0, 63), random.randint(0, 63), "no frame yet"
 
-        grid = latest_frame.frame[0]
+        grid = latest_frame.frame[-1]
         counts: dict[int, int] = {}
         for row in grid:
             for value in row:

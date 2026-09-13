@@ -67,19 +67,55 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       (ACTION1-4 → up/down/left/right at a 5px stride, 122/122
       consistent). Correctly *refuses* to learn genuinely ambiguous
       actions (m0r0 ACTION1: 15x one way, 13x the other).
+- [x] **settled-frame reading** — `frame` is animation sub-frames within
+      one action, not spatial layers; all signals now read `frame[-1]`
+      (the settled state) rather than `frame[0]` (mid-animation).
+- [ ] **recolour + cardinality change types** — translation covers only
+      31% of real transitions; recolour-in-place is 53% and
+      cardinality-change 16%. Cardinality likely also renders the
+      step/lives counters, so detecting it may give budget-awareness.
+- [ ] **translation as a *component*** — `_detect_translation` still
+      requires the whole diff to be one displacement (measured cost: 4%).
+      `_expected_move_occurred` already does the component test for
+      blocked-move detection; generalising it would let the three change
+      types coexist. Low priority given the measured 4%.
+- [x] **what changes when a move is blocked** — answered: both, by game.
+      ls20/dc22 render a resource meter (fixed row, fixed transition,
+      y-spread 0.0); wa30 shows interactions instead. Led to the meter
+      detector below.
+- [x] **budget awareness** — `meter_colour` / `budget_fraction` detect a
+      rendered budget via its sawtooth (declines, then refills to a
+      recurring max). Correctly rejects dc22's fill-progress colour, which
+      declines but never refills. Fires on ~9 of 25 games. ls20: 84 units
+      at 2/action = 42 actions per attempt.
+- [ ] **use of the budget signal** — deliberately NOT wired to behaviour:
+      measured cost per action is flat (ls20 1.94-2.00 for every action),
+      so cost-aware selection gains nothing. Needs a goal to be useful —
+      knowing time is short only helps if there is something to rush
+      toward.
+- [ ] **interactions (wa30-style)** — the non-meter half of the 44%:
+      blocked moves whose change tracks our position. This is the
+      remaining route to "thing I affect".
+- [x] **environment / blocked-move detection** — a learned move that
+      fails = something resists us, keyed by (position, action). Built
+      *before* robustness after measuring the strictness flaw at only 4%.
+      Validated by determinism: "mixed" outcomes per (position, action)
+      are ~0, and each action is blocked at a minority of positions —
+      obstacle signature, not model error. Cuts wasted moves (ls20
+      63%→21%) and raises coverage (+27-56% on 4 of 5 games). No score
+      change.
 - [ ] **thing I affect** — cluster that changes conditionally/indirectly.
       Partially visible already (`acts_locally`, and vc33 occasionally
       learning that a click displaces something by (-4,0)), but not yet
       separated from "thing I control" as its own concept.
 - [ ] **environment** — changes independent of action, or never changes
 
-- [ ] **Budget awareness** — death is resource exhaustion, so the finite
-      per-attempt budget is the binding constraint and the policy is
-      currently blind to it. Not yet started.
-- [ ] **First level-up** — nothing has ever completed a level, so the
-      sparse signal above is inert until something does. This is the real
-      blocker on a non-zero score; the layered reward is the scaffolding
-      that makes any first success compound rather than be forgotten.
+
+- [ ] **Reliable level-ups** — two have occurred spontaneously (vc33 once,
+      sp80 once), each non-reproducible on retest (0/6 and 0/8). So levels
+      are *reachable by chance* but the hit rate is far too low to score.
+      The problem is hit-rate, not reachability — which is a more tractable
+      framing than "nothing ever works."
 
 ## Tooling
 

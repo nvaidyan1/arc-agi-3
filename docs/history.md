@@ -1,345 +1,339 @@
 # History
 
-A dated log of what's been done and why, including how AI assistance was
-used at each step. Kept honestly, not retroactively cleaned up — the ARC
-Prize Foundation's Paper Prize track and the Grand Prize's "Solution
-Writeup" criteria reward transparent, genuine methodological contribution
-over an unexplained leaderboard number, so however AI is used in building
-this, it should show up here plainly.
+Notable findings — successes and failures both — as terse structured
+entries: **hypothesis / motivation / observation / inference**, plus
+context where it's load-bearing. Doubles as planning context for later
+sessions, and feeds an eventual writeup where the ARC Prize Paper Prize
+and Solution Writeup criteria explicitly reward transparency. Keep the
+unflattering samples; a log of only what worked is worse than none.
 
-Entries are append-only; append a new one per work session, don't edit old
-entries except to fix factual errors.
+Entries are append-only apart from restructuring passes. Built with
+Claude Code throughout; direction, strategy calls, and all commits and
+submissions are the user's.
 
 ---
 
-## 2026-09-13 — Environment setup and repo bootstrap
+## 2026-09-13 — Setup
 
-Worked with Claude Code (Sonnet 5) to go from a fresh clone to a working
-local dev loop. Claude: installed Python 3.12 via Homebrew (missing on this
-machine), ran `make setup` (venv, deps, framework clone), created the
-project-local `.kaggle/access_token` file from a token the user provided
-directly in chat, and verified `make verify-local` passes. Claude also
-renamed the original `origin` remote to `upstream` and added a new `origin`
-pointing at a GitHub repo the user created and asked to be used
-(`github.com/nvaidyan1/arc-agi-3`), then pushed. The user set explicit
-ground rules up front: never run `make submit` / touch Kaggle submissions
-autonomously (5-per-day budget, user-only), and never commit without being
-asked.
+**Context.** Python 3.12 + venv + framework clone + project-local Kaggle
+token. `origin` → `nvaidyan1/arc-agi-3`, arcprize starter kept as
+`upstream`. Standing rules set by the user: no autonomous commits or
+pushes, and Kaggle submissions (5/day cap) are user-only.
 
-## 2026-09-13 — Game mechanics orientation
+## 2026-09-13 — Environment facts
 
-User asked introductory questions about the action/observation space
-(action count, grid size, pixel depth) after watching the random-baseline
-agent play. Claude answered by reading the actual `arcengine`/`arc_agi`
-source (not guessing or relying on prior knowledge) via a research
-sub-agent, confirming: 8 actions (`RESET`, `ACTION1`-`5`, `ACTION7` simple,
-`ACTION6` complex with `x,y` in `0-63`), 64×64 frames, values 0-15 (16-color
-palette), and the 4-value `GameState` enum. This was folded into
-`README.md` under "Game mechanics reference" (an earlier draft lived in a
-separate `docs/game-mechanics.md`, moved into the README per the user's
-call that a separate file would go stale before submission).
+**Motivation.** Ground truth on the action/observation space before
+designing anything.
 
-## 2026-09-13 — First non-random agent strategy
+**Observation** (read from `arcengine`/`arc_agi`, not assumed): 8 actions
+— `RESET`, `ACTION1-5`/`ACTION7` simple, `ACTION6` complex with `x,y` in
+0-63. Frames are lists of 64×64 layers, values 0-15. `GameState` has
+exactly 4 values. Each frame reports `available_actions`, and games expose
+only a *subset* (ls20 `[1,2,3,4]`, vc33 `[6]`).
 
-User chose, from four options Claude proposed (generic exploration
-heuristic / per-game hardcoding / model-based-learning / minimal
-non-zero-score patch), the **generic exploration heuristic** direction —
-explicitly to match the competition's stated generalization goal rather
-than overfitting to the ~25 locally-visible games. Claude implemented it in
-`agent/my_agent.py`:
-- filter candidate actions to `latest_frame.available_actions` (discovered
-  mid-implementation that games declare a legal-action subset, e.g. `ls20`
-  → `[1,2,3,4]`, `vc33` → `[6]` — this wasn't known going in),
-- an epsilon-greedy bandit over "does this action change the frame",
-- salience-based coordinate picking for the complex click action.
+**Inference.** Acting outside `available_actions` is pure waste — became
+the first agent change (affordance filtering).
 
-Verified locally: ran against all 25 games with `make play-local
---max-steps 30`, no exceptions, `ls20` confirmed to only ever pick from
-`ACTION1`-`4` as expected. Score remains 0.0 (expected — exploration alone
-doesn't solve levels). Not committed yet; user reviews and commits
-explicitly.
+## 2026-09-13 — Council review of a proposed 4-layer architecture
 
-Also added `RENDER=terminal` / `RENDER=human` / `RENDER=terminal-fast`
-support to `scripts/play_local.py` and the `Makefile` — the underlying
-`arc_agi` package already shipped these renderers but the local script only
-exposed one of them.
+**Hypothesis reviewed.** Object extractor (connected components) → world
+model → A*/planner → verification harness, with an LLM fallback for
+transition-rule synthesis.
 
-## 2026-09-13 — Council review of a brainstormed architecture, then frame-diff + logging
+**Motivation.** Distil a large design into the single most economic next
+step rather than build it wholesale.
 
-User brought a substantial brainstormed 4-layer architecture (Object
-Extractor / Perception → Epistemic World Model → Planner/Search Arbiter →
-Verification Harness — connected-component object segmentation, a
-"Controllable_Agent" tracker, convex-hull frontier probing, A* search over
-an inferred simulator, LLM-based transition-rule synthesis as fallback)
-and asked for it to be checked and distilled into "the economic next
-action — a single small step in a vector that attains max increase in
-accuracy," rather than implemented wholesale.
+**Observation.** Three independent review passes (feasibility, ROI,
+generalization-fit), each blind to the others. Feasibility found two
+factual errors: `GameAction.UNDO` doesn't exist, and `scipy` isn't
+installed or transitively available. Generalization-fit rated
+connected-component objects, a single "controllable agent" assumption,
+and convex-hull frontier probing all RISKY; LLM rule-synthesis
+CONDITIONAL (acceptable only as a per-episode hypothesis, never cached
+across games).
 
-Claude ran three independent review passes in parallel (as background
-sub-agents, each given only the proposal and repo context, not each
-other's output) before synthesizing a recommendation:
-1. **Technical feasibility** — checked the proposal's concrete claims
-   against the actual installed packages and framework source. Found two
-   factual errors (`GameAction.UNDO` doesn't exist — 8 real members:
-   `RESET`, `ACTION1`-`7`; `scipy` isn't installed or transitively
-   available) and confirmed no object-tracking state existed yet in
-   `agent/my_agent.py` to extend.
-2. **ROI/incrementalism** — ranked which single piece would most plausibly
-   help with least effort/risk given the agent is still exploration-only
-   at 0.0 score. Flagged full object extraction and the search/synthesis
-   layer as premature, and recommended a minimal cell-level diff signal
-   instead (see below).
-3. **Generalization-fit** — evaluated purely on "does this transfer to
-   hidden games the competition actually scores on, or does it overfit to
-   assumptions about the ~25 visible games." Rated connected-component
-   objects, a single controllable-agent assumption, and convex-hull
-   frontier probing all RISKY (each bakes in a representational
-   assumption — contiguous-color objects, one avatar, 2D navigability —
-   that a hidden game could simply not have, in which case the technique
-   doesn't just underperform, it actively misleads downstream logic).
-   Rated LLM-synthesized transition rules CONDITIONAL: fine only as a
-   per-episode, verified/discarded hypothesis, never cached or reused
-   across games (that crosses into the per-game memorization the
-   competition's stated eval philosophy is explicitly designed against).
+**Inference.** Each RISKY item bakes in a representational assumption
+(objects are colour blobs / there is one avatar / space is navigable)
+that a hidden game can violate — and when violated it produces a *wrong
+ontology* corrupting every layer above it, which is worse than being
+merely unhelpful. Deferred; picked a cell-level diff signal instead. Full
+list in `plan.md` "On hold".
 
-Full reasoning and the "on hold" list (nothing rejected permanently, just
-sequenced behind having an actual object/goal signal) is in `plan.md`.
+## 2026-09-13 — Frame-diff signal, and a framework gap
 
-Chosen next action, implemented in `agent/my_agent.py`: a **frame-diff
-signal** — track which `(x, y)` cells changed between frames (not just a
-boolean), use recently-changed cells to target the coordinate-click
-action ahead of the previous "non-background color" heuristic, and track
-a per-region (8x8 coarse buckets) dead-click counter so regions that
-absorb clicks with zero effect get avoided. No new dependencies, no
-object model, no per-game logic. While implementing, found and fixed a
-real bug in the initial draft: `FrameData.action_input` — which the plan
-assumed could be read to recover "what action produced this frame" — is
-never actually populated by the local framework's
-`_convert_raw_frame_data()` (always left at its default, `RESET`/empty
-data); switched to the agent tracking its own last action/click as
-instance state instead. Verified via a traced run against `vc33`
-(ACTION6-only game): click targeting visibly converges from
-"non-background cell" to "recently active + non-background cell" within
-2 steps, and clusters into a handful of live regions. Full 25-game sweep
-still passes with no exceptions; score remains 0.0 as expected (this is
-an exploration-quality improvement, not a solving capability).
+**Hypothesis.** Keeping *which* cells changed (not just whether any did)
+gives enough signal to target the click action usefully.
 
-Also added per-step JSON logging to `scripts/play_local.py`
-(`recordings/<run-timestamp>/<game_id>.jsonl`, one line per step with
-action/reasoning/prev-diff-count), on by default, after the user noted
-that watching `RENDER=terminal` live is impractical for actual debugging.
-Deliberately did not use the framework's built-in `record=True` option —
-discovered it has the same `action_input`-never-populated gap, so it logs
-raw frames but not which action was taken or why, which is the part
-actually needed for debugging agent decisions.
+**Observation.** Works — click targeting converged from scattershot to a
+few live regions within ~2 steps on vc33. Separately:
+`FrameData.action_input` is **never populated** locally
+(`_convert_raw_frame_data()` omits it), so "which action produced this
+frame" cannot be read back from the frame.
 
-## 2026-09-13 — Naming convention, checklist plan, and a Go-Explore build that was reverted
+**Inference.** The agent must track its own last action/click. The same
+gap makes the framework's built-in `record=True` recorder near-useless
+for debugging (logs raw frames, not decisions) — wrote per-step JSON
+logging into `play_local.py` instead.
 
-Three process changes at the user's request: (a) name features after
-existing cognitive-science/ML/RL concepts rather than ad-hoc descriptions,
-so the work stays legible as history grows and is easier to describe to
-others — established `glossary.md` and retroactively named what already
-existed (affordance / contingency detection / salience map / habituation /
-epsilon-greedy); (b) restructured `plan.md` into a checklist; (c) the user
-raised, and deliberately shelved, a deeper idea of restructuring variables
-into a cognition-mapped namespace (`memory.last_action`), judging it a net
-loss against plain readable Python — recorded in `plan.md` under "Shelved
-ideas" rather than acted on.
+## 2026-09-13 — Go-Explore trajectory replay: built and reverted
 
-The user also asked that "compact symbolic modeling" — converting raw
-observations into a compact domain-specific symbolic state representation
-and planning over that rather than over raw pixels — inform the planning
-philosophy going forward. Treated as directionally useful (and see below:
-the session's own findings independently point the same way).
+**Hypothesis.** Remember the longest-surviving attempt's action sequence,
+replay it after RESET to return to that frontier, then explore onward.
 
-Then: implemented Go-Explore trajectory replay (remember the
-longest-surviving attempt's action sequence, replay it after a RESET to
-return to that frontier, then explore onward), tested it, and **reverted
-it the same session**. The sequence of findings:
-1. First test showed replay reproducing the previous attempt's death
-   exactly — the saved trajectory ended *with* the fatal action, so
-   deterministic replay deterministically re-died. Fixed by trimming the
-   last action.
-2. Retest showed attempts plateauing at exactly 130 actions on ls20 over
-   15 resets, never improving. Checked four more games: same pattern at
-   different fixed values (vc33 50, sc25 57, dc22 128, m0r0 151).
-3. That pattern prompted reading the engine and game sources rather than
-   assuming skill-limited deaths. Found that `lose()` is triggered by
-   *resource exhaustion* (vc33: `current_steps` budget; ls20: a lives
-   counter), and — decisively — that `GAME_OVER` routes to
-   `level_reset()`, not `full_reset()`, which **preserves `_score` /
-   `levels_completed` and keeps the current level**.
+**Observation.** Attempts plateaued at a fixed per-game length (ls20 130,
+dc22 128, m0r0 151, sc25 57, vc33 50) across up to 15 resets, never
+improving. Engine source: `lose()` fires on *resource exhaustion* (vc33
+step budget, ls20 lives counter), and `GAME_OVER` routes to
+`level_reset()` — not `full_reset()` — which **preserves `_score` /
+`levels_completed` and keeps the current level**.
 
-So the engine already checkpoints level progress for free (no frontier to
-return to), and since a saved trajectory is by construction a losing run,
-replaying it spends the new attempt's entire finite budget to arrive back
-at a losing position — net-harmful, not merely redundant. Removed it.
-Kept: the finding that `levels_completed` is the only real progress signal
-and per-attempt budget is the binding constraint, which reframes the next
-step and points toward representing state compactly enough to make
-budget-aware, state-dependent decisions, rather than the current
-state-agnostic per-action statistics.
+**Inference.** Premise invalid. The engine already checkpoints level
+progress, so there is no frontier to return to; and a saved trajectory is
+by construction a *losing* run, so replaying it spends the new attempt's
+finite budget to arrive back at a losing position. Net-harmful, not
+merely redundant. Reverted.
 
-Noting the reversal plainly because a log that only records things that
-worked would misrepresent how the work actually went.
+**Kept.** `levels_completed` is the only true progress signal;
+per-attempt budget is the binding constraint.
 
-## 2026-09-13 — Layered reward signal (frame-change + level-ups)
+## 2026-09-13 — Layered reward signal
 
-Following the Go-Explore reversal, the obvious correction was to make the
-policy aware of `levels_completed` — the signal that actually matches the
-competition score. The user pushed back on framing it as a replacement:
-frame-change is a good signal and shouldn't be removed. That was right,
-and it's why the implementation layers rather than swaps. Frame-change is
-the *dense* signal (fires most steps, so the policy keeps learning during
-the long stretches where nothing is being scored); level-ups are *sparse*
-but weighted 20x so they dominate whenever they fire.
+**Hypothesis.** Weight actions by `levels_completed` (what's scored),
+*added to* rather than replacing frame-change — the user's correction,
+since the dense signal is what keeps the policy learning during the long
+stretches where nothing is scored.
 
-One deliberate asymmetry: level-up credit persists across RESETs while
-frame-change stats stay per-attempt. Level-ups are far too rare to afford
-forgetting, and which action makes progress is a property of the game
-rather than of a single attempt — whereas frame-change stats can go stale
-when a fresh level behaves differently.
+**Observation.** No run has ever produced a level-up, so the path was
+untestable by play. Verified with synthetic `FrameData`: credit lands on
+the right action, survives RESET while per-attempt stats wipe, and shifts
+selection to ~74% (residual ~26% = the epsilon floor).
 
-Testing note worth recording: no run has ever produced a level-up, so this
-entire code path would have shipped untested if verified only by playing.
-Tested it instead with synthetic `FrameData` — confirming credit lands on
-the correct action, is logged loudly rather than buried, survives a RESET
-while frame-change stats correctly wipe, and shifts selection to ~74% for
-the rewarded action (the residual ~26% matching the epsilon-greedy floor).
-Full 25-game sweep then re-run clean; score still 0.0.
-
-Honest status: this change is *inert* until something completes a level
-for the first time. It is scaffolding, not a score improvement — it makes
-a first success compound instead of being forgotten, but does not by
-itself make that success more likely. Recorded plainly rather than
-presented as progress.
+**Inference.** Correct but **inert** until a first level completion
+exists. Scaffolding that makes a first success compound — not itself a
+score improvement.
 
 ## 2026-09-13 — Contingency awareness as the representation layer
 
-The user asked a representation-side question the memory-side work had
-been sidestepping: do we have any mechanism to distinguish
-pixel > object > the thing I control > the thing I affect? Explicitly
-*without* importing a 3D/spatial connotation that would pigeonhole every
-task.
+**Motivation.** User asked whether we can distinguish
+pixel > object > thing I control > thing I affect, explicitly *without*
+importing a 3D/spatial connotation that would pigeonhole every task.
+Answer at the time: no — we had pixels and change, and discarded the rest.
 
-Honest answer at the time: no. We had pixels and change-detection, and we
-were discarding the rest — `_recent_diffs` kept a 5-step window, flattened
-into an undifferentiated bag of cells, with no record of which action
-caused which diff. Per action, everything collapsed to one scalar.
+**Hypothesis.** Define each layer by **contingency, not appearance**.
+(This rescues the object concept the council rejected: what was rejected
+was the *visual* definition — colour blobs — not the idea.) Object =
+cells that change together (Gestalt common fate); controlled = change
+immediately contingent on action; affected = conditional/indirect;
+environment = independent of action.
 
-The framing adopted: **define each layer by contingency, not by
-appearance.** This matters because the earlier generalization review
-rejected connected-component objects as RISKY — but it rejected the
-*visual* definition ("object = contiguous same-colored blob"), not the
-concept. A statistical definition carries no spatial commitment:
-- **object** = cells that reliably change together (Gestalt *common
-  fate* — grouping by shared change, not shared appearance)
-- **thing I control** = a cluster whose change is immediate and reliably
-  contingent on the action chosen
-- **thing I affect** = a cluster that changes conditionally/indirectly
-- **environment** = changes independent of action, or never changes
+**Observation.** Instrumented `ACTION6` across three games — three
+distinct click semantics, zero game-specific code: ft09 94 local/0 remote,
+diff exactly 38 every time (paints at the cursor); vc33 0 local/117
+remote, 1-2 cells; tn36 0 local/118 remote, exactly 1. Also ~50% of clicks
+were exact repeats, and 8×8 region habituation over-generalized
+(blacklisting 64 cells after 3 duds).
 
-This fails gracefully in a way the blob-ontology does not: if nothing
-turns out contingent, you learn "nothing here is directly controllable,"
-which is true information rather than a corrupted ontology poisoning
-every downstream layer.
+**Inference.** Replaced region habituation with per-cell click memory.
+More significantly, `acts_locally=False` exposed a category error: when
+clicks change something *elsewhere*, the changed cells are the effect, not
+the cause, so targeting them is wrong. Targeting is now conditional on the
+signature — repeat waste fell from ~50% to 1-3%.
 
-The user made an important correction worth recording: having actually
-*played* two of the games, they have direct evidence that for a subset of
-games the 2D object-movement analogy is not merely useful but necessary,
-and that the emergent analogy of object must eventually be brought about.
-Agreed, with the sequencing being the point — spatial structure as a
-*derived destination* rather than an assumed prior. For spatially
-organized games, cells that change together will turn out to be
-contiguous and to translate coherently; the 2D reading then emerges from
-data, available where it's real without being imposed where it isn't.
+**Context.** User noted, from having actually *played* the games, that the
+2D object-movement analogy is necessary for a subset of them. Agreed, with
+sequencing as the point: spatial structure as a *derived destination*, not
+an assumed prior.
 
-First concrete step, measured before being coded. Instrumented ACTION6
-across three games:
-- **ft09**: 94 local / 0 remote, diff size exactly 38 every time → click
-  paints a 38-cell object at the cursor
-- **vc33**: 0 local / 117 remote, diff 1-2 cells
-- **tn36**: 0 local / 118 remote, diff exactly 1 every time
+## 2026-09-13 — Object and control layers via translation detection
 
-Three completely different click semantics, derived with zero
-game-specific code. The measurement also exposed waste: ~50% of clicks
-were exact repeats of already-clicked cells, against a finite budget; and
-the 8x8 region habituation was over-generalizing (blacklisting 64 cells
-after 3 duds could rule out the one productive cell in a block).
+**Hypothesis.** Test the specific question "is this change one coloured
+shape displaced by a single offset?" — stronger than generic co-change
+grouping, and yields two layers at once (the object, plus the action→effect
+map when displacement correlates with an action). Critically a *test*: it
+returns nothing when it doesn't hold.
 
-Changes: replaced coarse region habituation with per-cell click memory
-(prefer never-clicked cells, skip cells that absorbed a click with no
-effect), and recorded the local/remote signature as `acts_locally`,
-persisted across RESETs since it describes the game rather than the
-attempt.
+**Observation.** ls20: a complete noise-free directional map —
+`ACTION1(0,-5) ACTION2(0,+5) ACTION3(-5,0) ACTION4(+5,0)`, 122
+observations, zero disagreement; the 5px stride also reveals the game's
+logical cell size. Fires on **14 of 25 games**. Silent on vc33/ft09/tn36.
+Correctly *declined* to learn m0r0's ACTION1 (15× one way, 13× the other).
 
-Then the representation did its first real work. Per-cell memory alone
-barely helped vc33/tn36 (53%->45%, 52%->48%) because every click there
-produces *some* effect, so habituation never fires, and the
-"recently-active" tier is a couple of cells that are all already clicked.
-`acts_locally=False` explains why that heuristic was wrong there: when
-clicking changes something *elsewhere*, the cells that changed are the
-effect, not the cause, so aiming at them is a category error. Made
-targeting conditional on the signature — cover new ground when clicks act
-at a distance. Repeat rate then fell to 1% / 3% / 0%.
+**Inference.** The 2D object reading is real for most of this set and was
+*derived* rather than imposed; silence on the rest is the graceful-failure
+property working, not a gap. Refusal on ambiguous actions suggests some
+are context-dependent — which a state-agnostic model cannot represent.
 
-Status: this is a real efficiency win (budget no longer burned on
-duplicate clicks) but **not** a score win — still 0.0, no level completed
-anywhere. One honest tradeoff: vc33's total cells-changed dropped (~150
-to 23) under broader coverage, so "less repetition" is not automatically
-"more effect" there. Recorded rather than glossed.
+**Retraction.** One vc33 run returned `levels_completed=1`, the first
+non-zero progress all session, and was nearly reported as a win.
+Re-running vc33 six times: **0/6**. A fluke; the accompanying
+`ACTION6 → (-4,0)` mapping appeared in only 1 of 6 runs. Score remains 0.0
+everywhere.
 
-## 2026-09-13 — Object and control layers, derived from translation detection
+**Caveat, untuned.** `MIN_MOVE_OBSERVATIONS = 3` is low enough that short
+runs lock in premature mappings (at 40 steps dc22 "learned" both ACTION3
+and ACTION4 as `(2,0)`). Acceptable while diagnostic; must rise before
+anything plans on it.
 
-Next feature off the representation roadmap: the object layer. Design
-choice that paid off — rather than grouping co-changing cells generically,
-test the stronger and more specific hypothesis that a frame change is
-*one coloured shape displaced by a single offset*. That yields two
-roadmap layers at once: an object (the shape) and, when the displacement
-correlates with an action, the thing we control plus what that action
-does to it. Crucially it is a *test*, not an assumption: when the change
-isn't a translation, `_detect_translation` returns None and nothing
-downstream is polluted.
+**Status.** Representation layers reproducible; their behavioural use
+(exploring the controlled shape's derived position space) is principled
+but **unproven** — no demonstrated score effect.
 
-Results, all derived from pixels with no game-specific code:
-- **ls20**: a complete, noise-free directional map — ACTION1 (0,-5),
-  ACTION2 (0,+5), ACTION3 (-5,0), ACTION4 (+5,0), 122 observations with
-  zero disagreement. The 5px stride also reveals the game's logical cell
-  size.
-- **Fires on 14 of 25 games.** That is direct evidence for the user's
-  earlier point (made from having actually played the games) that the 2D
-  object-movement analogy is necessary for a substantial subset — and it
-  arrived as an emergent finding rather than a prior.
-- **Silent on vc33 / ft09 / tn36** — the graceful-failure property
-  working as intended, not a gap. ft09's 38-cell change is a recolour,
-  not a move.
-- **Refuses to learn ambiguous actions**: m0r0 ACTION1 was 15x (0,5) vs
-  13x (0,-5), and the majority rule correctly declined rather than
-  inventing a mapping. Likely a context-dependent action that a
-  state-agnostic model cannot pin down — which is itself informative.
+## 2026-09-13 — Change-space audit, and the sub-frame question settled
 
-Then made the representation behavioural rather than merely
-observational: accumulate the controlled shape's displacement from
-observed translations, and prefer actions predicted to land it somewhere
-this attempt hasn't been. This is count-based exploration over a *derived
-symbolic state* (position) instead of over raw frames — the compact
-symbolic modelling idea, reached bottom-up.
+**Hypothesis.** Before building prediction-error detection on top of
+translation, check whether the change vocabulary covers what games do.
 
-**A retraction worth recording.** One vc33 run returned
-`levels_completed=1` — the first non-zero progress all session — and it
-was nearly reported as a win. Re-running vc33 six times gave 0/6. It was
-a fluke, not a result, and the `ACTION6 -> (-4,0)` mapping that
-accompanied it was itself only learned in 1 of 6 runs. Score remains 0.0
-everywhere. Recording this because the temptation to report the lucky run
-was real, and a log that captures only the flattering sample is worse
-than useless for a writeup.
+**Observation.** Classifying 533 transitions across 8 games: three
+categories explain 99%, but translation — the only one implemented — is
+just **31%**. Recolour-in-place is **53%** (vc33 97%), cardinality-change
+(grow/appear/vanish) **16%** (ft09 98%). `available_actions` never
+changed in any run, so it carries no signal.
 
-Known caveat, untuned: MIN_MOVE_OBSERVATIONS=3 is low enough that short
-runs can lock in a premature mapping (at 40 steps, dc22 learned both
-ACTION3 and ACTION4 as (2,0), which is likely under-sampling rather than
-truth). Fine while this is diagnostic; needs raising before anything
-plans on it.
+**Inference.** We model roughly a third of what happens. Recolour and
+cardinality are the missing categories; cardinality likely also renders
+the step/lives counters, so reading it could yield budget-awareness.
 
-Status: the representation layers are real and reproducible; the
-behavioural use of them is principled but **unproven** — it has not been
-shown to improve score.
+---
+
+**Sub-frame question (raised as a blocker, now settled).**
+`FrameData.frame` is *not* spatial layers: `base_game.py` loops
+`step()` + render until an action completes, so it is the animation
+sub-frames of that action. `frame[-1]` is the settled state, `frame[0]`
+mid-animation. All signals had been comparing `frame[0]` to `frame[0]`.
+
+*Method error worth recording.* The first comparison (36% vs 25%
+translations) was run as two **separate agent runs** with different random
+trajectories, and the difference attributed to the index. Invalid: a
+paired test on identical frames shows **86% of steps (694/808) have
+`frame[0]` identical to `frame[-1]`** — only 9.5% of steps animate at
+all — so most of that gap was run-to-run variance.
+
+*Decisive evidence.* On tu93, which animates on 61/101 steps, move-map
+consistency is **21-29% with `frame[0]` versus 43-64% with `frame[-1]`**,
+and only `frame[-1]` yields a coherent map (8px orthogonal stride). On
+barely-animated ls20 both recover the same clean map.
+
+**Inference.** `frame[-1]` is correct — semantically (it is the state the
+action produced) and empirically (better where animation exists, neutral
+where it doesn't). Switched all three read sites.
+
+**Retraction (second of the session).** The post-fix sweep reported
+aggregate 0.19 with a level-up on sp80. sp80 re-run 8 times: **0/8**.
+Three further full sweeps: 0.0, 0.0, 0.0. The 0.19 was entirely that one
+fluke. No score improvement from this change.
+
+**Inference worth keeping.** Two spontaneous level-ups have now occurred
+(vc33, sp80) across many runs. Levels are evidently *reachable* by chance,
+just at a very low rate — the problem is hit-rate, not reachability.
+
+**Design note.** `_detect_translation` requires the *entire* diff to be
+one shape's displacement. Finding a translation *component* instead would
+be more robust and is likely a precondition for recolour and cardinality
+detection to coexist with it.
+
+## 2026-09-13 — Blocked-move detection (the environment layer)
+
+**Hypothesis.** An action with a learned move that fails to produce it
+means something resists us there. Keyed by (position, action), that yields
+an obstacle map — and the map's *shape* validates itself: real obstacles
+fail at specific positions, a wrong move-map fails roughly uniformly.
+
+**Motivation.** Ordering question — harden `_detect_translation` first, or
+build this first? Settled with data rather than preference: across 731
+predicted-move steps, the strictness flaw (whole-diff test missing a real
+move because something else changed too) accounts for only **4%**, i.e.
+6% of "blocked" verdicts would be false. Tolerable, so robustness was
+*not* the blocker and this went first. Same measurement showed the
+definition of blocked had to be "expected translation didn't occur"
+(16% silent + 44% something-changed-but-no-move), not "nothing changed" —
+on ls20 the silent case is 0/120, so silence-only would have missed all
+of it.
+
+**Observation.** Determinism check: "mixed" outcomes for the same
+(position, action) are near-zero — ls20 2/114, dc22 2/173, ka59/wa30/
+sk48/g50t exactly 0 — and each action is blocked at a *minority* of
+positions (ls20 ACTION1 at 7 of 30). Effect of avoiding known blocks,
+averaged over 4 runs per condition:
+
+| game | blocked-move rate | distinct positions |
+|---|---|---|
+| ls20 | 62.9% → 20.7% | 8.2 → 12.8 (+55%) |
+| ka59 | 43.4% → 21.2% | 22.2 → 34.8 (+56%) |
+| wa30 | 58.8% → 31.9% | 61.0 → 86.2 (+41%) |
+| sk48 | 33.0% → 17.7% | 72.8 → 92.5 (+27%) |
+| dc22 | 35.7% → 27.2% | 16.0 → 16.0 (0%) |
+
+**Inference.** The determinism plus position-specificity says these are
+real obstacles, not model error — the validation the map was designed to
+provide. Avoiding them is a large, consistent efficiency win on the axis
+that matters, since death is resource exhaustion. Residual ~20% blocked
+rate is the unavoidable cost of discovering each wall once.
+
+**But: three full sweeps after the change give 0.0, 0.0, 0.0.** Better
+exploration efficiency did not convert into a single level completion.
+Stated plainly to avoid a third false positive: the mechanism works, the
+score did not move.
+
+**Lead for next.** The 44% bucket — blocked moves that nonetheless change
+something — is unexamined. Whatever changes when we fail to move is either
+the step/lives counter (→ budget awareness) or an interaction with the
+thing we bumped into (→ the "thing I affect" layer). Both are wanted, and
+the data is already being collected.
+
+## 2026-09-13 — What changes on a blocked move: it's a rendered budget meter
+
+**Hypothesis.** The 44% of failed moves that still change something is
+either an interaction with whatever we bumped, or a HUD counter.
+Discriminator: a counter changes in a *fixed screen location* regardless
+of where we are; an interaction tracks our position.
+
+**Observation.** On ls20 every blocked-move diff is exactly 2 cells, always
+the transition colour 11→3, with centroid y-spread **0.0** while our own
+position varies in y by 7.7 — same row every time, advancing along x.
+dc22 the same (1 cell, `0→3`, y-spread 0.0). wa30 is the opposite: only
+3/40 recolour-like, transitions `14→0` and `0→14` in equal numbers — an
+interaction, not a meter. Reading colour 11's count over time on ls20
+gives a clean sawtooth: `84 82 80 … 2 0 0` then back to 84.
+
+**Inference.** Both of the user's candidates are right, for different
+games. ls20/dc22-style games render a resource meter; wa30-style changes
+are interactions. ls20's budget is 84 units at 2/action = 42 actions per
+attempt, and a blocked move costs the same 2 — so blocked moves aren't
+merely wasted, they're *paid for*, which raises the value of the obstacle
+map built in the previous step.
+
+**Built.** A meter detector keyed on the sawtooth: a colour that declines
+steadily and jumps back to a recurring maximum. Deliberately not "declines
+monotonically" — dc22 has a colour that moves all run because the player
+is filling the board, which is progress, not budget, and it is correctly
+rejected (it never refills).
+
+**Three bugs found by testing, each a wrong assumption:**
+1. Refills were keyed to *our* RESET. ls20 refills internally per life
+   with no GAME_OVER, so no start value was ever recorded. Fixed by
+   detecting the jump in the series itself.
+2. A colour at count 0 vanishes from the histogram, so the refill that
+   followed looked like a first sighting and was skipped. Fixed by
+   retaining zeros.
+3. Two false positives at scale: a 3-cell colour oscillating, and a large
+   background that depletes as the board fills. Added a minimum size and
+   a requirement that a real budget actually empties (min ≤ 25% of full).
+
+Also lowered the evidence bar from two refills to one: two needs ~250
+actions, but `MAX_ACTIONS` is 80, so the meter would never have been found
+under realistic conditions. At 80 steps it now correctly finds ls20 (84),
+vc33 (64), ft09 (64) and rejects dc22/bp35. Fires on ~9 of 25 games,
+stable across runs.
+
+**Negative result worth keeping.** Measured cost per action against the
+meter: ls20 is 1.94-2.00 for *every* action (spread 0.02); vc33/ft09 have
+only one action type. The budget is a flat step counter, so cost-aware
+action selection — the obvious use — would gain essentially nothing. Not
+built. The corollary matters: since every step costs the same, efficiency
+can only come from making steps *better*, never cheaper.
+
+**Status.** Meter exposed as a diagnostic (`budget_fraction`, surfaced in
+reasoning/logs), not driving behaviour, because the data says the natural
+behavioural use is worthless. Sweeps: 0.047 then 0.0 — the former is
+another one-off sp80 level-up of the kind retracted twice already, not an
+improvement.
