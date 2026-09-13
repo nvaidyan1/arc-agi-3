@@ -9,8 +9,14 @@ __pycache__/
 # Vendored framework + downloaded game source + agent recordings
 vendor/
 environment_files/
-recordings/
 logs.log
+
+# Per-step logs are bulky and disposable. The sweep summaries under
+# results/sweeps/ are NOT — they are the durable record of every run, and
+# losing them is what made ~50 earlier sweeps unattributable.
+recordings/
+!results/
+!results/sweeps/
 
 # Generated artefacts
 notebooks/submission.ipynb

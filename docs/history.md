@@ -1011,3 +1011,208 @@ elsewhere, since correspondence is per colour.
 did. The value is that the next experiment is cheap to write, the layer
 boundaries make "where does this belong?" answerable, and a packaging
 mistake can no longer cost a submission.
+
+## 2026-09-13 — Council on the goal problem; durable sweep summaries; the scorer re-read, and the speed premise refuted
+
+**Council brief.** Five independent advisors (contrarian, first-principles,
+expansionist, outsider, executor), then an anonymised peer-review round, on:
+what is the next most economic experiment, given that more routing and more
+perception both cost score. Convergent findings: the measurement channel is
+narrower than the effect sizes; realizable score lives in the first ~100
+actions; and the no-semantic-slots principle has never been *priced* against
+the scoring function. All five reviewers independently ranked the executor's
+answer strongest — fix the instrument before buying more sweeps.
+
+A reviewer also flagged the load-bearing assumption nobody had checked:
+is `actions_taken` per-level or cumulative? That turned out to be the whole
+entry.
+
+**Observation 1 — the record was gone.** ~50 sweeps have been run. `recordings/`
+is gitignored and only **four runs** survive; exactly **one** is a full 25-game
+sweep. Every configuration comparison in the tables above was made against
+numbers that no longer exist. Across all 29 surviving logs there are **three**
+level completions, at actions **175, 185, 342**.
+
+**Observation 2 — truncate-and-retry is dead.** `arc_agi/scorecard.py`
+`_calculate_score` (~line 476) computes `level_actions = actions_at_level -
+prev_actions`: a level's cost is the cumulative counter at its completion minus
+the counter at the previous completion. `agents/agent.py:87` never resets that
+counter — not on RESET, not on level change. So actions spent failing *within*
+a level are charged to that level. Six 60-action attempts charge level 1 with
+360. The council's convergent "short budget, retry often" recommendation is
+refuted before it was built. The three surviving completions agree: none
+arrived under 120 actions, so a 40/60/80/120 cap would have scored zero on
+every completion this project has ever recorded.
+
+**Observation 3 — the scorer is a level-index-weighted average, over *all*
+levels.** `EnvironmentScoreCalculator.to_score` computes
+`sum(level_score_i * i) / sum(i)`, where the denominator runs over every level
+in the game including ones never reached. vc33 and ls20 have **7 levels** each
+(full baseline vectors are now visible in the summaries: vc33
+`[7,18,44,61,131,34,152]`, ls20 `[22,123,73,84,96,192,186]` — previously only
+the level-1 figure was recorded). Weights 1..7 sum to 28, so level 1 is worth
+**1/28 of the environment**. Per-level score is capped at 115, not 100.
+
+**Inference — the speed premise was wrong, and it has been steering everything.**
+Measured directly against the real scorer, on vc33:
+
+| | score |
+|---|---|
+| L1 in 185 actions (our best ever) | 0.0051 |
+| L1 in 46 actions (**4x faster**) | 0.0827 |
+| L1 in 23 actions (**8x faster**) | 0.3308 |
+| L1 in 7 actions (human parity, **26x faster**) | 3.5714 |
+| L1-L2, each still at 185 actions | 0.0727 |
+| L1-L3, each still at 185 actions | 0.6788 |
+| L1-L4, each still at 185 actions | 2.2320 |
+
+Reaching level 2 *at our current sluggish pace* is worth as much as becoming
+4x faster at level 1. Reaching level 3 beats an 8x speedup by 2x. Reaching
+level 4 approaches human-parity-on-level-1. `plan.md` has said since the budget
+ladder that "closing that 10-50x [speed gap] is the whole remaining problem";
+that reads only one term of a two-term objective. **Depth dominates speed**,
+and depth is the term never measured, because the agent has cleared level 2
+approximately never.
+
+This also re-reads the router result. "More routing buys reliability and costs
+score" was inferred from a metric in which only level-1 speed could move.
+Reliability — completing more often — is the *precondition* for depth. The
+finding stands as measured but its interpretation was too strong.
+
+**Built.** `scripts/sweep_summary.py` + wiring in `play_local.py`: every sweep
+now writes `results/sweeps/<run-id>.json` — committed, a few KB — carrying the
+scorer's per-level actions/scores/baselines, the action index of each
+completion, and a git fingerprint so a score is attributable to the code that
+produced it. Level tracking is deliberately independent of `--log`: the JSONL
+is a debugging convenience, the completion index is the result.
+`scripts/backfill_summaries.py` recovered the four surviving runs (marked
+`"backfilled": true`, no scorer half — it is gone). 14 unit tests, asserting
+the degradation paths as carefully as the successes, since a summariser that
+can throw would take a 25-game sweep down with it. `make clean` deliberately
+spares `results/`.
+
+**Status.** No agent behaviour changed; this entry is instrument work and a
+re-reading. The next experiment is now a different question than the one the
+council was asked: not "how do we find the goal" but "what stops us reaching
+level 2", which is measurable for the first time.
+
+## 2026-09-13 — Variance floor measured (n=30); every past configuration comparison dissolves; budget buys breadth, not depth
+
+**Motivation.** With summaries in place, the two questions that had been
+deferred as too expensive were finally cheap. A 25-game sweep at 400 actions
+takes **29 seconds**. The "measurement tax" this project has organised itself
+around since the budget ladder — deferring experiments, reasoning from n=3 —
+was never real.
+
+### Variance floor
+
+**Hypothesis.** Configuration comparisons made at n=3-14 are underpowered.
+
+**Observation.** 30 sweeps at one unchanged commit:
+
+| n | mean | median | sd | min | max | zeros |
+|---|---|---|---|---|---|---|
+| 30 | 0.0307 | 0.0131 | 0.0490 | 0.0000 | 0.1940 | 3/30 |
+
+Severely right-skewed: the top sweep is **6.3x the mean**, and one sp80 run
+cleared level 1 in **9 actions** against a human baseline of 39. Score is
+manufactured by rare lucky completions, so the mean is the wrong statistic.
+
+Bootstrapped 95% interval for the reported mean, configuration unchanged:
+
+| k sweeps | interval | width |
+|---|---|---|
+| 3 | 0.0030-0.0970 | 32x |
+| 5 | 0.0054-0.0850 | 16x |
+| 8 | 0.0079-0.0693 | 9x |
+| 14 | 0.0109-0.0599 | 6x |
+
+**Inference — every configuration in this document is consistent with the
+current unchanged code.** Probability that k sweeps of *this* config report at
+least the claimed figure: pre-router baseline 0.0630 at n=5 → **p=0.08**;
+router-competes 0.0511 at n=9 → 0.12; vanish-dropped 0.0164 at n=8 → 0.76;
+post-refactor 0.0268 at n=14 → 0.58. The "pre-router baseline is the best
+configuration ever measured" claim was a 1-in-12 fluctuation selected
+post-hoc as the maximum across ~6 configurations — the standard way to
+manufacture a false best. The monotonic "more routing buys reliability and
+costs score" result rests on three numbers that are one distribution.
+
+This does not mean the router helps. It means **nothing here has ever been
+measured**, in either direction.
+
+**Power, for future work** (rank test, P(detect)):
+
+| improvement | n=10 | n=30 | n=50 | n=100 |
+|---|---|---|---|---|
+| +50% | 0.13 | 0.26 | 0.39 | 0.68 |
+| 2x | 0.21 | 0.51 | 0.75 | 0.95 |
+| 3x | 0.35 | **0.80** | 0.95 | 1.00 |
+
+Standard from here: **n>=30 per arm, compare medians, 15 minutes.**
+
+### Budget ladder, graded on depth
+
+**Hypothesis.** Depth dominates score, and 400 actions is below the human cost
+of finishing most games (median 638, and a perfect human finishes only 8/25
+within 400). So more budget should buy depth.
+
+**Observation.**
+
+| cap | n | mean | median | games reaching L1 | games reaching **L2** | median completion |
+|---|---|---|---|---|---|---|
+| 400 | 30 | 0.0307 | 0.0131 | 1.63 | 1 (in 750 game-runs) | 173 |
+| 800 | 6 | 0.0466 | 0.0125 | 2.33 | **0** | 320 |
+| 1600 | 6 | 0.0111 | 0.0091 | 3.83 | **0** | 726 |
+
+**Inference — budget buys breadth, not depth.** Games clearing level 1 rises
+cleanly 1.63 → 2.33 → 3.83, and level 2 stays at zero. Score does not rise,
+because the extra completions are slow ones and score is quadratic in speed
+*within* a level. The 1600-action experiment from the budget-ladder entry was
+right to be run and was abandoned on the wrong grounds; the number that
+mattered (depth) was never recorded. Across **every sweep on record, one
+game-run has ever reached level 2** (tu93, once).
+
+### What actually stops level 2
+
+**Hypothesis 1 (refuted).** Completing level 1 poisons the policy: level-up
+credit persists across the boundary at weight 20 and permanently flips the
+`proven` gate that disables routing. **Refuted** — measured on the recorded
+completions, the action distribution does not collapse afterwards (sp80 stays
+spread across all four actions, frame-change stays 100%). The credit is
+divided by try-count, so by action ~185 a +20 bonus is well diluted.
+
+**Hypothesis 2 (partly confirmed, and the useful part is where it fails).**
+Death is resource exhaustion, so the binding constraint may be the
+*per-attempt* budget inside a level, not the total cap. sp80 at cap 1600,
+logged: cleared level 1 at action 109, then made **33 attempts at level 2 and
+died on all of them**, median **45 actions per attempt** — against a human
+baseline of **58**. Only 1 of 33 attempts survived long enough to match human
+optimal play. On sp80, level 2 is not stumble-able even in principle.
+
+But it does not generalise, and that is the finding:
+
+| game | level 2: actions per attempt | human needs | attempts cleared |
+|---|---|---|---|
+| sp80 | 45 (median) | 58 | 0/33 — budget below human optimal |
+| cn04 | 81 | 54 | 0/1 |
+| **cd82** | **100** | **8** | **0/15 — 12x the needed budget, still fails** |
+
+**Inference — two distinct failure modes, and cd82 isolates the interesting
+one.** On sp80 the per-attempt resource is below what the level costs a human,
+so no policy without near-human efficiency can clear it. On cd82 the agent has
+**twelve times** the budget it needs and still fails every attempt, which
+budget cannot explain. That makes **cd82 level 2 the clean testbed for goal
+identification**: ample budget, short human solution, 0/15. Any real goal
+signal should move it, and a null there cannot be blamed on the action cap.
+
+Level 1 has been winnable by stumbling (small space, per-attempt budget close
+to the human baseline — one run cleared it in 9 actions). Level 2 is not.
+The original council question was right, but not for the stated reason: the
+goal signal matters not because it improves reliability, but because from
+level 2 onward there is no stumble budget to fall back on.
+
+**Built.** `scripts/analyse_sweeps.py` — groups summaries by (sha, dirty, cap,
+game count) and reports score spread, depth, and completion timing. Fixed a
+latent defect in `play_local.py`: second-granularity run ids collide when
+sweeps run concurrently, silently overwriting a summary; the pid now
+disambiguates.

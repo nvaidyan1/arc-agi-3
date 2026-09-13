@@ -15,6 +15,7 @@ import argparse
 import importlib.util
 import json
 import logging
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,18 @@ from typing import Callable
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from sweep_summary import (  # noqa: E402  (must follow the sys.path bootstrap)
+    build_summary,
+    completion_indices,
+    git_fingerprint,
+    write_summary,
+)
+
+# Sweep summaries are small and committed; the per-step JSONL under
+# recordings/ stays gitignored. See scripts/sweep_summary.py for why.
+RESULTS_DIR = ROOT / "results" / "sweeps"
 
 VENDOR = ROOT / "vendor" / "ARC-AGI-3-Agents"
 if not VENDOR.exists():
@@ -30,6 +43,25 @@ sys.path.insert(0, str(VENDOR))
 
 import arc_agi
 from arc_agi import OperationMode
+
+
+def _wrap_with_level_tracking(
+    choose_action: Callable, levels_seen: list[int]
+) -> Callable:
+    """Wrap `choose_action` to record `levels_completed` at every step.
+
+    Always installed, independently of `--log`: the per-step JSONL is a
+    debugging convenience that can reasonably be switched off, but the action
+    index at which a level completed is the sweep's primary result and must
+    never depend on a flag. `levels_seen` is appended in place and read after
+    `agent.main()` returns.
+    """
+
+    def wrapped(frames, latest_frame):
+        levels_seen.append(latest_frame.levels_completed)
+        return choose_action(frames, latest_frame)
+
+    return wrapped
 
 
 def _wrap_with_step_logging(choose_action: Callable, log_path: Path) -> Callable:
@@ -146,13 +178,20 @@ def main() -> None:
         # and every "bigger budget" experiment secretly ran at 80.
         MyAgentCls.MAX_ACTIONS = args.max_steps
 
+    # Second-granularity alone is not unique: two sweeps running in parallel
+    # (or one following another quickly) can land on the same second, and the
+    # second summary would silently overwrite the first — losing exactly the
+    # data this is meant to preserve. The pid disambiguates concurrent runs.
+    run_id = f"{datetime.now():%Y%m%d-%H%M%S}-{os.getpid():05d}"
+
     log_dir = None
     if args.log:
-        log_dir = ROOT / "recordings" / datetime.now().strftime("%Y%m%d-%H%M%S")
+        log_dir = ROOT / "recordings" / run_id
         log_dir.mkdir(parents=True, exist_ok=True)
         print(f"Logging one JSON line per step to {log_dir}/<game_id>.jsonl\n")
 
     per_game = []
+    observed: dict[str, dict] = {}
     for i, game_id in enumerate(game_ids, 1):
         print(f"=== [{i}/{len(game_ids)}] {game_id} ===")
         env = arc.make(game_id, render_mode=args.render)
@@ -173,22 +212,67 @@ def main() -> None:
             agent.choose_action = _wrap_with_step_logging(
                 agent.choose_action, log_dir / f"{game_id}.jsonl"
             )
+        levels_seen: list[int] = []
+        agent.choose_action = _wrap_with_level_tracking(
+            agent.choose_action, levels_seen
+        )
         agent.main()
 
         final = agent.frames[-1]
         per_game.append((game_id, final.state, final.levels_completed,
                          agent.action_counter))
+        # `levels_seen` is sampled before each action, so it misses a level-up
+        # caused by the very last action. Append the final count to catch it.
+        levels_seen.append(final.levels_completed)
+        completions = completion_indices(levels_seen)
+        observed[game_id] = {
+            "state": str(final.state),
+            "levels_completed": final.levels_completed,
+            "actions": agent.action_counter,
+            "completion_action_indices": completions,
+        }
         print(f"  → state={final.state}, levels_completed={final.levels_completed}, "
-              f"actions={agent.action_counter}")
+              f"actions={agent.action_counter}"
+              + (f", completed at {completions}" if completions else ""))
 
     sc = arc.get_scorecard()
     print("\n========= SUMMARY =========")
     for gid, state, levels, actions in per_game:
-        print(f"  {gid:8} levels={levels:3}  actions={actions:5}  state={state}")
+        done = observed.get(gid, {}).get("completion_action_indices") or []
+        print(f"  {gid:8} levels={levels:3}  actions={actions:5}  state={state}"
+              + (f"  completed@{done}" if done else ""))
     score_val = sc.score if hasattr(sc, "score") else sc
     print(f"\nAggregate scorecard score: {score_val}")
+
+    # A sweep costs 25 games of compute; never lose its record to a
+    # serialisation problem in the third-party scorecard. Fall back to the
+    # agent-observed half, which is plain Python and cannot fail to encode.
+    def _write(scorecard, notes=None) -> Path:
+        return write_summary(
+            build_summary(
+                run_id=run_id,
+                max_steps=args.max_steps,
+                games=game_ids,
+                observed=observed,
+                scorecard=scorecard,
+                aggregate_score=score_val,
+                fingerprint=git_fingerprint(ROOT),
+                notes=notes,
+            ),
+            RESULTS_DIR,
+        )
+
+    try:
+        summary_path = _write(sc)
+    except Exception as exc:  # noqa: BLE001 — deliberately broad, see above
+        print(f"\nWARNING: could not summarise the scorecard ({exc!r}); "
+              f"writing the agent-observed half only.")
+        summary_path = _write(None, notes=f"scorecard summary failed: {exc!r}")
+
     if log_dir is not None:
         print(f"Per-step logs written to {log_dir}/")
+    print(f"Sweep summary written to {summary_path.relative_to(ROOT)} "
+          f"(committed — this is the durable record of this run)")
 
 
 if __name__ == "__main__":

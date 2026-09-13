@@ -49,17 +49,46 @@ the naming convention used for feature names below.
 
 ## Agent strategy (`agent/my_agent.py`)
 
-**Where the score stands (2026-09-13).** Pre-router: 5/5 full 25-game
-sweeps at 400 actions scored non-zero, 0.0006–0.1496 (mean ~0.063).
-Post-router (fixed, see "planning toward a target" below): 3 sweeps,
-0.0110/0.0/0.0072 (mean ~0.0061) — not yet distinguishable from the same
-noise given the pre-router range already spans 250x on 5 samples; more
-replicates needed before reading this as better, worse, or unchanged.
-Scoring is `((baseline_actions / actions_taken) ** 2) * 100` on completion
-and **0.0** otherwise, counted per level — quadratic in *speed*, not
-linear in how many levels fall. Human level-1 baselines: vc33 7 actions,
-ls20 22, sp80 39, dc22 59. We take ~400. Closing that 10–50x is the whole
-remaining problem, and every item below is graded against it.
+**Where the score stands (2026-09-13, after measuring the noise floor).**
+30 sweeps at one unchanged commit: mean 0.0307, **median 0.0131**, sd
+0.0490, range 0.0–0.194, 3/30 zero. Severely right-skewed — the top sweep
+is 6.3x the mean. **Every configuration ever recorded in `history.md` is
+statistically consistent with this one**, including the "pre-router
+baseline" (0.0630 at n=5, p=0.08 — a 1-in-12 fluctuation picked post-hoc
+as the max of ~6 configs). Nothing in this project has ever been measured,
+in either direction. A sweep costs **29 seconds**; the measurement tax we
+deferred work around was never real.
+
+**Standard from here: n>=30 per arm, compare medians.** At n=30 a rank
+test has 80% power to detect a 3x change and 51% for 2x; at n=3–14 (what
+every past comparison used) it cannot see a 3x change reliably.
+Scoring, **re-read from `arc_agi/scorecard.py` 2026-09-13** and partly
+refuting what this section said before. Per level:
+`((baseline_actions / actions_taken) ** 2) * 100` on completion, 0.0
+otherwise, capped at 115. But an environment's score is the
+**level-index-weighted average over every level in the game**,
+`sum(score_i * i) / sum(i)`, the denominator including levels never
+reached. vc33 and ls20 have 7 levels, so level 1 is worth **1/28** of the
+environment.
+
+Two consequences, both measured against the real scorer (see
+`history.md`, same date):
+
+  * **Depth dominates speed.** On vc33, reaching level 2 *at our current
+    185-action pace* scores 0.0727 — as much as becoming 4x faster at
+    level 1 (0.0827). Level 3 at that pace (0.6788) beats an 8x speedup
+    (0.3308) twofold. "Closing the 10–50x speed gap is the whole
+    remaining problem" was **wrong**: it reads one term of a two-term
+    objective, and the other term has never been measured because the
+    agent has cleared level 2 approximately never.
+  * **`actions_taken` is a cumulative delta**, not a per-attempt count
+    (`_calculate_score`, ~line 476: `actions_at_level - prev_actions`),
+    and the agent's counter never resets. Actions spent failing *within*
+    a level are charged to that level, so truncate-and-retry buys
+    nothing. Refuted before being built.
+
+Human level-1 baselines: vc33 7 actions, ls20 22, sp80 39, dc22 59; full
+per-level vectors now land in every sweep summary. We take ~400.
 
 - [x] **Affordance filtering** — only try actions `latest_frame.available_actions`
       reports as legal.
@@ -218,6 +247,27 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       so cost-aware selection gains nothing. Needs a goal to be useful —
       knowing time is short only helps if there is something to rush
       toward.
+- [ ] **THE OPEN PROBLEM: level 2.** Across every sweep on record, exactly
+      **one** game-run has reached level 2 (tu93, once). Budget is not the
+      cause: a ladder at 400/800/1600 raises games clearing level 1
+      cleanly (1.63 → 2.33 → 3.83 per sweep) and leaves level 2 at zero.
+      Two distinct failure modes, measured per-attempt (`history.md`,
+      same date):
+      - **sp80** — 33 attempts at level 2, all fatal, median **45 actions
+        per attempt against a human baseline of 58**. The per-attempt
+        resource is below what the level costs a human, so no policy
+        short of near-human efficiency can clear it.
+      - **cd82** — **100 actions per attempt against a human baseline of
+        8**, and still 0/15. Twelve times the needed budget. Budget
+        cannot explain this one.
+
+      **cd82 level 2 is therefore the clean testbed for goal
+      identification**: ample budget, short human solution, reproducible
+      zero. A real goal signal should move it, and a null there cannot be
+      blamed on the action cap. Level 1 has been winnable by stumbling
+      (one sp80 run cleared it in 9 actions vs a human 39); from level 2
+      on there is no stumble budget. That, not reliability, is why the
+      goal signal matters.
 - [x] **thing I affect** — residual change after subtracting our own
       movement and the meter. Gated on having a move map, since with no
       known "self" the residual is just "anything changed" and
@@ -351,7 +401,23 @@ contingency awareness) for the full framing and `glossary.md` for terms.
 - [x] `RENDER=terminal` / `RENDER=human` / `RENDER=terminal-fast` in
       `scripts/play_local.py` / `Makefile`.
 - [x] Per-step JSON logging (`recordings/<run-timestamp>/<game_id>.jsonl`),
-      on by default in `play_local.py`.
+      on by default in `play_local.py`. Bulky and gitignored — a debugging
+      convenience, not the record.
+- [x] **Durable sweep summaries** (`scripts/sweep_summary.py`,
+      `results/sweeps/<run-id>.json`, committed). Carries the scorer's
+      per-level actions/scores/baselines, the action index of every
+      completion, and a git fingerprint, so a score is attributable to the
+      code that produced it. Built because ~50 sweeps had been run and
+      **one** survived on disk — every comparison in the tables above was
+      against numbers that no longer exist. Level tracking is independent
+      of `--log` on purpose: the completion index is the result, not a
+      debugging aid. `make backfill-summaries` recovered the four
+      surviving runs (marked `backfilled`, scorer half unrecoverable).
+      `make clean` spares `results/`.
+- [ ] **Variance floor still unmeasured.** The summaries make it cheap to
+      compute for the first time — run N sweeps at one unchanged commit
+      and read the spread. Until that number exists, no configuration
+      comparison in this document is defensible.
 
 ## Docs
 

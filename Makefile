@@ -21,7 +21,8 @@ GAME            ?=
 STEPS           ?= 200
 RENDER          ?=
 
-.PHONY: help setup play-local pull-sample notebook submit status verify-local clean _check-kaggle
+.PHONY: help setup play-local pull-sample notebook submit status verify-local \
+        test list-games verify-packaging backfill-summaries clean _check-kaggle
 
 _check-kaggle:
 	@if [ ! -s .kaggle/access_token ]; then \
@@ -69,6 +70,9 @@ pull-sample: _check-kaggle ## Download the official Stochastic Goose sample note
 test: ## Run the unit tests (fast, no game engine needed)
 	$(VENV_PY) -m pytest tests/ -q
 
+backfill-summaries: ## Rebuild sweep summaries from any per-step logs still in recordings/
+	$(VENV_PY) scripts/backfill_summaries.py
+
 notebook: ## Splice every agent/*.py module into notebooks/submission.ipynb
 	$(VENV_PY) scripts/build_notebook.py
 
@@ -87,6 +91,8 @@ status: _check-kaggle ## Show the status of your most recent Kaggle kernel run
 	@KERNEL_ID=$$(python3 -c "import json; print(json.load(open('notebooks/kernel-metadata.json'))['id'])"); \
 	$(KAGGLE) kernels status $$KERNEL_ID
 
+# Deliberately does NOT remove results/ — the sweep summaries there are the
+# durable record of every run and are not reproducible once deleted.
 clean: ## Remove generated artefacts (venv, downloaded games, vendored repos)
 	rm -rf $(VENV) vendor environment_files recordings notebooks/submission.ipynb \
 	       reference logs.log __pycache__ .pytest_cache
