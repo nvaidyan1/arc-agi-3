@@ -676,3 +676,268 @@ still genuinely unmeasured — would need several more replicated sweeps
 to separate from this environment's inherent variance, and that's a
 reasonable next check before or shortly after committing, not a reason
 to hold the commit.
+
+## 2026-09-13 — Architecture review: the ontology question, and a principle
+
+**Hypothesis reviewed.** An 18-point critique argued the agent is "still
+somewhat event-driven and heuristic" and should maintain an explicit
+latent world model: a `WorldState` schema (objects/relations/environment
+with `walls`, `targets`, `resources`, `hazards`, `inventory`, `timer`), a
+fixed pixel taxonomy (agent/target/obstacle/effect/resource/decoration),
+cross-game action priors, Bayesian confidence over the hard thresholds,
+causal graphs from intervention, and a hypothesis ledger driving
+information-gain action selection.
+
+**Motivation.** Enough of it was right that it deserved a real triage
+rather than either wholesale adoption or reflexive defence.
+
+**Observation — triage.** Seven items (generalised correspondence,
+conditional effects, Bayesian confidence, state-space frontier, causal
+graph, reversibility, invariants) were low-risk extensions of what
+exists. Three were not: the fixed `WorldState` schema and the fixed pixel
+taxonomy reintroduce precisely what the earlier council review rejected —
+an *imposed* ontology, where a hidden game either leaves slots empty or
+gets force-fit into them. The cross-game action prior ("ACTION1 usually
+means left") is refuted by our own data: m0r0's ACTION1 splits 15/13 with
+no majority, and the hidden eval set has no reason to share our 25 games'
+control conventions.
+
+**Observation — the exchange converged.** The schema and taxonomy were
+retracted, and the distinction that came out of it is sharper than the
+original proposal: **semantic** ontology (agent/target/obstacle) encodes
+what games *are*; **relational** ontology
+(entity/attribute/relation/event/transition/hypothesis) only supplies
+vocabulary for what *happens*. The first pigeonholes; the second doesn't.
+
+**Inference.** Adopted as a governing principle, now at the top of both
+`plan.md` and `my_agent.py`: *no semantic slots without evidence — every
+interpretation comes from a falsifiable test and may return `None`.*
+Worth being clear that this is not a new direction but a *name* for the
+one pattern that has survived contact with real games here: translation
+detection returning None, the meter requiring a sawtooth, `acts_locally`
+staying None until evidence. Corollary: game type is an output, never an
+architectural input — no `if maze: use_bfs()`; BFS runs because a move
+map and obstacle map were discovered.
+
+**Also inferred.** The council was *not* convened. It exists to arbitrate
+disagreement about risk, and the disagreement dissolved in conversation —
+the three high-risk items were withdrawn by the proposer. Convening it
+anyway would have been process for its own sake.
+
+## 2026-09-13 — Correspondence lens: recolour-in-place and cardinality-change
+
+**Hypothesis.** Translation explains only 31% of transitions (533
+classified across 8 games); recolour-in-place is 53% and
+cardinality-change 16%. Give the other two a lens and ~69% of transitions
+stop being anonymous diff cells.
+
+**Motivation.** Longest-standing open item on the checklist, and the
+cheapest of the triage's "build" row — purely additive, no new ontology.
+
+**Built.** `_classify_change` returns `(recolours, cardinality)` or None.
+Discriminator is the background: a change *touching* it creates or
+destroys content (cardinality, signed), a change between two
+non-background colours relabels something already present (recolour) —
+the same rule that fixed the vanish false-positive. Also extracted
+`_lost_and_gained`, which four call sites were duplicating. Wired in
+**recording-only**: the router taught us that a new signal plus a
+decision-logic change in one pass makes a regression unattributable.
+
+**Observation 1 — a correction, found by measuring.** The first version
+derived background per frame as `max(counts)`. I asserted in the
+docstring that this mis-filed ft09, whose clicks paint 38 cells a time.
+That was wrong, and inspecting real frames showed why: ft09's background
+is a stable colour 5, and its changes are 9→8 (468 cells) and 8→9 (432)
+— two *foreground* colours toggling, which is recolour-in-place under any
+sensible reading. The manual study's "cardinality" label is the looser
+one (per-colour totals do move). The false claim was removed from the
+code rather than left to harden.
+
+**Observation 2 — the fix was right, on a different game.** Measuring
+where per-frame argmax actually disagrees with the level's initial mode:
+24 of 25 games stable, but **dc22 disagrees on 37.4% of steps**, argmax
+oscillating between colours 3 and 4. That is precisely the game whose
+mechanic is filling the board in, so the fill outvotes the canvas.
+Background is now the level's initial mode; dc22's classification moved
+exactly as predicted (recolour 38%→19%, cardinality 23%→0%).
+
+**Observation 3 — the predicted payoff did not arrive.** The checklist
+claimed cardinality "likely also renders the step/lives counters, so
+detecting it may give budget-awareness". It does not. It finds **drains**
+— monotonic, never returning (dc22's fill, cd82's consumption) — not
+**budgets**, which refill each attempt. Only 2 of 25 games showed a large
+drain `meter_colour` missed, and cd82's is the already-known consumption
+mechanic. The meter detector is *correct* to reject them: the refill test
+is the entire distinction, and the two imply opposite behaviour (a budget
+near zero means conserve, a drain near zero means you are nearly done).
+
+**Inference.** Two of three change categories now have lenses, and the
+census runs clean across 25 games. But the signal is currently **inert** —
+nothing consumes it — and the census percentages are *not* comparable to
+the manual 31/53/16 (ours count "category present in this step",
+non-exclusive, summing past 100%; the study assigned one dominant
+category per transition). The open question is whether category should
+differentiate interest weight — a cardinality loss resembles sub-goal
+progress, a foreground toggle may be a mere indicator — which is the
+natural next consumer and a behaviour change to make on its own.
+
+**Regression.** Two full sweeps after the refactor: 0.0136 and 0.0569
+(the latter the best since the router landed), sp80 4/6 on spot-check.
+The `_lost_and_gained` extraction was separately verified equivalent to
+the inline loops on 200 random grids.
+
+## 2026-09-13 — Vanish signal rebuilt on cardinality: better signal, no score change
+
+**Hypothesis.** Replace the whole-board-histogram vanish detector with
+`_classify_change`'s per-cell cardinality loss. Predicted chain: a more
+precise sub-goal signal trips the router's gate less spuriously, so the
+router (our only directed-behaviour mechanism) stays available longer,
+so completions get faster.
+
+**Built.** `_pending_vanish` now comes from per-cell content->canvas
+transitions rather than colour histograms, and `_classify_change` returns
+`lost_cells` so the salience bump lands on the cells that actually
+emptied instead of smearing across every residual cell. Self-occlusion is
+now structurally impossible rather than threshold-guarded: our own shape
+sliding over something is content-over-content, which lands in
+`recolours`, not in cardinality. The `max(_controlled_size,
+MIN_VANISH_CELLS)` floor is kept, and is exactly sized so our own
+vacated trail can never clear it.
+
+**Observation 1 — signal quality improved, and is now measured
+everywhere.** Vanish fires on **2.1% of steps overall**, back in line
+with the 0-1.5% the detector was originally documented at.
+
+**Observation 2 — two games stay high, and the detector is right.**
+cd82 **22.2%** (was 21.9%, essentially unchanged) and bp35 **22.7%**.
+The per-cell rebuild did not move them because there is nothing to fix:
+those games genuinely destroy content on a fifth of all steps. An earlier
+entry assumed cd82's rate was detector noise — that assumption was wrong,
+and this is what refutes it.
+
+**Observation 3 — the predicted chain broke at step two.** Router
+engagement is **3.0% of steps overall**, concentrated almost entirely in
+ls20 (35.4%) and tu93 (24.4%); most games are flat 0%. Making the gate
+more accurate did not make the router run more, because the gate was
+never the binding constraint.
+
+**Observation 4 — no score change.** Four sweeps: 0.0, 0.0396, 0.0023,
+0.0 (mean ~0.0105) against ~0.0061 for the three before it. Both sit
+inside a metric that has ranged 0.0 to 0.1496 across its own baseline.
+No effect detectable at this sample size.
+
+**Inference.** The signal got better and the score did not, which
+localises the bottleneck rather than being a dead end. The router is
+nearly vestigial *by construction*: it sits below the frontier tier, and
+`_visited_displacements` resets every attempt, so the frontier almost
+never runs dry and the router tier is rarely reached at all. On top of
+that ~9 games never form a move map, so routing is structurally
+impossible there. The limiting factor on directed behaviour is the
+router's **placement**, not the quality of the signal gating it — which
+is a different fix from the one just made, and the next thing to test.
+
+## 2026-09-13 — Router competes with frontier: score recovers, hypothesis still refuted
+
+**Hypothesis.** The router fires on only 3.0% of steps because it sits
+permanently *below* the frontier tier, which rarely runs dry. Let it
+compete — win when its target is well evidenced — and directed behaviour
+should increase, and completions get faster.
+
+**Built.** Plan creation no longer gated on the frontier being exhausted.
+A `strong_route` wins over the frontier when the best interest cell
+carries at least `INTEREST_VANISH_WEIGHT` — deliberately an existing
+weight, not a new tuned constant: "something meaningful happened there",
+not "something changed there". Below that bar the frontier still wins.
+The `proven_action_exists` gate is untouched and still outranks
+everything, preserving the earlier regression fix. Neither the epsilon
+nor frontier branch clears the plan any more — the drift check handles
+invalidation, and correctly *keeps* the plan when their move was blocked.
+
+**Observation 1 — the stated mechanism barely moved.** Router engagement
+went **3.0% -> 3.6%** of steps. It spread across more games (cn04
+0.2->11.2%, g50t 0->8.2%, sc25 0->5.5%, tr87 0->2.5%) but the aggregate
+is essentially unchanged. Placement was *not* the binding constraint.
+The real ones, in order: 9 of 25 games never form a move map so routing
+is structurally impossible (frontier is 0% there too); any vanish or
+level-up permanently disables routing via `proven_action_exists`; and
+`strong_route` needs accumulated interest >= 4.0, which is rare.
+
+**Observation 2 — score recovered anyway.** Nine sweeps: 0.1316, 0,
+0.0183, 0.0244, 0.1485, 0, 0, 0.1369, 0 — mean **0.0511**, 5/9 non-zero,
+three sweeps at 0.13-0.15.
+
+| config | mean | max | non-zero |
+|---|---|---|---|
+| pre-router baseline (n=5) | 0.0630 | 0.1496 | 5/5 |
+| router, strict order (n=3) | 0.0061 | 0.0110 | 2/3 |
+| + vanish rework, strict (n=4) | 0.0105 | 0.0396 | 2/4 |
+| + router competes (n=9) | 0.0511 | 0.1485 | 5/9 |
+
+**Inference, and it is unflattering.** Against the config immediately
+before it, this is ~5x better. Against the **pre-router baseline** — the
+honest reference point — it is *not* an improvement: nominally lower mean
+(0.0511 vs 0.0630) and clearly worse consistency (5/9 vs 5/5 non-zero),
+with comparable maxima. So the whole line of work since that baseline
+(interest map, router, correspondence lens, vanish rework) has recovered
+from a regression it introduced rather than produced a net gain.
+
+Also important: the score recovery **cannot be attributed to the stated
+mechanism**, because router engagement moved only 0.6pp. Something else
+in the change, or noise, is responsible. Claiming the causal story here
+would repeat the ft09 error from earlier today.
+
+**What this actually establishes.** We have not tested "directed
+navigation as a strategy" — we have tested directed navigation on 3.6% of
+decisions. The interesting question is no longer placement but whether
+the router can become the *primary* mode where a move map exists, which
+means confronting the two real constraints: `proven_action_exists`
+disabling it outright, and the 9 games where no move map ever forms.
+
+## 2026-09-13 — Scoping the routing gate: the speed/reliability trade, and why routing loses it
+
+**Hypothesis.** `proven_action_exists` blocks routing on *any* level-up
+or vanish, ever, globally, permanently. Vanishes fire on 22% of steps on
+cd82/bp35, so a single one kills directed navigation for a whole run —
+disproportionate for what is only a *proxy* for sub-goal progress.
+Scoping the gate to level-ups alone should free the router where it is
+being vetoed on weak evidence.
+
+**Observation 1 — the mechanism worked exactly as predicted.** Router
+engagement **3.6% -> 5.8%** overall, with the gains precisely on the
+high-vanish games that had been vetoed: re86 0 -> **43.1%**, cn04 11.2 ->
+**38.7%**, bp35 0 -> **9.7%**. Unchanged at 0% on the nine games that
+never form a move map, as expected.
+
+**Observation 2 — completions got more reliable.** 7 of 8 sweeps
+non-zero, against 5 of 9 before.
+
+**Observation 3 — and the score got worse.** Mean **0.0511 -> 0.0164**,
+max **0.1485 -> 0.0639**.
+
+| config | mean | max | non-zero | router% |
+|---|---|---|---|---|
+| pre-router baseline (n=5) | 0.0630 | 0.1496 | 5/5 | n/a |
+| router competes, vanish gates (n=9) | 0.0511 | 0.1485 | 5/9 | 3.6% |
+| vanish dropped from gate (n=8) | 0.0164 | 0.0639 | 7/8 | 5.8% |
+
+**Inference — the most useful negative result so far.** The relationship
+across all three configs is monotonic: *more routing buys reliability and
+costs score*. That is not a contradiction, it is the scoring function
+working as designed. Score is `(baseline_actions/actions_taken)**2 * 100`,
+so for sp80 (baseline 39) a completion in 100 actions scores 15.2 and one
+in 400 scores 0.95 — **a 4x speed difference is a 16x score difference**.
+A mechanism that completes more often but more slowly is actively
+harmful.
+
+And the reason routing is slow is now plain: the interest map marks
+**where things happened**, not **where the goal is**. Walking deliberately
+to a correlational hotspot spends real actions on a destination with no
+established link to the win condition, while the high scores in every
+config came from *stumbling onto the goal early*. Directed navigation
+toward a non-goal is worse than undirected search that might get lucky.
+
+**Action.** Reverted — vanishes stay in the gate. Recorded rather than
+silently dropped, because the finding is worth more than the change: it
+says the bottleneck was never routing *capacity*, and adding more of it
+without a real goal signal will keep making the score worse. The
+pre-router baseline (0.0630) remains the best-measured configuration.

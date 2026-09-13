@@ -6,6 +6,24 @@ submission stay in lock-step:
 
     [edit my_agent.py] → [make play-local] → [make submit]
 
+Governing principle — NO SEMANTIC SLOTS WITHOUT EVIDENCE:
+
+    Every perceptual or semantic interpretation must be produced by a
+    falsifiable test and may return None. General structure may constrain
+    *how* hypotheses are represented and tested, but must not constrain
+    *which* entities, goals, roles, or game types exist.
+
+Concretely, every detector below is a *lens*: it asks whether some
+specific explanation fits this change and reports nothing when it
+doesn't. `_detect_translation` does not assert that games contain moving
+objects; `meter_colour` does not assert that games have resource bars;
+`acts_locally` stays None until there is evidence either way. **None is a
+first-class outcome** — it is what keeps a game we have never seen from
+being force-fit into the shape of the 25 we have. Game *type* is an
+output, never an input: the router runs BFS because a move map and an
+obstacle map were discovered, not because anything recognised a maze.
+See docs/plan.md "Governing principle" for the full rationale.
+
 Strategy: game-agnostic exploration. No per-game special-casing — the goal
 is a policy that behaves reasonably on games it has never seen, which is
 what the competition actually scores. Ideas, all driven only by what the
@@ -201,6 +219,21 @@ class MyAgent(Agent):
         # RESETs — where the world reacts is a property of the level.
         self._action_interactions: dict[GameAction, int] = {}
         self._interaction_sites: dict[tuple[int, int], int] = {}
+        # Change-type census (see `_classify_change`). Recorded but NOT
+        # yet wired into action selection — the router taught us that
+        # adding a new signal and changing decision logic in the same
+        # pass makes a regression impossible to attribute. Validate the
+        # lens against the known 31/53/16 baseline first, then decide
+        # whether any of it deserves to influence behaviour.
+        self._recolour_counts: dict[tuple[int, int], int] = {}
+        self._cardinality_counts: dict[int, int] = {}
+        # The empty canvas for this level, captured once from the first
+        # frame seen rather than re-derived per frame.
+        self._background: int | None = None
+        self._change_steps = 0
+        self._translation_steps = 0
+        self._recolour_steps = 0
+        self._cardinality_steps = 0
         # Sub-goal progress: whole objects disappearing. Persists across
         # RESETs like the other rare, high-value signals.
         self._action_vanishes: dict[GameAction, int] = {}
@@ -398,6 +431,7 @@ class MyAgent(Agent):
             self._route_plan = []
             self._route_target = None
             self._route_expected_position = None
+            self._background = None  # new level, new canvas
 
         if len(frames) >= 2 and self._last_action is not None:
             prev_frame = frames[-2]
@@ -485,19 +519,63 @@ class MyAgent(Agent):
             if residual:
                 self._bump_interest(residual, INTEREST_RESIDUAL_WEIGHT)
 
+            # Change-type census. `diff_cells - residual` is exactly the
+            # cells another lens already accounted for (our own movement,
+            # and the budget meter ticking), so subtracting it keeps the
+            # meter's steady drain from swamping the cardinality count
+            # and stops two lenses claiming the same pixels.
+            self._pending_vanish = 0
+            vanish_cells: set[tuple[int, int]] = set()
+            if diff_cells:
+                self._change_steps += 1
+                if moved is not None:
+                    self._translation_steps += 1
+                classified = self._classify_change(
+                    prev_frame,
+                    latest_frame,
+                    set(diff_cells) - set(residual),
+                    self._background,
+                )
+                if classified is not None:
+                    recolours, cardinality, lost_cells = classified
+                    if recolours:
+                        self._recolour_steps += 1
+                        for key, count in recolours.items():
+                            self._recolour_counts[key] = (
+                                self._recolour_counts.get(key, 0) + count
+                            )
+                    if cardinality:
+                        self._cardinality_steps += 1
+                        for colour, delta in cardinality.items():
+                            self._cardinality_counts[colour] = (
+                                self._cardinality_counts.get(colour, 0) + delta
+                            )
+                    # Sub-goal signal, now derived per cell rather than
+                    # from whole-board histograms. A colour is only
+                    # treated as having *vanished* if it lost more than a
+                    # whole object's worth in one step: below that it is
+                    # churn (ka59 produces 244 one-cell drops). Our own
+                    # shape sliding over something can no longer be
+                    # mistaken for a deletion — that lands in `recolours`
+                    # (content over content), not here.
+                    floor = max(self._controlled_size, MIN_VANISH_CELLS)
+                    vanished = sum(
+                        -delta
+                        for delta in cardinality.values()
+                        if delta < 0 and -delta > floor
+                    )
+                    if vanished:
+                        self._pending_vanish = vanished
+                        vanish_cells = lost_cells
+
             if self._pending_vanish:
                 self._action_vanishes[self._last_action] = (
                     self._action_vanishes.get(self._last_action, 0) + 1
                 )
-                # Position proxy: the vanished cells are, by construction,
-                # part of `residual` (they are neither self nor the meter).
-                # Not exact — a vanish coinciding with our own movement in
-                # the same step could be missed — acceptable for a
-                # screening-level signal, and consistent with how
-                # `_action_vanishes` above already credits the whole
-                # action rather than isolating which cells vanished.
-                if residual:
-                    self._bump_interest(residual, INTEREST_VANISH_WEIGHT)
+                # Bump exactly where content was destroyed, not across
+                # every residual cell — the old signal had no positions to
+                # offer, so it had to smear the credit.
+                self._bump_interest(sorted(vanish_cells), INTEREST_VANISH_WEIGHT)
 
             # Environment layer: an action with a known effect that failed
             # to produce it. Deliberately covers both "nothing changed"
@@ -573,17 +651,28 @@ class MyAgent(Agent):
             not in self._visited_displacements
         ]
 
-        # Router: once there is no unvisited single-step move left to take
-        # (coverage's own frontier is exhausted) AND nothing has proven
-        # itself valuable yet (see the gate just below), spend a
-        # multi-step plan heading toward the best-known region of interest
-        # instead of falling straight to blind weighted-random. History:
-        # a first version placed this below frontier with no further
-        # gate, reasoning it would only replace the "weakest" existing
-        # option — wrong, and measured wrong (see docs/history.md,
-        # 2026-09-13): that fallback branch is the only one carrying
-        # LEVEL_UP_WEIGHT/VANISH_WEIGHT, so the router preempted the only
-        # channel that had ever produced a real completion.
+        # Router vs frontier: these now *compete* rather than the router
+        # sitting permanently beneath the frontier. Measured reason: under
+        # strict frontier-first ordering the router fired on only 3.0% of
+        # steps across 25 games, because `_visited_displacements` resets
+        # every attempt so the frontier almost never runs dry and the
+        # router tier was rarely reached at all (docs/history.md,
+        # 2026-09-13). A signal nothing can act on cannot move the score.
+        #
+        # The router wins when its target is *well evidenced* — the best
+        # interest cell carrying at least a sub-goal's worth of weight
+        # (INTEREST_VANISH_WEIGHT) rather than a single residual bump.
+        # That threshold is deliberately one of the existing weights
+        # rather than a new tuned constant: "something meaningful happened
+        # there", not "something changed there". Below that bar the
+        # frontier still wins, so ordinary exploration is unaffected.
+        #
+        # The `proven_action_exists` gate below is untouched and still
+        # outranks all of this: once an action has actually earned a
+        # level-up or vanish, the reward-weighted branch must win, which
+        # is what fixed the earlier regression where an unconditional
+        # router preempted the only channel that ever produced a
+        # completion.
         if self._route_plan and (
             self._route_plan[0] not in candidate_actions
             or self._displacement != self._route_expected_position
@@ -600,21 +689,60 @@ class MyAgent(Agent):
         # an unconditional router was measured crowding them out entirely
         # (a regression: every one of 25 games scored 0, including sp80,
         # which completed in 4 of 5 runs before this gate existed).
+        # Vanishes stay in this gate, and the reason is counter-intuitive
+        # enough to be worth recording. Dropping them (keeping only
+        # level-ups) was tried and measured: router engagement rose
+        # 3.6% -> 5.8% and completions got *more reliable* (7/8 sweeps
+        # non-zero vs 5/9) — yet mean score fell 0.0511 -> 0.0164 and the
+        # max fell 0.1485 -> 0.0639. Scoring is
+        # `(baseline/actions)**2 * 100`, so completing more often but
+        # slower loses badly: for sp80 a 4x speed difference is a 16x
+        # score difference. Routing walks toward the *interest map*, which
+        # marks where things happened, not where the goal is — so more of
+        # it buys reliability at the cost of the speed the score actually
+        # pays for. See docs/history.md, 2026-09-13.
         proven_action_exists = bool(
             self._action_level_ups or self._action_vanishes
         )
         if proven_action_exists and self._route_plan:
             self._route_plan = []  # evidence arrived mid-plan; stop routing
-        if not novel_moves and not self._route_plan and not proven_action_exists:
+        # Plan whenever we have no plan — no longer conditional on the
+        # frontier being exhausted, which is what starved this entirely.
+        if not self._route_plan and not proven_action_exists:
             self._route_plan = self._plan_route() or []
             if self._route_plan:
                 self._route_target = self._top_interest_cells[0]
 
+        # Is the target worth preferring over covering new ground?
+        strong_route = bool(
+            self._route_plan
+            and self._interest
+            and max(self._interest.values()) >= INTEREST_VANISH_WEIGHT
+        )
+
+        # Note neither the epsilon nor the frontier branch clears the plan
+        # any more. If they move us off it, the drift check at the top of
+        # the next call notices `_displacement` isn't where the plan
+        # expected and drops it then — and if their move was blocked, we
+        # are still where the plan expected and it correctly survives.
         if random.random() < EXPLORATION_EPSILON:
-            self._route_plan = []
             action = random.choice(candidate_actions)
+        elif strong_route:
+            action = self._route_plan.pop(0)
+            self._route_expected_position = (
+                self._displacement[0] + moves[action][0],
+                self._displacement[1] + moves[action][1],
+            )
+            action.reasoning = (
+                f"router: {action.name} to well-evidenced interest cell "
+                f"{self._route_target} (weight "
+                f"{max(self._interest.values()):.1f}), "
+                f"{len(self._route_plan)} steps left"
+            )
+            self._last_click = None
+            self._last_action = action
+            return action
         elif novel_moves:
-            self._route_plan = []
             action = random.choice(novel_moves)
             action.reasoning = (
                 f"frontier: {action.name} moves {moves[action]} to unvisited "
@@ -696,15 +824,7 @@ class MyAgent(Agent):
         if not prev_frame.frame or not latest_frame.frame:
             return False
         dx, dy = offset
-        lost: dict[int, set[tuple[int, int]]] = {}
-        gained: dict[int, set[tuple[int, int]]] = {}
-        for y, (prev_row, latest_row) in enumerate(
-            zip(prev_frame.frame[-1], latest_frame.frame[-1])
-        ):
-            for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
-                if prev_val != latest_val:
-                    lost.setdefault(prev_val, set()).add((x, y))
-                    gained.setdefault(latest_val, set()).add((x, y))
+        lost, gained = MyAgent._lost_and_gained(prev_frame, latest_frame)
         for color, source in lost.items():
             target = gained.get(color)
             if target and any((x + dx, y + dy) in target for x, y in source):
@@ -719,6 +839,13 @@ class MyAgent(Agent):
         for row in latest_frame.frame[-1]:
             for value in row:
                 counts[value] = counts.get(value, 0) + 1
+
+        # The canvas, fixed at what it was before we started changing
+        # things. Deliberately not re-derived per frame — see the note in
+        # `_classify_change` on ft09, where a per-frame argmax background
+        # silently flips once painted content outgrows the canvas.
+        if self._background is None and counts:
+            self._background = max(counts, key=counts.get)
 
         # Look for the sawtooth in the series itself rather than keying off
         # our own RESET: ls20 refills its meter internally (per life), with
@@ -742,33 +869,12 @@ class MyAgent(Agent):
                 else:
                     self._meter_up[colour] = self._meter_up.get(colour, 0) + 1
 
-        # Sub-goal signal: a whole object disappearing. Two discriminators,
-        # both available online with no lookahead:
-        #   1. Occlusion by our own shape can hide at most
-        #      `_controlled_size` cells, so a larger drop cannot be us
-        #      covering something up.
-        #   2. A drop that some *other* colour absorbs is a recolour, not
-        #      a deletion — cardinality is preserved and nothing left the
-        #      board. Only what the background takes back has vanished.
-        # (2) was missing, and without it this fired on ordinary
-        # recolouring churn: measured at 78.6% of steps on ft09, 46.7% on
-        # s5i5, 44.5% on cd82, against the 0-1.5% it was documented at.
-        # The background is excluded from the drop loop for the mirror
-        # reason — background shrinking is content *appearing*.
-        floor = max(self._controlled_size, MIN_VANISH_CELLS)
-        meter_colour = self.meter_colour
-        background = max(counts, key=counts.get) if counts else None
-        total_drop = 0
-        for colour, previous in self._colour_counts.items():
-            if colour in (meter_colour, background):
-                continue  # the budget draining / content appearing
-            drop = previous - counts.get(colour, 0)
-            if drop > floor:
-                total_drop += drop
-        background_gain = counts.get(background, 0) - self._colour_counts.get(
-            background, 0
-        )
-        self._pending_vanish = max(0, min(total_drop, background_gain))
+        # The sub-goal (vanish) signal used to be computed here from
+        # whole-board colour histograms. It now comes from
+        # `_classify_change`'s per-cell cardinality loss instead — see
+        # `choose_action`. Histograms could only say "colour C has fewer
+        # cells than last step", which conflates a deleted object with our
+        # own shape sliding over one, and cannot say *where* it happened.
 
         # Keep zeros rather than dropping absent colours: a meter that
         # empties disappears from the histogram, and forgetting it here
@@ -807,15 +913,7 @@ class MyAgent(Agent):
         explained: set[tuple[int, int]] = set()
         if offset is not None and prev_frame.frame and latest_frame.frame:
             dx, dy = offset
-            lost: dict[int, set[tuple[int, int]]] = {}
-            gained: dict[int, set[tuple[int, int]]] = {}
-            for y, (prev_row, latest_row) in enumerate(
-                zip(prev_frame.frame[-1], latest_frame.frame[-1])
-            ):
-                for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
-                    if prev_val != latest_val:
-                        lost.setdefault(prev_val, set()).add((x, y))
-                        gained.setdefault(latest_val, set()).add((x, y))
+            lost, gained = self._lost_and_gained(prev_frame, latest_frame)
             for colour, source in lost.items():
                 target = gained.get(colour)
                 if not target:
@@ -956,6 +1054,135 @@ class MyAgent(Agent):
         return path
 
     @staticmethod
+    def _classify_change(
+        prev_frame: FrameData,
+        latest_frame: FrameData,
+        explained: set[tuple[int, int]] | None = None,
+        background: int | None = None,
+    ) -> tuple[
+        dict[tuple[int, int], int], dict[int, int], set[tuple[int, int]]
+    ] | None:
+        """Name the change types translation doesn't cover.
+
+        Returns `(recolours, cardinality, lost_cells)`, or None if there's
+        nothing to classify:
+          `recolours`   {(from_colour, to_colour): cell_count} — a thing
+                        at a fixed position changed identity.
+          `cardinality` {colour: signed_delta} — content appeared
+                        (positive) or disappeared (negative) relative to
+                        the empty canvas.
+          `lost_cells`  the positions where content became canvas. This
+                        is the sub-goal signal, and unlike the whole-board
+                        histogram it replaces, it says *where* — so the
+                        salience bump can land on the cells that actually
+                        emptied rather than on every residual cell.
+
+        Motivation: classifying 533 transitions across 8 games found
+        translation is only **31%** of what games actually do —
+        recolour-in-place is **53%** (vc33 97%) and cardinality-change
+        **16%** (ft09 98%), with the three together covering 99%. Only
+        translation had a lens; this adds the other two, so ~69% of
+        transitions stop being anonymous diff cells.
+
+        The discriminator is the background colour, which is exactly the
+        rule the vanish-detector fix already relies on (docs/history.md,
+        2026-09-13): a change *touching the background* creates or
+        destroys content, while a change *between two non-background
+        colours* merely relabels something that was already there and is
+        still there.
+
+        `background` is passed in rather than derived per frame, and that
+        matters more than it looks: deriving it as "the most common colour
+        right now" makes the classification flip when content grows enough
+        to outvote the canvas. Measured across all 25 games — 24 are
+        stable, but **dc22 disagrees on 37.4% of steps** (argmax
+        oscillating between colours 3 and 4), which is exactly the game
+        whose mechanic is filling the board in, so the fill eventually
+        outvotes the canvas. The caller supplies the level's *initial*
+        mode instead (see `self._background`): the canvas as it was
+        before we touched it. Falls back to per-frame argmax only when
+        the caller has none yet.
+
+        Note the taxonomy this implements is deliberately *narrower* than
+        the manual 533-transition study's. ft09 toggles two foreground
+        colours back and forth (9->8 468 cells, 8->9 432 cells, over a
+        stable background of 5); the study counted that as
+        cardinality-change because per-colour totals move, this counts it
+        as recolour because nothing was created or destroyed. Same
+        distinction that fixed the vanish false-positive.
+
+        Like every other lens here this is a *test*, not an assertion: a
+        game whose changes are entirely translations yields empty dicts
+        rather than a forced classification, and `explained` lets the
+        caller subtract cells another lens already accounted for so the
+        same pixels aren't claimed twice.
+        """
+        if not prev_frame.frame or not latest_frame.frame:
+            return None
+        prev_grid, latest_grid = prev_frame.frame[-1], latest_frame.frame[-1]
+
+        if background is None:
+            counts: dict[int, int] = {}
+            for row in latest_grid:
+                for value in row:
+                    counts[value] = counts.get(value, 0) + 1
+            if not counts:
+                return None
+            background = max(counts, key=counts.get)
+
+        explained = explained or set()
+        recolours: dict[tuple[int, int], int] = {}
+        cardinality: dict[int, int] = {}
+        lost_cells: set[tuple[int, int]] = set()
+        for y, (prev_row, latest_row) in enumerate(zip(prev_grid, latest_grid)):
+            for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
+                if prev_val == latest_val or (x, y) in explained:
+                    continue
+                if prev_val == background:
+                    # Canvas -> content: something came into existence.
+                    cardinality[latest_val] = cardinality.get(latest_val, 0) + 1
+                elif latest_val == background:
+                    # Content -> canvas: something ceased to exist.
+                    cardinality[prev_val] = cardinality.get(prev_val, 0) - 1
+                    lost_cells.add((x, y))
+                else:
+                    key = (prev_val, latest_val)
+                    recolours[key] = recolours.get(key, 0) + 1
+
+        if not recolours and not cardinality:
+            return None
+        return recolours, cardinality, lost_cells
+
+    @staticmethod
+    def _lost_and_gained(
+        prev_frame: FrameData, latest_frame: FrameData
+    ) -> tuple[dict[int, set[tuple[int, int]]], dict[int, set[tuple[int, int]]]]:
+        """Per colour, the cells that stopped being it and started being it.
+
+        The shared substrate under every correspondence question we ask:
+        translation, blocked-move confirmation, residual, and recolour /
+        cardinality classification all start from exactly this. Extracted
+        because four copies of the same nested loop is four places for a
+        fix to have to land.
+
+        Note both dicts are keyed by *colour at that side of the change*:
+        a cell that went 3 -> 7 appears in `lost[3]` and `gained[7]`, so a
+        colour can appear in one, the other, or both.
+        """
+        lost: dict[int, set[tuple[int, int]]] = {}
+        gained: dict[int, set[tuple[int, int]]] = {}
+        if not prev_frame.frame or not latest_frame.frame:
+            return lost, gained
+        for y, (prev_row, latest_row) in enumerate(
+            zip(prev_frame.frame[-1], latest_frame.frame[-1])
+        ):
+            for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
+                if prev_val != latest_val:
+                    lost.setdefault(prev_val, set()).add((x, y))
+                    gained.setdefault(latest_val, set()).add((x, y))
+        return lost, gained
+
+    @staticmethod
     def _detect_translation(
         prev_frame: FrameData, latest_frame: FrameData
     ) -> tuple[int, int, tuple[int, int], tuple[int, int]] | None:
@@ -979,15 +1206,7 @@ class MyAgent(Agent):
         if not prev_frame.frame or not latest_frame.frame:
             return None
 
-        lost: dict[int, set[tuple[int, int]]] = {}
-        gained: dict[int, set[tuple[int, int]]] = {}
-        for y, (prev_row, latest_row) in enumerate(
-            zip(prev_frame.frame[-1], latest_frame.frame[-1])
-        ):
-            for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
-                if prev_val != latest_val:
-                    lost.setdefault(prev_val, set()).add((x, y))
-                    gained.setdefault(latest_val, set()).add((x, y))
+        lost, gained = MyAgent._lost_and_gained(prev_frame, latest_frame)
 
         for color, source in lost.items():
             target = gained.get(color)

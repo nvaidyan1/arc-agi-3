@@ -1,5 +1,38 @@
 # Plan
 
+## Governing principle
+
+> **No semantic slots without evidence.**
+>
+> Every perceptual or semantic interpretation must be produced by a
+> falsifiable test and may return `None`. General structure may constrain
+> *how hypotheses are represented and tested*, but must not constrain
+> *which entities, goals, roles, or game types exist*.
+
+Adopted 2026-09-13 after a design exchange that proposed a fixed
+`WorldState` schema (`agent`/`target`/`obstacle`/`resource`/`hazard`) and
+a fixed pixel taxonomy, then retracted both. The distinction that
+survived: a **semantic** ontology encodes what games *are* and quietly
+answers questions the agent hasn't earned; a **relational** one
+(entity/attribute/relation/event/transition/hypothesis) only supplies
+vocabulary for describing what *happens*. The first pigeonholes, the
+second doesn't.
+
+This is not a new direction — it is the pattern every surviving component
+already follows. `_detect_translation` doesn't assert games contain moving
+things, it asks whether *this* change is a translation and returns `None`
+otherwise. `meter_colour` doesn't assert games have resource bars, it
+tests for a sawtooth. `acts_locally` stays `None` until evidence exists.
+**`None` is a first-class outcome**, and that is the defence against
+building an agent that is excellent at the games we happened to look at.
+
+Corollary for review: game *type* is an output, never an architectural
+input. No `if maze: use_bfs()`. BFS is what the router does *because* a
+move map and obstacle map were discovered — not because anything
+recognised a maze.
+
+---
+
 Living checklist — check items off as they're done, add new ones as they
 come up. Don't delete completed items (they're the record of what's
 built); don't rewrite history here beyond fixing errors — narrative of
@@ -82,10 +115,39 @@ contingency awareness) for the full framing and `glossary.md` for terms.
 - [x] **settled-frame reading** — `frame` is animation sub-frames within
       one action, not spatial layers; all signals now read `frame[-1]`
       (the settled state) rather than `frame[0]` (mid-animation).
-- [ ] **recolour + cardinality change types** — translation covers only
-      31% of real transitions; recolour-in-place is 53% and
-      cardinality-change 16%. Cardinality likely also renders the
-      step/lives counters, so detecting it may give budget-awareness.
+- [x] **recolour + cardinality change types** (`_classify_change`) —
+      translation covers only 31% of real transitions; recolour-in-place
+      is 53% and cardinality-change 16%. Both now have a lens.
+      Discriminator is the background ("the canvas"): a change *touching*
+      it creates or destroys content (cardinality), a change *between two
+      non-background colours* relabels something already there
+      (recolour) — the same rule that fixed the vanish false-positive.
+      **Recording-only: deliberately not wired into action selection.**
+      The router taught us that adding a signal and changing decision
+      logic in one pass makes a regression impossible to attribute.
+      - Background must be the level's *initial* mode, not a per-frame
+        argmax: measured across 25 games, 24 are stable but **dc22
+        disagrees on 37.4% of steps** (its fill mechanic eventually
+        outvotes the canvas). Fixed; changed dc22's classification
+        exactly as predicted (recolour 38%→19%, cardinality 23%→0%).
+      - Our taxonomy is deliberately **narrower** than the manual study's.
+        ft09 toggles two foreground colours (9→8 468 cells, 8→9 432, over
+        a stable background of 5); the study called that cardinality
+        because per-colour totals move, we call it recolour because
+        nothing was created or destroyed.
+      - Census percentages are **not comparable** to the manual 31/53/16:
+        ours count "category present in this step" (non-exclusive, sums
+        past 100%), the study assigned one dominant category per
+        transition. Also noisy run-to-run since trajectories differ.
+- [ ] **budget-awareness from cardinality — NOT confirmed.** The stated
+      hope was that cardinality would reveal step/lives counters. It
+      finds **drains**, not **budgets**: a drain falls monotonically and
+      never returns (dc22 fill-progress, cd82 consumption), a budget
+      *refills* each attempt. Only 2 of 25 games (lp85, cd82) showed a
+      large drain the meter missed, and cd82's is the known consumption
+      mechanic. `meter_colour` is right to reject them — the refill test
+      is the whole distinction. Superseded unless a refilling counter
+      turns up that the sawtooth misses.
 - [ ] **translation as a *component*** — `_detect_translation` still
       requires the whole diff to be one displacement (measured cost: 4%).
       `_expected_move_occurred` already does the component test for
