@@ -213,3 +213,133 @@ for the first time. It is scaffolding, not a score improvement — it makes
 a first success compound instead of being forgotten, but does not by
 itself make that success more likely. Recorded plainly rather than
 presented as progress.
+
+## 2026-09-13 — Contingency awareness as the representation layer
+
+The user asked a representation-side question the memory-side work had
+been sidestepping: do we have any mechanism to distinguish
+pixel > object > the thing I control > the thing I affect? Explicitly
+*without* importing a 3D/spatial connotation that would pigeonhole every
+task.
+
+Honest answer at the time: no. We had pixels and change-detection, and we
+were discarding the rest — `_recent_diffs` kept a 5-step window, flattened
+into an undifferentiated bag of cells, with no record of which action
+caused which diff. Per action, everything collapsed to one scalar.
+
+The framing adopted: **define each layer by contingency, not by
+appearance.** This matters because the earlier generalization review
+rejected connected-component objects as RISKY — but it rejected the
+*visual* definition ("object = contiguous same-colored blob"), not the
+concept. A statistical definition carries no spatial commitment:
+- **object** = cells that reliably change together (Gestalt *common
+  fate* — grouping by shared change, not shared appearance)
+- **thing I control** = a cluster whose change is immediate and reliably
+  contingent on the action chosen
+- **thing I affect** = a cluster that changes conditionally/indirectly
+- **environment** = changes independent of action, or never changes
+
+This fails gracefully in a way the blob-ontology does not: if nothing
+turns out contingent, you learn "nothing here is directly controllable,"
+which is true information rather than a corrupted ontology poisoning
+every downstream layer.
+
+The user made an important correction worth recording: having actually
+*played* two of the games, they have direct evidence that for a subset of
+games the 2D object-movement analogy is not merely useful but necessary,
+and that the emergent analogy of object must eventually be brought about.
+Agreed, with the sequencing being the point — spatial structure as a
+*derived destination* rather than an assumed prior. For spatially
+organized games, cells that change together will turn out to be
+contiguous and to translate coherently; the 2D reading then emerges from
+data, available where it's real without being imposed where it isn't.
+
+First concrete step, measured before being coded. Instrumented ACTION6
+across three games:
+- **ft09**: 94 local / 0 remote, diff size exactly 38 every time → click
+  paints a 38-cell object at the cursor
+- **vc33**: 0 local / 117 remote, diff 1-2 cells
+- **tn36**: 0 local / 118 remote, diff exactly 1 every time
+
+Three completely different click semantics, derived with zero
+game-specific code. The measurement also exposed waste: ~50% of clicks
+were exact repeats of already-clicked cells, against a finite budget; and
+the 8x8 region habituation was over-generalizing (blacklisting 64 cells
+after 3 duds could rule out the one productive cell in a block).
+
+Changes: replaced coarse region habituation with per-cell click memory
+(prefer never-clicked cells, skip cells that absorbed a click with no
+effect), and recorded the local/remote signature as `acts_locally`,
+persisted across RESETs since it describes the game rather than the
+attempt.
+
+Then the representation did its first real work. Per-cell memory alone
+barely helped vc33/tn36 (53%->45%, 52%->48%) because every click there
+produces *some* effect, so habituation never fires, and the
+"recently-active" tier is a couple of cells that are all already clicked.
+`acts_locally=False` explains why that heuristic was wrong there: when
+clicking changes something *elsewhere*, the cells that changed are the
+effect, not the cause, so aiming at them is a category error. Made
+targeting conditional on the signature — cover new ground when clicks act
+at a distance. Repeat rate then fell to 1% / 3% / 0%.
+
+Status: this is a real efficiency win (budget no longer burned on
+duplicate clicks) but **not** a score win — still 0.0, no level completed
+anywhere. One honest tradeoff: vc33's total cells-changed dropped (~150
+to 23) under broader coverage, so "less repetition" is not automatically
+"more effect" there. Recorded rather than glossed.
+
+## 2026-09-13 — Object and control layers, derived from translation detection
+
+Next feature off the representation roadmap: the object layer. Design
+choice that paid off — rather than grouping co-changing cells generically,
+test the stronger and more specific hypothesis that a frame change is
+*one coloured shape displaced by a single offset*. That yields two
+roadmap layers at once: an object (the shape) and, when the displacement
+correlates with an action, the thing we control plus what that action
+does to it. Crucially it is a *test*, not an assumption: when the change
+isn't a translation, `_detect_translation` returns None and nothing
+downstream is polluted.
+
+Results, all derived from pixels with no game-specific code:
+- **ls20**: a complete, noise-free directional map — ACTION1 (0,-5),
+  ACTION2 (0,+5), ACTION3 (-5,0), ACTION4 (+5,0), 122 observations with
+  zero disagreement. The 5px stride also reveals the game's logical cell
+  size.
+- **Fires on 14 of 25 games.** That is direct evidence for the user's
+  earlier point (made from having actually played the games) that the 2D
+  object-movement analogy is necessary for a substantial subset — and it
+  arrived as an emergent finding rather than a prior.
+- **Silent on vc33 / ft09 / tn36** — the graceful-failure property
+  working as intended, not a gap. ft09's 38-cell change is a recolour,
+  not a move.
+- **Refuses to learn ambiguous actions**: m0r0 ACTION1 was 15x (0,5) vs
+  13x (0,-5), and the majority rule correctly declined rather than
+  inventing a mapping. Likely a context-dependent action that a
+  state-agnostic model cannot pin down — which is itself informative.
+
+Then made the representation behavioural rather than merely
+observational: accumulate the controlled shape's displacement from
+observed translations, and prefer actions predicted to land it somewhere
+this attempt hasn't been. This is count-based exploration over a *derived
+symbolic state* (position) instead of over raw frames — the compact
+symbolic modelling idea, reached bottom-up.
+
+**A retraction worth recording.** One vc33 run returned
+`levels_completed=1` — the first non-zero progress all session — and it
+was nearly reported as a win. Re-running vc33 six times gave 0/6. It was
+a fluke, not a result, and the `ACTION6 -> (-4,0)` mapping that
+accompanied it was itself only learned in 1 of 6 runs. Score remains 0.0
+everywhere. Recording this because the temptation to report the lucky run
+was real, and a log that captures only the flattering sample is worse
+than useless for a writeup.
+
+Known caveat, untuned: MIN_MOVE_OBSERVATIONS=3 is low enough that short
+runs can lock in a premature mapping (at 40 steps, dc22 learned both
+ACTION3 and ACTION4 as (2,0), which is likely under-sampling rather than
+truth). Fine while this is diagnostic; needs raising before anything
+plans on it.
+
+Status: the representation layers are real and reproducible; the
+behavioural use of them is principled but **unproven** — it has not been
+shown to improve score.

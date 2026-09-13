@@ -30,11 +30,17 @@ game itself reports each frame (see README.md "Game mechanics reference"):
      (ACTION6, a grid click) targets cells that were recently part of a
      diff — "click near where things are happening" — falling back to
      cells that merely differ from the frame's most common color, and
-     finally to a uniform random cell. Coarse grid regions that have been
-     clicked repeatedly with zero effect are avoided ("dead" regions),
-     the same Laplace-smoothed pattern used for the per-action stats.
-     See docs/plan.md for why a full object/connected-component model
-     (considered and deliberately deferred) isn't used for this instead.
+     finally to a uniform random cell. Per-cell click memory on top:
+     never-clicked cells are preferred, and cells that absorbed a click
+     with no effect are skipped (habituation).
+  4. The beginning of a *learned representation*, derived rather than
+     assumed: per click we record whether the change landed on the cell
+     we touched or somewhere else (`acts_locally`). Sampling three games
+     showed a clean split — ft09 changes the clicked cell (and exactly
+     38 cells each time), while vc33/tn36 never touch it and change 1-2
+     cells elsewhere. Nothing here assumes the grid is a 2D space or
+     that anything in it is an object; that structure is meant to emerge
+     from correlated change, not be imposed. See docs/plan.md.
 Go-Explore-style trajectory replay was built and then removed here — see
 docs/plan.md "Tried and reverted." Short version: the engine already
 checkpoints level progress across GAME_OVER (it calls `level_reset()`,
@@ -68,16 +74,13 @@ logger = logging.getLogger(__name__)
 # uniformly at random, so under-tried actions keep getting sampled.
 EXPLORATION_EPSILON = 0.25
 
-# Coarse grid bucket size for click "dead region" tracking: 64/8 -> an 8x8
-# grid of regions, coarse enough that a handful of clicks is enough signal.
-REGION_SIZE = 8
-
-# A region needs at least this many tried clicks, with zero of them causing
-# any diff, before it's treated as dead and avoided.
-DEAD_REGION_MIN_TRIES = 3
-
 # How many past steps' diffed cells to keep as "recently active" targets.
 RECENT_DIFF_STEPS = 5
+
+# Evidence needed before calling an action's effect a consistent "move":
+# this many sightings of the same offset, and that share of all sightings.
+MIN_MOVE_OBSERVATIONS = 3
+MOVE_MAJORITY = 0.6
 
 # How much a level-up outweighs a mere frame change when weighting actions.
 # Frame change is the dense signal (fires most steps, teaches "this action
@@ -103,16 +106,64 @@ class MyAgent(Agent):
         # Which action makes progress is a property of the game, not of one
         # attempt, and level-ups are far too rare to afford forgetting.
         self._action_level_ups: dict[GameAction, int] = {}
+        # Contingency signature of the click action: does clicking change
+        # the cell you clicked, or something elsewhere? Measured, never
+        # assumed — the three games sampled so far split cleanly into
+        # "acts locally" and "acts at a distance", and that's a property
+        # of the game, so it persists across attempts like level-ups do.
+        self._click_local = 0
+        self._click_remote = 0
+        # Per action, how often each movement offset was observed. This is
+        # the "thing I control" layer: if one action reliably translates
+        # the same shape by the same offset, that shape is what we move
+        # and that offset is what the action does. Persists across RESETs
+        # (a property of the game, not of one attempt).
+        self._action_offsets: dict[GameAction, dict[tuple[int, int], int]] = {}
+        self._announced_moves: set[GameAction] = set()
         self._reset_exploration_state()
+
+    @property
+    def learned_moves(self) -> dict[GameAction, tuple[int, int]]:
+        """Actions whose effect is a consistent translation, and by what.
+
+        Requires several observations and a clear majority, so a one-off
+        coincidence doesn't get mistaken for control.
+        """
+        learned = {}
+        for action, offsets in self._action_offsets.items():
+            if not offsets:
+                continue
+            best, count = max(offsets.items(), key=lambda kv: kv[1])
+            total = sum(offsets.values())
+            if count >= MIN_MOVE_OBSERVATIONS and count / total >= MOVE_MAJORITY:
+                learned[action] = best
+        return learned
+
+    @property
+    def acts_locally(self) -> bool | None:
+        """Whether clicking tends to change the clicked cell itself.
+
+        None until there's evidence either way. This is the first piece of
+        a learned representation of *what kind of thing the click is* —
+        derived from contingency, with no assumption that the grid is a
+        2D space or that anything in it is an object.
+        """
+        if not (self._click_local or self._click_remote):
+            return None
+        return self._click_local > self._click_remote
 
     def _reset_exploration_state(self) -> None:
         # (tries, frame-changes) per action, reset on every RESET since a
         # fresh level can behave differently from the one before it.
         self._action_tries: dict[GameAction, int] = {}
         self._action_changes: dict[GameAction, int] = {}
-        # Same idea, keyed by coarse click region, for ACTION6 only.
-        self._region_tries: dict[tuple[int, int], int] = {}
-        self._region_changes: dict[tuple[int, int], int] = {}
+        # Per-cell click memory, for ACTION6. Deliberately per-cell rather
+        # than per-coarse-region: measurement showed ~50% of clicks were
+        # exact repeats of already-clicked cells, and that blacklisting a
+        # whole 8x8 block after a few duds can rule out the one productive
+        # cell inside it.
+        self._click_tries: dict[tuple[int, int], int] = {}
+        self._click_effect: dict[tuple[int, int], int] = {}
         # Rolling window of recent diffed-cell lists, newest last.
         self._recent_diffs: deque[list[tuple[int, int]]] = deque(
             maxlen=RECENT_DIFF_STEPS
@@ -122,6 +173,12 @@ class MyAgent(Agent):
         # be read back from the frame itself).
         self._last_action: GameAction | None = None
         self._last_click: tuple[int, int] | None = None
+        # Where the controlled shape has got to, relative to where this
+        # attempt started, accumulated from observed translations — a
+        # compact symbolic state derived from the learned move map. Reset
+        # per attempt because the level restarts from its own origin.
+        self._displacement = (0, 0)
+        self._visited_displacements: set[tuple[int, int]] = {(0, 0)}
 
     @property
     def name(self) -> str:
@@ -169,6 +226,31 @@ class MyAgent(Agent):
                 )
                 self._recent_diffs.append(diff_cells)
 
+                # Object layer: was that change one shape translating? If
+                # so, attribute the movement to the action that caused it.
+                moved = self._detect_translation(prev_frame, latest_frame)
+                if moved is not None:
+                    _color, _size, offset = moved
+                    offsets = self._action_offsets.setdefault(self._last_action, {})
+                    offsets[offset] = offsets.get(offset, 0) + 1
+                    self._displacement = (
+                        self._displacement[0] + offset[0],
+                        self._displacement[1] + offset[1],
+                    )
+                    self._visited_displacements.add(self._displacement)
+                    if (
+                        self._last_action in self.learned_moves
+                        and self._last_action not in self._announced_moves
+                    ):
+                        self._announced_moves.add(self._last_action)
+                        logger.info(
+                            "LEARNED on %s: %s moves a %d-cell shape by %s",
+                            self.game_id,
+                            self._last_action.name,
+                            _size,
+                            offset,
+                        )
+
             # The signal that actually matches what's scored: did that
             # action complete a level? Rare enough that we surface it
             # loudly rather than letting it vanish into the stats.
@@ -184,16 +266,47 @@ class MyAgent(Agent):
                 )
 
             if self._last_action is GameAction.ACTION6 and self._last_click is not None:
-                cx, cy = self._last_click
-                region = (cx // REGION_SIZE, cy // REGION_SIZE)
-                self._region_tries[region] = self._region_tries.get(region, 0) + 1
+                self._click_tries[self._last_click] = (
+                    self._click_tries.get(self._last_click, 0) + 1
+                )
                 if diff_cells:
-                    self._region_changes[region] = (
-                        self._region_changes.get(region, 0) + 1
-                    )
+                    self._click_effect[self._last_click] = self._click_effect.get(
+                        self._last_click, 0
+                    ) + len(diff_cells)
+                    # Did we change what we touched, or something else?
+                    if self._last_click in set(diff_cells):
+                        self._click_local += 1
+                    else:
+                        self._click_remote += 1
+
+        # Once we know what each action does to the shape we control, we
+        # can explore *its position space* rather than wander: prefer a
+        # move that lands somewhere this attempt hasn't been. Only applies
+        # where a move map was actually learned, so non-spatial games are
+        # unaffected.
+        moves = self.learned_moves
+        novel_moves = [
+            a
+            for a in candidate_actions
+            if a in moves
+            and (
+                self._displacement[0] + moves[a][0],
+                self._displacement[1] + moves[a][1],
+            )
+            not in self._visited_displacements
+        ]
 
         if random.random() < EXPLORATION_EPSILON:
             action = random.choice(candidate_actions)
+        elif novel_moves:
+            action = random.choice(novel_moves)
+            action.reasoning = (
+                f"frontier: {action.name} moves {moves[action]} to unvisited "
+                f"displacement from {self._displacement}"
+            )
+            self._last_click = None
+            self._last_action = action
+            return action
         else:
             # Laplace-smoothed value per action, combining both signals:
             # frame changes (dense — fires most steps, keeps the policy
@@ -215,7 +328,13 @@ class MyAgent(Agent):
             # ACTION6 takes (x, y) coordinates on a 64×64 grid.
             x, y, why = self._pick_coordinate(latest_frame)
             action.set_data({"x": x, "y": y})
-            action.reasoning = {"why": why}
+            action.reasoning = {
+                "why": why,
+                # Learned, not assumed: does clicking change what you
+                # touched, or something elsewhere? None until known.
+                "acts_locally": self.acts_locally,
+                "clicked_cells": len(self._click_tries),
+            }
             self._last_click = (x, y)
         else:
             tries = self._action_tries.get(action, 0)
@@ -228,6 +347,48 @@ class MyAgent(Agent):
             self._last_click = None
         self._last_action = action
         return action
+
+    @staticmethod
+    def _detect_translation(
+        prev_frame: FrameData, latest_frame: FrameData
+    ) -> tuple[int, int, tuple[int, int]] | None:
+        """Is this frame-to-frame change one colored shape *moving*?
+
+        Returns (color, cell_count, (dx, dy)) if the entire set of cells
+        that lost colour C is exactly the set that gained colour C,
+        displaced by a single consistent offset — otherwise None.
+
+        This is the object layer, derived rather than assumed (Gestalt
+        common fate: things that change together are one thing). Note it
+        makes no prior commitment to 2D space or to anything being an
+        object: it *tests* whether a translation explains the change, and
+        reports nothing when it doesn't, so a non-spatial game simply
+        yields no detections instead of a wrong ontology.
+        """
+        if not prev_frame.frame or not latest_frame.frame:
+            return None
+
+        lost: dict[int, set[tuple[int, int]]] = {}
+        gained: dict[int, set[tuple[int, int]]] = {}
+        for y, (prev_row, latest_row) in enumerate(
+            zip(prev_frame.frame[0], latest_frame.frame[0])
+        ):
+            for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
+                if prev_val != latest_val:
+                    lost.setdefault(prev_val, set()).add((x, y))
+                    gained.setdefault(latest_val, set()).add((x, y))
+
+        for color, source in lost.items():
+            target = gained.get(color)
+            if not target or len(target) != len(source):
+                continue
+            # Anchor on each set's lexicographically smallest cell to get
+            # the single candidate offset, then require an exact match.
+            (sx, sy), (tx, ty) = min(source), min(target)
+            offset = (tx - sx, ty - sy)
+            if {(x + offset[0], y + offset[1]) for x, y in source} == target:
+                return color, len(source), offset
+        return None
 
     @staticmethod
     def _diff_cells(
@@ -248,11 +409,12 @@ class MyAgent(Agent):
             if prev_val != latest_val
         ]
 
-    def _region_is_dead(self, x: int, y: int) -> bool:
-        region = (x // REGION_SIZE, y // REGION_SIZE)
-        tries = self._region_tries.get(region, 0)
-        changes = self._region_changes.get(region, 0)
-        return tries >= DEAD_REGION_MIN_TRIES and changes == 0
+    def _cell_is_spent(self, cell: tuple[int, int]) -> bool:
+        """Clicked before and never did anything — habituated, skip it."""
+        return (
+            self._click_tries.get(cell, 0) > 0
+            and self._click_effect.get(cell, 0) == 0
+        )
 
     def _pick_coordinate(self, latest_frame: FrameData) -> tuple[int, int, str]:
         """Pick a click target and say why, most to least preferred:
@@ -263,9 +425,11 @@ class MyAgent(Agent):
         3. Any cell that differs from the frame's most common color.
         4. A uniform random cell.
 
-        Regions that have absorbed several clicks with zero effect are
-        filtered out of 1-3 (falling back to a live region if everything
-        is dead) — a game-agnostic stand-in for "stop poking dead space."
+        Within a tier, cells that have already absorbed a click with no
+        effect are dropped entirely (habituation), and never-clicked cells
+        are preferred over ones already tried — measurement showed ~half
+        of all clicks were exact repeats, which is pure waste against a
+        finite per-attempt budget.
         """
         if not latest_frame.frame:
             return random.randint(0, 63), random.randint(0, 63), "no frame yet"
@@ -285,20 +449,33 @@ class MyAgent(Agent):
         }
         recent_active = [cell for diff in self._recent_diffs for cell in diff]
 
-        ranked: list[tuple[list[tuple[int, int]], str]] = [
-            (
-                [c for c in recent_active if c in color_salient],
-                "recently active + non-background cell",
-            ),
-            (recent_active, "recently active cell"),
-            (list(color_salient), "non-background cell"),
-        ]
+        if self.acts_locally is False:
+            # Clicking here changes something *elsewhere*, so the cells
+            # that changed are the effect, not the cause — aiming at them
+            # is a category error. Cover new ground instead. (First place
+            # the learned contingency signature changes what we do.)
+            ranked: list[tuple[list[tuple[int, int]], str]] = [
+                (list(color_salient), "non-background cell (acts at a distance)"),
+                (recent_active, "recently active cell"),
+            ]
+        else:
+            ranked = [
+                (
+                    [c for c in recent_active if c in color_salient],
+                    "recently active + non-background cell",
+                ),
+                (recent_active, "recently active cell"),
+                (list(color_salient), "non-background cell"),
+            ]
         for candidates, why in ranked:
-            live = [c for c in candidates if not self._region_is_dead(*c)]
-            if live:
-                return (*random.choice(live), why)
-            # Either no candidates at this tier, or all of them sit in a
-            # dead region — either way, fall through to the next (weaker)
-            # tier rather than clicking a known-inert spot.
+            live = [c for c in candidates if not self._cell_is_spent(c)]
+            if not live:
+                continue
+            # Prefer cells we've never clicked before; only fall back to
+            # re-clicking productive ones once the fresh ones run out.
+            fresh = [c for c in live if c not in self._click_tries]
+            if fresh:
+                return (*random.choice(fresh), f"{why} (unclicked)")
+            return (*random.choice(live), f"{why} (revisit)")
 
         return random.randint(0, 63), random.randint(0, 63), "random fallback"

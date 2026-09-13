@@ -33,6 +33,46 @@ the naming convention used for feature names below.
       level-up, so the path would otherwise be untested): credit lands on
       the right action, survives RESET, and shifts selection to ~74%
       (the other ~26% being the epsilon floor).
+- [x] **Contingency awareness, first layer** — per-cell click memory
+      (prefer unclicked, skip cells that did nothing) plus a learned
+      `acts_locally` signature: does clicking change the cell you touched,
+      or something elsewhere? Measured across three games: ft09 local
+      (38 cells per click), vc33/tn36 remote (1-2 cells). The signature now
+      *changes behavior* — when clicks act at a distance, targeting
+      recently-changed cells is a category error (they're the effect, not
+      the cause), so the policy covers new ground instead. Click repeat
+      waste fell from ~50% to 1-3%. No score change.
+
+### Representation roadmap
+
+The layers the user asked for — pixel > object > thing I control > thing
+I affect — defined by **contingency, not appearance**, so nothing assumes
+2D space, avatars, or navigability. See `history.md` (2026-09-13,
+contingency awareness) for the full framing and `glossary.md` for terms.
+
+- [x] **pixel** — raw grid
+- [x] **change** — `_diff_cells`
+- [x] **click contingency** — `acts_locally`, per-cell effect memory
+- [x] **object** — `_detect_translation` tests whether a frame change is
+      one colored shape displaced by a single offset. Not
+      connected-components, no colored-blob assumption: it *tests* for a
+      translation and reports nothing when there isn't one. Fires on
+      **14 of 25 games** — strong evidence that the 2D object reading is
+      real for much of this set, and it was derived rather than imposed.
+      Silent on vc33/ft09/tn36, which is the graceful-failure property
+      working rather than a gap.
+- [x] **thing I control** — `learned_moves`: per action, the movement
+      offset it reliably causes (needs 3+ sightings and a 60% majority).
+      On ls20 it recovers a complete, noise-free directional map
+      (ACTION1-4 → up/down/left/right at a 5px stride, 122/122
+      consistent). Correctly *refuses* to learn genuinely ambiguous
+      actions (m0r0 ACTION1: 15x one way, 13x the other).
+- [ ] **thing I affect** — cluster that changes conditionally/indirectly.
+      Partially visible already (`acts_locally`, and vc33 occasionally
+      learning that a click displaces something by (-4,0)), but not yet
+      separated from "thing I control" as its own concept.
+- [ ] **environment** — changes independent of action, or never changes
+
 - [ ] **Budget awareness** — death is resource exhaustion, so the finite
       per-attempt budget is the binding constraint and the policy is
       currently blind to it. Not yet started.
