@@ -53,8 +53,12 @@ def main() -> None:
                    help="Per-game cap on actions (overrides MyAgent.MAX_ACTIONS).")
     p.add_argument("--list", action="store_true",
                    help="List available games and exit.")
-    p.add_argument("--render", default=None, choices=[None, "terminal"],
-                   help="Optional terminal rendering each step.")
+    p.add_argument("--render", default=None,
+                   choices=[None, "terminal", "terminal-fast", "human"],
+                   help="Optional rendering each step: 'terminal' (ANSI colors "
+                        "in this shell, paced to the game's FPS), 'terminal-fast' "
+                        "(same, no pacing delay), or 'human' (a live matplotlib "
+                        "window — needs a real display, not headless SSH).")
     args = p.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")

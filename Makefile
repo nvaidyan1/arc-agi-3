@@ -19,6 +19,7 @@ FRAMEWORK_DIR   := vendor/ARC-AGI-3-Agents
 COMP_SLUG       := arc-prize-2026-arc-agi-3
 GAME            ?=
 STEPS           ?= 200
+RENDER          ?=
 
 .PHONY: help setup play-local pull-sample notebook submit status verify-local clean _check-kaggle
 
@@ -33,7 +34,7 @@ _check-kaggle:
 help:
 	@awk 'BEGIN{FS=":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "  %-15s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
 	@echo ""
-	@echo "Vars: PYTHON=$(PYTHON)  GAME=$(GAME)  STEPS=$(STEPS)"
+	@echo "Vars: PYTHON=$(PYTHON)  GAME=$(GAME)  STEPS=$(STEPS)  RENDER=$(RENDER)"
 
 setup: ## One-time install: venv, arc-agi, kaggle CLI, clone framework
 	$(PYTHON) -m venv $(VENV)
@@ -50,8 +51,8 @@ setup: ## One-time install: venv, arc-agi, kaggle CLI, clone framework
 	@echo ""
 	@echo "Setup complete. Try:  make play-local"
 
-play-local: ## Run agent/my_agent.py against ALL games (or GAME=ls20 for a single one)
-	$(VENV_PY) scripts/play_local.py $(if $(GAME),--game $(GAME)) --max-steps $(STEPS)
+play-local: ## Run agent/my_agent.py against ALL games (GAME=ls20 for one, RENDER=terminal|human to watch)
+	$(VENV_PY) scripts/play_local.py $(if $(GAME),--game $(GAME)) --max-steps $(STEPS) $(if $(RENDER),--render $(RENDER))
 
 verify-local: ## Quick smoke test: 50 steps on ls20 + vc33 only
 	$(VENV_PY) scripts/play_local.py --game ls20,vc33 --max-steps 50

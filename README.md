@@ -42,26 +42,72 @@ chmod 600 .kaggle/access_token
 # 3.  One-time setup: venv, dependencies, framework
 make setup
 
-# 4.  Open agent/my_agent.py to see the random-action starter, then edit
+# 4.  Activate the venv in every new terminal session before running
+#     anything below (make targets do this internally, but if you ever
+#     call scripts/ directly or run `python`, do this first)
+source .venv/bin/activate
+
+# 5.  Open agent/my_agent.py to see the random-action starter, then edit
 #     it to make a better submission. This is the only file you change.
 
-# 5.  Run it locally against every game in the competition (takes seconds)
+# 6.  Run it locally against every game in the competition (takes seconds)
 make play-local
 
-# 6.  Push it to Kaggle as a submission notebook
+#     Want to *watch* it play instead of just reading the score at the
+#     end? Add RENDER=terminal (colored ASCII grid, right in this shell)
+#     or RENDER=human (a live matplotlib window) and GAME=<id> to focus
+#     on one game:
+make play-local GAME=ls20 RENDER=terminal
+
+# 7.  Push it to Kaggle as a submission notebook
 make submit
 
-# 7.  Watch the run
+# 8.  Watch the run
 make status
 
-# 8.  When status shows "complete", open the notebook on kaggle.com,
+# 9.  When status shows "complete", open the notebook on kaggle.com,
 #     find your kernel, click "Submit to Competition" in the top
 #     right, and pick `submission.parquet` from the Output File
 #     dropdown. That's one of your 5 daily submissions.
 ```
 
-That's the entire loop. Steps 4–7 are what you'll repeat as you iterate;
-step 8 is the deliberate moment when you spend a daily submission.
+That's the entire loop. Steps 5–8 are what you'll repeat as you iterate;
+step 9 is the deliberate moment when you spend a daily submission.
+
+---
+
+## Running and watching your agent
+
+**Activate the venv** in every new terminal tab before calling anything
+below directly (the `make` targets do this internally via `.venv/bin/python`,
+so this is only required if you run `python` or `scripts/*.py` yourself):
+
+```bash
+source .venv/bin/activate
+```
+
+**Run one game at a time** while you're iterating — much faster than the
+full sweep:
+
+```bash
+make play-local GAME=ls20
+```
+
+Omit `GAME=` to run against every game in the competition, which is what
+Kaggle does at submission time.
+
+**Watch it play**, instead of just reading the final score, with the
+`RENDER` variable:
+
+| `RENDER=` | What you see |
+|---|---|
+| `terminal` | A colored ASCII grid animated in this shell, paced to the game's natural FPS |
+| `terminal-fast` | Same as `terminal`, but no pacing delay — useful for skimming many steps fast |
+| `human` | A live matplotlib window that updates each step (needs a real display) |
+
+```bash
+make play-local GAME=ls20 RENDER=terminal
+```
 
 ---
 
@@ -85,6 +131,52 @@ The starter version picks random actions — a baseline that proves your whole
 pipeline works end-to-end. Replace the body of `choose_action` with your
 strategy. Everything else (Kaggle plumbing, submission file format, game
 orchestration) is handled for you.
+
+### Game mechanics reference
+
+Working notes on how the environment behaves, based on reading `arcengine`
+(`.venv/lib/python3.12/site-packages/arcengine/enums.py`) and `arc_agi`
+(`.../arc_agi/rendering.py`) directly — re-check those if anything here
+looks stale after a dependency bump.
+
+**Action space** — 8 members of `GameAction`:
+
+| Action | Type | Payload |
+|---|---|---|
+| `RESET` | simple | none — restarts the level |
+| `ACTION1`–`ACTION5` | simple | none |
+| `ACTION6` | **complex** | `x, y` integers, each `0–63` (a click on the grid) |
+| `ACTION7` | simple | none |
+
+There's no universal semantic mapping (no fixed WASD-style convention) —
+each game wires ACTION1–7 to whatever it wants internally. **Each frame
+also reports which actions are currently legal**, in
+`latest_frame.available_actions` (a list of action ids) — e.g. `ls20`
+only ever exposes `[1, 2, 3, 4]`, and `vc33` only exposes `[6]`. Trying
+actions outside that set just burns action budget for nothing, so
+`choose_action` should filter against it rather than guessing across all 7.
+
+**Observation space** — a `FrameData.frame` is a list of layers, each a
+**64×64 grid** of ints (matches `ACTION6`'s 0–63 coordinate range). Cell
+values range **0–15** (a 16-color palette, confirmed by the 16-entry
+`COLOR_MAP` in `arc_agi/rendering.py`) — 4-bit, not 8-bit/256.
+
+**Game state** — `GameState` has exactly 4 values: `NOT_PLAYED`,
+`NOT_FINISHED`, `WIN`, `GAME_OVER`. `GAME_OVER` is a retryable failure
+(send `RESET` to try again), not a terminal episode boundary.
+
+**Scoring** (from the Kaggle competition page): per-game score is 0–100%,
+where 100% ≈ human-level (matching the number of actions a human needed),
+capped at 100%. Final score is the average across games. The competition
+draws on **public and private test sets**; which of the ~25 games visible
+locally belong to which is not disclosed — the actual goal is a policy
+that generalizes to unseen games, not one hand-tuned to the visible ones.
+
+**Jargon** (matches the framework's own terms — use these, not RL-style
+"episode/observation/reward"): a **game** (e.g. `ls20`) contains **levels**
+(`levels_completed`); one observation is a **frame**; there's no episode
+boundary — `GAME_OVER` → `RESET` is a retry within the same game run,
+visible in `agent.frames` history.
 
 ---
 
@@ -164,6 +256,8 @@ already the default in this kit.
 | `make setup` | One-time install: Python venv, `arc-agi`, `kaggle` CLI, clones the framework |
 | `make play-local` | Runs your agent against every game in the dataset, locally |
 | `make play-local GAME=ls20` | Same, but only one game (faster while debugging) |
+| `make play-local GAME=ls20 RENDER=terminal` | Same, but render each step as a colored ASCII grid in this shell |
+| `make play-local GAME=ls20 RENDER=human` | Same, but pop a live matplotlib window per step (needs a real display) |
 | `make verify-local` | 30-second smoke test on two games |
 | `make list-games` | Print every game id available |
 | `make pull-sample` | Download the official sample agent for reference |
