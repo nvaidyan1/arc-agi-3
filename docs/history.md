@@ -337,3 +337,123 @@ reasoning/logs), not driving behaviour, because the data says the natural
 behavioural use is worthless. Sweeps: 0.047 then 0.0 — the former is
 another one-off sp80 level-up of the kind retracted twice already, not an
 improvement.
+
+## 2026-09-13 — "Thing I affect": residual change after subtracting self
+
+**Hypothesis.** Subtract what our own movement explains (and the budget
+meter, which ticks on its own), and whatever change is left is something
+else we acted upon — the "thing I affect" layer, with no assumption about
+what that something is.
+
+**Observation / two bugs, both mine.** First pass reported ls20 as 118/120
+steps being "interactions", which is absurd for a plain movement game.
+Causes: (1) it used `_detect_translation`, which fails on ~69% of steps
+because it demands the *whole* diff be one translation — so our own
+movement went unexplained and every step looked like an interaction;
+fixed by falling back to the offset `learned_moves` already knows for that
+action. (2) The meter exclusion tested only the new cell value, but
+depletion recolours cells *away* from the meter colour (11→3), so
+depleting cells slipped through; fixed by testing both sides.
+
+**Second, more interesting flaw.** Even fixed, tn36 sat at 97% and ft09 at
+77% — non-discriminating. Reason is conceptual, not incidental: on games
+with no move map there is no "self" to subtract, so residual ≡ any change,
+which silently double-counts the existing frame-change signal. Gated the
+layer on having a move map, which is the correct statement of the idea —
+**"thing I affect" is only definable once "thing I control" is known.**
+
+**Result.** Games with a move map: 26-57% interaction rate (ls20 26%,
+wa30 40%, dc22 44%, ka59 57%, cn04 55%) — discriminating rather than
+constant. Games without (vc33, ft09, tn36): ~0%, correctly silent. Wired
+in as a third reward tier at weight 3, between frame-change (1) and
+level-up (20): affecting the world is better evidence of progress than
+merely moving, but it is not the score.
+
+**Status.** Two sweeps after the change: 0.0, 0.0. No score movement.
+
+**Context — Kaggle packaging constraint (checked, not acted on).**
+`build_notebook.py` reads *only* `agent/my_agent.py` and ships it via one
+`%%writefile` + one `cp`. Worse, the agent executes only under
+`KAGGLE_IS_COMPETITION_RERUN`, so Phase A "Save & Run All" never imports
+it. Splitting into modules today would therefore pass `make play-local`,
+pass `make submit`, report `complete` — and fail only in Phase B, after
+spending one of five daily submissions. Two viable routes if we refactor:
+ship each file with its own `%%writefile`+`cp` (testable locally by
+replicating the framework's `templates/` import path), or have the builder
+inline the modules into one file at build time (submission path stays
+byte-identical). Not attempted without explicit approval.
+
+## 2026-09-13 — Council on the goal problem; action cap raised; sub-goal (vanish) signal
+
+**Council brief.** Three independent reviews (signal inventory grounded in
+engine source; sparse-reward strategy; a skeptic told to attack the
+premise). Two convened findings reframed the question before they even
+reported: `MAX_ACTIONS=80` is self-imposed (framework demo guard; no
+server/gateway cap exists anywhere; Playback uses 1,000,000), and scoring
+is `((baseline/actions_taken)**2)*100` when completed, **0.0** when not,
+counted **per level** (`scorecard.py:481`).
+
+**Skeptic's verdict.** Do not build a goal; we are budget-starved and
+cannot conclude "no goal" when the sample size for "ever reached one" is
+statistically zero. Correct on the facts.
+
+**Experiment (budget ladder, and a harness bug).** First run was void:
+`play_local.py` did `min(MAX_ACTIONS, --max-steps)`, so the flag could
+only *lower* the budget and all three "budget" runs silently executed at
+80. Fixed to assign. Corrected ladder:
+
+| budget | repA | repB |
+|---|---|---|
+| 80 | 0 games, **0.0** | 0 games, **0.0** |
+| 400 | 2 games, 0.0048 | 1 game, **0.0444** |
+| 1600 | 6 games, 0.0061 | 4 games, 0.0114 |
+
+**Correction worth recording.** The first (unreplicated) ladder showed 80
+scoring 0.190, and an inference was drawn from it that score moves
+*against* budget. Replication refutes that: 80 scores exactly 0.0 in both
+replicates, and the 0.190 was itself a single fluke completion. Raising
+the cap moves us from reliably-zero to reliably-nonzero. Conclusion drawn
+from one run of a stochastic process — the same error retracted twice
+earlier today.
+
+**Inference.** More budget buys completions and real (if tiny) score, so
+we were genuinely budget-starved. But magnitudes stay ~0.004-0.044 against
+a per-level maximum of 100, and the human baselines explain why:
+vc33 level 1 takes a human **7 actions**, ls20 22, sp80 39, dc22 59
+(found in `environment_files/*/metadata.json`; note the live API redacts
+`baseline_actions`, so this is for offline evaluation only — using it in
+the agent would be per-game memorisation and unavailable on hidden games).
+Stumbling in at ~400 actions scores `(7/400)^2*100 = 0.03`. Note repB at
+400: ONE completing game scored 0.044, more than SIX completing games at
+1600 (0.0061) — one fast completion is worth many slow ones. So the
+efficiency work the skeptic called "decoration" is in fact the dominant
+term, quadratically, once completions exist.
+
+**Signal inventory — the useful part.** No API field reports partial
+progress (confirmed absent). But sub-goal completion *mutates pixels*:
+ls20 deletes matched sprites, vc33 hides them. Win conditions across all
+24 games reduce to two shapes — coordinate/pixel equality ("reach or match
+a position") or a flag tested in `step()`. Also `win_levels` == total level
+count, known from frame 0, so `levels_completed/win_levels` is free coarse
+progress.
+
+**Built.** (1) `MAX_ACTIONS` 80 -> 400. (2) A vanish detector: a whole
+object disappearing, as the visible proxy for sub-goal progress, weighted
+8 (above interaction 3, below level-up 20). Discriminator is online and
+needs no lookahead — occlusion by our own shape can hide at most
+`_controlled_size` cells, so a larger drop cannot be self-occlusion.
+Validated: fires 0-1.5% of steps, and correctly returns **zero** on ka59,
+whose 244 one-cell drops are churn rather than deletions.
+
+**Status: no score improvement.** Two sweeps at 400: one produced 2
+completions (0.0023), the other none (0.0). Completions remain flukish and
+slow. The vanish signal has the same bootstrap problem as level-ups — real
+but too rare (0-1.5%) to shape behaviour.
+
+**Sharpened next step.** The gap is now quantified: we need level 1 in
+~7-59 actions; undirected search takes ~400. That is 10-50x, which reward
+shaping alone will not close — it needs planning toward a target. The
+council originally deferred A*/pathfinding as premature "with no object
+identity or goal signal to search over". Those prerequisites now exist
+(object, move map, obstacle map, and win conditions that are mostly
+"reach a position"), so the condition they set for revisiting it is met.

@@ -109,12 +109,32 @@ METER_MUST_EMPTY_TO = 0.25
 # what the competition scores, so it dominates when it ever fires.
 LEVEL_UP_WEIGHT = 20.0
 
+# An interaction — changing something *other than* ourselves — sits between
+# "the frame changed at all" and "a level completed". Affecting the world is
+# better evidence of progress than merely moving, but it is not the score.
+INTERACTION_WEIGHT = 3.0
+
+# A whole object vanishing is the closest thing to visible sub-goal
+# progress: no API field reports partial progress, but games delete or
+# hide sprites when a sub-goal is met (ls20 removes matched targets, vc33
+# hides them). Ranked above a mere interaction, below an actual level-up.
+VANISH_WEIGHT = 8.0
+# Floor for "a whole object", used when no move map exists to compare
+# against. Below this, drops are churn: ka59 shows 244 one-cell drops.
+MIN_VANISH_CELLS = 8
+
 
 class MyAgent(Agent):
     """Explores by favoring actions/regions that visibly change the frame."""
 
-    # Upper bound on actions per game; the framework also enforces global limits.
-    MAX_ACTIONS = 80
+    # Upper bound on actions per game. The framework's default was 80, but
+    # that is a demo guard against infinite loops, NOT a competition rule —
+    # no server- or gateway-side cap exists anywhere, and the framework's
+    # own Playback class uses 1,000,000. At 80, ls20 (42 actions per life)
+    # gets under two attempts, and measured completions were pure noise
+    # (1 run of 2 produced any). At 400 both replicate runs produced
+    # completions on 2 games. Raised deliberately; see docs/history.md.
+    MAX_ACTIONS = 400
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -141,6 +161,16 @@ class MyAgent(Agent):
         # (a property of the game, not of one attempt).
         self._action_offsets: dict[GameAction, dict[tuple[int, int], int]] = {}
         self._announced_moves: set[GameAction] = set()
+        # "Thing I affect": times an action changed something beyond our own
+        # movement, and the positions where that happened. Persists across
+        # RESETs — where the world reacts is a property of the level.
+        self._action_interactions: dict[GameAction, int] = {}
+        self._interaction_sites: dict[tuple[int, int], int] = {}
+        # Sub-goal progress: whole objects disappearing. Persists across
+        # RESETs like the other rare, high-value signals.
+        self._action_vanishes: dict[GameAction, int] = {}
+        self._controlled_size = 0
+        self._pending_vanish = 0
         # Where a known move failed to happen, keyed by (position, action):
         # the environment layer — things that resist us. Survives RESET
         # (the level restarts from the same origin, so displacements stay
@@ -311,6 +341,7 @@ class MyAgent(Agent):
         if len(frames) >= 2 and self._last_action is not None:
             prev_frame = frames[-2]
             diff_cells = self._diff_cells(prev_frame, latest_frame)
+            moved = None
             # Position the last action was taken *from* — captured before
             # a successful move updates _displacement below.
             origin = self._displacement
@@ -329,6 +360,7 @@ class MyAgent(Agent):
                 moved = self._detect_translation(prev_frame, latest_frame)
                 if moved is not None:
                     _color, _size, offset = moved
+                    self._controlled_size = max(self._controlled_size, _size)
                     offsets = self._action_offsets.setdefault(self._last_action, {})
                     offsets[offset] = offsets.get(offset, 0) + 1
                     self._displacement = (
@@ -348,6 +380,37 @@ class MyAgent(Agent):
                             _size,
                             offset,
                         )
+
+            # "Thing I affect": whatever changed that our own movement and
+            # the budget meter do not explain.
+            # Fall back to what this action is *known* to do when the
+            # strict whole-diff test fails — otherwise our own movement
+            # goes unexplained and every step looks like an interaction.
+            observed_offset = (
+                moved[2] if moved else self.learned_moves.get(self._last_action)
+            )
+            # Only meaningful once we know what our *own* effect is: with
+            # no move map there is no self to subtract, so "residual" would
+            # just be "anything changed" — double-counting frame-change.
+            residual = (
+                self._residual_cells(
+                    prev_frame, latest_frame, diff_cells, observed_offset
+                )
+                if observed_offset is not None
+                else []
+            )
+            if residual:
+                self._action_interactions[self._last_action] = (
+                    self._action_interactions.get(self._last_action, 0) + 1
+                )
+                self._interaction_sites[origin] = (
+                    self._interaction_sites.get(origin, 0) + 1
+                )
+
+            if self._pending_vanish:
+                self._action_vanishes[self._last_action] = (
+                    self._action_vanishes.get(self._last_action, 0) + 1
+                )
 
             # Environment layer: an action with a known effect that failed
             # to produce it. Deliberately covers both "nothing changed"
@@ -438,6 +501,8 @@ class MyAgent(Agent):
             weights = [
                 (
                     self._action_changes.get(a, 0)
+                    + INTERACTION_WEIGHT * self._action_interactions.get(a, 0)
+                    + VANISH_WEIGHT * self._action_vanishes.get(a, 0)
                     + LEVEL_UP_WEIGHT * self._action_level_ups.get(a, 0)
                     + 1
                 )
@@ -533,6 +598,20 @@ class MyAgent(Agent):
                 else:
                     self._meter_up[colour] = self._meter_up.get(colour, 0) + 1
 
+        # Sub-goal signal: a whole object disappearing. Occlusion by our
+        # own shape can hide at most `_controlled_size` cells, so a larger
+        # drop cannot be us covering something — it is a real deletion.
+        # That test is available online, with no lookahead.
+        floor = max(self._controlled_size, MIN_VANISH_CELLS)
+        meter_colour = self.meter_colour
+        self._pending_vanish = 0
+        for colour, previous in self._colour_counts.items():
+            if colour == meter_colour:
+                continue  # the budget draining, not a sub-goal
+            drop = previous - counts.get(colour, 0)
+            if drop > floor:
+                self._pending_vanish += drop
+
         # Keep zeros rather than dropping absent colours: a meter that
         # empties disappears from the histogram, and forgetting it here
         # would make the refill that follows look like a first sighting.
@@ -550,6 +629,58 @@ class MyAgent(Agent):
                 colour,
                 sum(self._meter_starts[colour]) / len(self._meter_starts[colour]),
             )
+
+    def _residual_cells(
+        self,
+        prev_frame: FrameData,
+        latest_frame: FrameData,
+        diff_cells: list[tuple[int, int]],
+        offset: tuple[int, int] | None,
+    ) -> list[tuple[int, int]]:
+        """Changed cells NOT explained by our own shape moving.
+
+        The "thing I affect" layer: subtract self (the translation we
+        caused) and the budget meter (which ticks on its own schedule),
+        and whatever is left is something else we acted upon. Nothing
+        here assumes what that something is.
+        """
+        if not diff_cells:
+            return []
+        explained: set[tuple[int, int]] = set()
+        if offset is not None and prev_frame.frame and latest_frame.frame:
+            dx, dy = offset
+            lost: dict[int, set[tuple[int, int]]] = {}
+            gained: dict[int, set[tuple[int, int]]] = {}
+            for y, (prev_row, latest_row) in enumerate(
+                zip(prev_frame.frame[-1], latest_frame.frame[-1])
+            ):
+                for x, (prev_val, latest_val) in enumerate(zip(prev_row, latest_row)):
+                    if prev_val != latest_val:
+                        lost.setdefault(prev_val, set()).add((x, y))
+                        gained.setdefault(latest_val, set()).add((x, y))
+            for colour, source in lost.items():
+                target = gained.get(colour)
+                if not target:
+                    continue
+                moved = {p for p in source if (p[0] + dx, p[1] + dy) in target}
+                if moved:
+                    explained |= moved
+                    explained |= {(x + dx, y + dy) for x, y in moved}
+
+        meter = self.meter_colour
+        residual = []
+        for cell in diff_cells:
+            if cell in explained:
+                continue
+            if meter is not None and prev_frame.frame and latest_frame.frame:
+                x, y = cell
+                # Depletion recolours meter cells *away* from the meter
+                # colour, so check both sides of the change, not just the
+                # new value.
+                if meter in (prev_frame.frame[-1][y][x], latest_frame.frame[-1][y][x]):
+                    continue  # the budget ticking down, not something we hit
+            residual.append(cell)
+        return residual
 
     def _is_blocked(self, action: GameAction) -> bool:
         """Is this action known not to work from where we currently are?"""

@@ -141,7 +141,10 @@ def main() -> None:
 
     MyAgentCls = load_my_agent_class()
     if hasattr(MyAgentCls, "MAX_ACTIONS"):
-        MyAgentCls.MAX_ACTIONS = min(MyAgentCls.MAX_ACTIONS, args.max_steps)
+        # Set it, don't min() it — the old form silently clamped to the
+        # class default (80), so asking for a LARGER budget did nothing
+        # and every "bigger budget" experiment secretly ran at 80.
+        MyAgentCls.MAX_ACTIONS = args.max_steps
 
     log_dir = None
     if args.log:

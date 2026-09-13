@@ -88,14 +88,40 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       recurring max). Correctly rejects dc22's fill-progress colour, which
       declines but never refills. Fires on ~9 of 25 games. ls20: 84 units
       at 2/action = 42 actions per attempt.
+- [x] **action cap raised 80 -> 400** — self-imposed, no external cap
+      exists. Reproducibly yields completions (2 of 2 replicates at 400)
+      where 80 gave noise. Does NOT raise score: completions at ~400
+      actions score ~0 against human baselines of 7-59.
+- [x] **sub-goal (vanish) signal** — a whole object disappearing, the
+      only visible proxy for intra-level progress. Online discriminator:
+      drops larger than `_controlled_size` cannot be self-occlusion.
+      Fires 0-1.5% of steps; correctly ignores ka59's 244 one-cell churn
+      drops. Weight 8. No score change (too rare to shape behaviour).
+- [ ] **planning toward a target** — the quantified gap: level 1 needs
+      ~7-59 actions, undirected search takes ~400. 10-50x is not
+      closable by reward shaping. Win conditions across all 24 games are
+      mostly "reach or match a position", and the prerequisites the
+      council required before revisiting A* (object identity, move map,
+      obstacle map) now exist.
 - [ ] **use of the budget signal** — deliberately NOT wired to behaviour:
       measured cost per action is flat (ls20 1.94-2.00 for every action),
       so cost-aware selection gains nothing. Needs a goal to be useful —
       knowing time is short only helps if there is something to rush
       toward.
-- [ ] **interactions (wa30-style)** — the non-meter half of the 44%:
-      blocked moves whose change tracks our position. This is the
-      remaining route to "thing I affect".
+- [x] **thing I affect** — residual change after subtracting our own
+      movement and the meter. Gated on having a move map, since with no
+      known "self" the residual is just "anything changed" and
+      double-counts frame-change. 26-57% on games with a move map, ~0%
+      without. Third reward tier (weight 3) between frame-change and
+      level-up. No score change.
+- [ ] **code organisation** — `my_agent.py` is ~700 lines. Splitting into
+      modules is currently UNSAFE: `build_notebook.py` ships only that one
+      file, and the agent runs only under `KAGGLE_IS_COMPETITION_RERUN`,
+      so a bad import passes every local and Phase-A check and fails only
+      after spending a submission. Routes: ship each file
+      (`%%writefile`+`cp` per module, verifiable locally against the
+      framework's `templates/` import path) or inline modules at build
+      time. Needs explicit approval before touching the submission path.
 - [x] **environment / blocked-move detection** — a learned move that
       fails = something resists us, keyed by (position, action). Built
       *before* robustness after measuring the strictness flaw at only 4%.
