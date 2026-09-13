@@ -224,14 +224,67 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       double-counts frame-change. 26-57% on games with a move map, ~0%
       without. Third reward tier (weight 3) between frame-change and
       level-up. No score change.
-- [ ] **code organisation** — `my_agent.py` is ~700 lines. Splitting into
-      modules is currently UNSAFE: `build_notebook.py` ships only that one
-      file, and the agent runs only under `KAGGLE_IS_COMPETITION_RERUN`,
-      so a bad import passes every local and Phase-A check and fails only
-      after spending a submission. Routes: ship each file
-      (`%%writefile`+`cp` per module, verifiable locally against the
-      framework's `templates/` import path) or inline modules at build
-      time. Needs explicit approval before touching the submission path.
+- [x] **code organisation** — was 1,328 lines in one file, now seven
+      modules mirroring the layer stack, each answering one question:
+
+      | module | question |
+      |---|---|
+      | `perception.py` | what happened? |
+      | `control.py` | what can I make happen? |
+      | `constraints.py` | what limits what I can make happen? |
+      | `attention.py` | what appears worth investigating? |
+      | `navigation.py` | how do I get there with what I've learned? |
+      | `my_agent.py` | given all that, what should I do next? |
+      | `constants.py` | every tunable, grouped by layer |
+
+      Names are **epistemic, not semantic** — `control`/`constraints`/
+      `attention` are functional roles, not claims about what games
+      contain. `objects.py`/`goals.py`/`enemies.py` would smuggle in an
+      ontology; these don't. Review test for anything added later: does
+      the name describe an observable relationship, or an interpretation?
+
+      Two boundaries are load-bearing and should be defended:
+      - **`perception` returns evidence, never decisions.** It can say
+        something happened; it cannot say what it means. No `is_goal()`.
+      - **`navigation` takes a target, never picks one.** An earlier
+        draft had the router reach into the interest map to choose its
+        own destination, which quietly made navigation the privileged
+        paradigm — routing happened because it *could*, not because the
+        situation called for it. Policy lives in `my_agent.py` alone.
+
+      Synthesis stays in `my_agent.py` until there is enough accumulated
+      model-learning logic to justify extracting a hypothesis layer.
+      Don't create a module because you can imagine one; create it when
+      the code shows there is one.
+
+      **Shipping is now proven rather than hoped.** `build_notebook.py`
+      emits one `%%writefile` cell per module and copies them all into
+      the framework's `templates/`; a `sys.path` bootstrap in
+      `my_agent.py` makes sibling imports resolve both locally (loaded
+      standalone by `play_local.py`) and on Kaggle (imported as
+      `agents.templates.my_agent`) — neither plain absolute nor relative
+      imports work in both. `make verify-packaging` reconstructs the
+      rerun layout from the *notebook's own bytes* and imports MyAgent
+      through it in a clean interpreter, so a packaging mistake fails
+      here instead of after spending one of 5 daily submissions. Wired
+      into `make submit` as a prerequisite.
+
+      An attached-Kaggle-dataset layout was considered and rejected: it
+      needs two artifacts kept in sync (silent stale-code runs when they
+      drift) and can't be verified locally at all, since `/kaggle/input`
+      paths don't exist here.
+- [x] **tests** — 47 unit tests across perception, navigation, control
+      and constraints (`make test`, no game engine needed). They assert
+      the *refusals* as carefully as the successes: that translation
+      detection returns None on a recolour, that the move map refuses
+      m0r0's 15/13 coin-flip action, that the meter rejects dc22's
+      monotonic fill. A layer that concludes confidently from ambiguous
+      evidence is worse than one that stays silent.
+      Caught a latent crash during the refactor: `learned_moves` is
+      recomputed every step, so an action can drop out of it when new
+      observations break its majority — a queued route still referencing
+      it then raised `KeyError` (seen live on sc25 and wa30). Pre-existing;
+      the restructure only made it surface.
 - [x] **environment / blocked-move detection** — a learned move that
       fails = something resists us, keyed by (position, action). Built
       *before* robustness after measuring the strictness flaw at only 4%.

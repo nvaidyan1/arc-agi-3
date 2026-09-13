@@ -66,10 +66,16 @@ pull-sample: _check-kaggle ## Download the official Stochastic Goose sample note
 	    -p reference/stochastic-goose -m
 	@echo "Open reference/stochastic-goose/*.ipynb for the canonical pattern."
 
-notebook: ## Splice agent/my_agent.py into notebooks/submission.ipynb
+test: ## Run the unit tests (fast, no game engine needed)
+	$(VENV_PY) -m pytest tests/ -q
+
+notebook: ## Splice every agent/*.py module into notebooks/submission.ipynb
 	$(VENV_PY) scripts/build_notebook.py
 
-submit: notebook _check-kaggle ## Build notebook and push to Kaggle (one-line submission)
+verify-packaging: notebook ## Prove the shipped module layout imports on Kaggle
+	$(VENV_PY) scripts/verify_packaging.py
+
+submit: notebook verify-packaging _check-kaggle ## Build notebook and push to Kaggle (one-line submission)
 	@grep -q REPLACE_WITH_YOUR_USERNAME notebooks/kernel-metadata.json && { \
 	    echo "ERROR: edit notebooks/kernel-metadata.json and replace REPLACE_WITH_YOUR_USERNAME"; \
 	    exit 1; } || true

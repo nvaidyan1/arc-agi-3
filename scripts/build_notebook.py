@@ -1,17 +1,38 @@
-"""Splice the current `agent/my_agent.py` into `notebooks/submission.ipynb`.
+"""Splice every module in `agent/` into `notebooks/submission.ipynb`.
 
-The notebook follows the exact pattern used by Kaggle's official sample
+The notebook follows the pattern used by Kaggle's official sample
 ("ARC3 Sample Submission - Stochastic Goose"):
 
   Cell 1: install the `arc-agi` wheel from the offline competition dataset.
-  Cell 2: write `my_agent.py` to /kaggle/working/ — its body is THIS file.
-  Cell 3: if running inside the Kaggle competition rerun, wait for the
-          gateway sidecar, copy the framework into /kaggle/working/, register
-          MyAgent, and run `python main.py --agent myagent`.
-  Cell 4: otherwise (during commit / save-and-run-all), write a dummy
+  Cell 2: create the staging directory.
+  Cell 3+: one `%%writefile` cell per module in `agent/`.
+  Then:   if running inside the Kaggle competition rerun, wait for the
+          gateway sidecar, copy the framework into /kaggle/working/, drop
+          every module in as a framework template, register MyAgent, and
+          run `python main.py --agent myagent`.
+  Last:   otherwise (during commit / save-and-run-all), write a dummy
           submission.parquet so Kaggle accepts the commit.
 
-You don't normally need to call this directly — `make submit` runs it for you.
+WHY INLINE RATHER THAN AN ATTACHED DATASET
+------------------------------------------
+The obvious alternative is to upload `agent/` as a private Kaggle dataset
+and `sys.path.append` its mount point. That was considered and rejected
+for this repo, for two reasons that both bite only at rerun time — the
+one moment we cannot afford a surprise, since a failed rerun costs one of
+five daily submissions:
+
+  1. **Version skew is silent.** Two artifacts (notebook + dataset) must
+     stay in sync. Forget `kaggle datasets version` and the rerun runs
+     stale code that imports perfectly and produces wrong results. A
+     crash would be kinder.
+  2. **It can't be verified locally.** `/kaggle/input/...` paths don't
+     exist here, so the packaging is untestable until it's too late.
+
+Inlining keeps one self-contained artifact whose contents are byte-
+identical to what we test locally, and `make verify-packaging` proves the
+assembled layout imports before anything is submitted.
+
+You don't normally need to call this directly — `make submit` runs it.
 """
 from __future__ import annotations
 
@@ -39,9 +60,33 @@ _ACCELERATORS = {
 }
 
 ROOT = Path(__file__).resolve().parents[1]
-AGENT_SRC = ROOT / "agent" / "my_agent.py"
+AGENT_DIR = ROOT / "agent"
 NOTEBOOK_PATH = ROOT / "notebooks" / "submission.ipynb"
 METADATA_PATH = ROOT / "notebooks" / "kernel-metadata.json"
+
+# Where modules are staged before being copied into the framework. NOT
+# /kaggle/working/ — anything there shows up as a notebook output, and
+# the "Submit to Competition" UI would then offer it as a candidate
+# submission file alongside submission.parquet, where an unlucky default
+# selection rejects the submission.
+STAGING = "/tmp/agent_src"
+
+
+def agent_modules() -> list[Path]:
+    """Every module to ship, with my_agent.py last.
+
+    Order is cosmetic — the bootstrap in my_agent.py puts the staging
+    directory on sys.path, so imports resolve regardless of which file
+    was written first — but reading the notebook top to bottom is nicer
+    when the entry point comes last.
+    """
+    modules = sorted(
+        p for p in AGENT_DIR.glob("*.py") if p.name != "my_agent.py"
+    )
+    entry = AGENT_DIR / "my_agent.py"
+    if not entry.exists():
+        raise SystemExit(f"Could not find {entry}")
+    return modules + [entry]
 
 
 def code_cell(source: str) -> dict:
@@ -59,9 +104,7 @@ def markdown_cell(source: str) -> dict:
 
 
 def build() -> dict:
-    if not AGENT_SRC.exists():
-        raise SystemExit(f"Could not find {AGENT_SRC}")
-    agent_body = AGENT_SRC.read_text()
+    modules = agent_modules()
 
     install_cell = code_cell(
         "!pip install --no-index --find-links \\\n"
@@ -69,13 +112,14 @@ def build() -> dict:
         "    arc-agi python-dotenv"
     )
 
-    # We write the agent to /tmp/ (not /kaggle/working/) so it does NOT appear
-    # as a notebook output. Otherwise the "Submit to Competition" UI would
-    # offer it as a candidate submission file alongside submission.parquet,
-    # and an unlucky default selection rejects the submission.
-    write_agent_cell = code_cell(
-        "%%writefile /tmp/my_agent.py\n" + agent_body
-    )
+    mkdir_cell = code_cell(f"!mkdir -p {STAGING}")
+
+    # One cell per module. `%%writefile` must be the first line of its own
+    # cell, so each module gets its own.
+    write_cells = [
+        code_cell(f"%%writefile {STAGING}/{path.name}\n" + path.read_text())
+        for path in modules
+    ]
 
     run_cell_source = dedent(
         """\
@@ -90,9 +134,12 @@ def build() -> dict:
             !cp -r /kaggle/input/competitions/arc-prize-2026-arc-agi-3/ARC-AGI-3-Agents \\
                    /kaggle/working/ARC-AGI-3-Agents
 
-            # Drop our agent in as a framework template.
-            !cp /tmp/my_agent.py \\
-                /kaggle/working/ARC-AGI-3-Agents/agents/templates/my_agent.py
+            # Drop every agent module in as framework templates. They sit
+            # side by side, and my_agent.py's sys.path bootstrap makes its
+            # own directory importable so the siblings resolve here just
+            # as they do locally.
+            !cp /tmp/agent_src/*.py \\
+                /kaggle/working/ARC-AGI-3-Agents/agents/templates/
 
             # Register MyAgent in the framework's agent registry. We rewrite
             # __init__.py because the upstream version eagerly imports
@@ -184,12 +231,15 @@ def build() -> dict:
         "cells": [
             markdown_cell(
                 "# ARC Prize 2026 — ARC-AGI-3 Submission\n\n"
-                "Built from `agent/my_agent.py` via `scripts/build_notebook.py`. "
-                "Do not edit cells directly — edit the source file and re-run "
-                "`make submit`."
+                "Built from `agent/*.py` via `scripts/build_notebook.py` "
+                f"({len(modules)} modules: "
+                f"{', '.join(p.name for p in modules)}).\n\n"
+                "Do not edit cells directly — edit the source files and "
+                "re-run `make submit`."
             ),
             install_cell,
-            write_agent_cell,
+            mkdir_cell,
+            *write_cells,
             run_cell,
             dummy_submission_cell,
         ],
@@ -200,8 +250,11 @@ def build() -> dict:
 def main() -> None:
     NOTEBOOK_PATH.parent.mkdir(parents=True, exist_ok=True)
     NOTEBOOK_PATH.write_text(json.dumps(build(), indent=1))
+    shipped = [p.name for p in agent_modules()]
     print(f"[build_notebook] Wrote {NOTEBOOK_PATH.relative_to(ROOT)}  "
           f"(accelerator: {ACCELERATOR})")
+    print(f"[build_notebook] Shipped {len(shipped)} modules: "
+          f"{', '.join(shipped)}")
 
     # Keep notebooks/kernel-metadata.json in sync so the user never has to
     # edit it just to flip CPU ↔ GPU.

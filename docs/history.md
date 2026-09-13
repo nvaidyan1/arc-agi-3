@@ -941,3 +941,73 @@ silently dropped, because the finding is worth more than the change: it
 says the bottleneck was never routing *capacity*, and adding more of it
 without a real goal signal will keep making the score worse. The
 pre-router baseline (0.0630) remains the best-measured configuration.
+
+## 2026-09-13 — Reorganised into layers; packaging made provable; a latent crash found
+
+**Motivation.** 1,328 lines in one file, and navigating it had become the
+bottleneck on doing anything else. Deferred previously because splitting
+was judged UNSAFE — `build_notebook.py` shipped exactly one file, and a
+bad import would pass every local check and fail only during the Kaggle
+rerun, costing one of five daily submissions.
+
+**Hypothesis.** The layer stack we already documented is a real
+decomposition, so the code can mirror it without inventing structure; and
+the deployment risk is removable rather than inherent.
+
+**Built.** Seven modules, each answering one question: `perception` (what
+happened), `control` (what can I make happen), `constraints` (what limits
+it), `attention` (what's worth investigating), `navigation` (how to get
+there), `constants`, and `my_agent` (what to do next). Names are
+deliberately **epistemic rather than semantic** — `objects.py`/`goals.py`
+would smuggle in an ontology the governing principle forbids.
+
+Two boundaries defended on purpose:
+  * `perception` returns evidence, never decisions — it can say something
+    happened, not what it means.
+  * `navigation` takes a target, never chooses one. The pre-refactor
+    router reached into the interest map for its own destination, which
+    quietly made navigation the privileged paradigm: routing happened
+    because it *could*, not because the situation called for it.
+
+**Packaging, now proven rather than hoped.** The notebook emits one
+`%%writefile` cell per module; a `sys.path` bootstrap makes sibling
+imports resolve both locally (loaded standalone by `play_local.py`) and
+on Kaggle (imported as `agents.templates.my_agent`) — neither plain
+absolute nor relative imports work in both contexts.
+`scripts/verify_packaging.py` rebuilds the rerun layout **from the
+notebook's own bytes**, rewrites `agents/__init__.py` as the notebook
+does, and imports MyAgent in a clean subprocess. It is a prerequisite of
+`make submit`. An attached-dataset layout was considered and rejected:
+two artifacts to keep in sync (drift runs stale code *silently*) and no
+way to verify locally, since `/kaggle/input` paths don't exist here.
+
+**Observation — a latent crash, surfaced by the move.** Two games raised
+`KeyError(ACTION4)`. Cause: `learned_moves` is recomputed every step, so
+an action whose offsets stop meeting the majority threshold silently
+*drops out* of the map — and a queued route still holding that action
+then failed its offset lookup. Pre-existing; the restructure only made it
+frequent enough to see. Fixed by invalidating a route whose next action
+is no longer a known move.
+
+**Observation — behavioural parity.** After the fix: 0 errors across 25
+games, move maps form on **16/25 (exactly matching pre-refactor)**,
+vanish 2.3% vs 2.1%, router 3.3% vs 3.6%. Score across 14 sweeps: mean
+0.0268, max 0.0958, **13/14 non-zero** against pre-refactor 0.0511 / 5-of-9.
+The means overlap heavily given this metric's documented 0.0-0.15 range
+within a single configuration, and consistency is better; the structural
+measurements are what actually certify the refactor, not the score.
+
+**Also built.** 47 unit tests (`make test`), the first in the repo. They
+assert the **refusals** as carefully as the successes — translation
+returning None on a recolour, the move map declining m0r0's 15/13
+coin-flip, the meter rejecting dc22's monotonic fill — because a layer
+that concludes confidently from ambiguous evidence is worse than one that
+stays silent. One test failure was the *test* being wrong, and it
+corrected an inherited docstring: `detect_translation` is defeated by a
+stray cell of the **moving shape's own colour**, not by unrelated change
+elsewhere, since correspondence is per colour.
+
+**Inference.** No behaviour was intended to change and none measurably
+did. The value is that the next experiment is cheap to write, the layer
+boundaries make "where does this belong?" answerable, and a packaging
+mistake can no longer cost a submission.
