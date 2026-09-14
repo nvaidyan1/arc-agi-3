@@ -92,8 +92,8 @@ class BoundarySupervisor:
                 if rec is None or rec.lever(_relations.DOWN) is None:
                     continue
                 typed = type_of(key, colour_of)
-                if typed is None:
-                    continue
+                if typed is None or typed in found:
+                    continue          # one count per type per advance, however many pairs
                 found.append(typed)
                 self.mattered[typed] = self.mattered.get(typed, 0) + 1
         if not found:

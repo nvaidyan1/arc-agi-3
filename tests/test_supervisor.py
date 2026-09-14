@@ -99,3 +99,15 @@ def test_describe_reads_as_a_brief_section():
     text = "\n".join(s.describe())
     assert "MATTERED" in text and "part_size_diff" in text and "ACTION5 x2" in text
     assert "1 with no expressible coordinate" in text
+
+
+def test_several_pairs_of_one_type_count_once_per_advance():
+    # ar25 read "fell into 6 advances" after one advance: six colour-5 things
+    # each approaching the colour-11 thing.
+    e = Engine(**{f'("distance", {i}, 2)': rec(2, ACTION4=(8, 0, 2), ACTION3=(0, 8, 2)) for i in (1, 3, 4)})
+    colour = {1: 9, 3: 9, 4: 9, 2: 3}.get
+    s = supervisor.BoundarySupervisor()
+    for v in (10, 8, 6, 4, 2):
+        s.observe({("distance", i, 2): v for i in (1, 3, 4)})
+    s.on_advance(e, colour, "ACTION4")
+    assert s.mattered == {("distance", frozenset({3}), frozenset({9})): 1}
