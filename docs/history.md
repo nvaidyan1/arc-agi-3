@@ -1837,3 +1837,48 @@ Next per the verdict: step 5 (event log + `action -> delta residual` in the
 agent), then the level-boundary diff, with the grouping *view* added to the
 relation layer so `palette_diff` can move. More advances are needed to make
 (iii') a measurement rather than a reading: 11 is the whole sample.
+
+## 2026-09-14 — The brief, the grouping view, and what two games' briefs say
+
+**Built.** `agent/brief.py` — the text a hypothesis proposer would be sent
+(THINGS / GROUPS / CONTROL / RELATIONS / FALLING / OPEN / RECENT, ~45
+lines), composed live by the agent and shown verbatim in a new recap card.
+`RelationEngine.groups()` — the council's "composite for free": union-find
+over pairs whose `containment == 0` or `cell_exchange > 0` has persisted 3
+steps, recomputed every call, never stored; `palette_diff` / `shape_diff`
+between groups. `PairRecord.lever()` — the action that moves a residual
+*more than the others do*, Belief's selectivity contrast lifted to a pair.
+161 tests.
+
+**Observation — reading the brief as a proposer would, three times.**
+First draft on cd82: all ten RELATIONS rows and six of eight RECENT events
+were the canvas (`containment(static, canvas) = 3192`; "canvas lost 35
+cells that the bucket gained" on every move). The canvas is now excluded
+from relation pairs at the engine. Second draft: `containment(*, stamina
+bar)` filled FALLING because the bar drains under everything. FALLING now
+requires a lever. Third draft, sp80: the **canvas had earned CONTROL** —
+it grows under one action and shrinks under another, deterministically,
+which is the d-pad signature applied to the substrate — and was named as
+what the d-pad moves. Excluded from CONTROL.
+
+**Observation — the grouping view on cd82, unprompted, at step 60:**
+`{#0,#1,#5,#6}` the template (interior, frame, black, pink);
+`{#2,#3,#4}` the strip with its swatches; `{#8,#9}` the bucket, frame and
+fill; `{#11,#12}` the block's two halves. Every object the opening
+screenshot named, from persistence of two relations, with no node stored.
+
+**Inference — what the two briefs say, and what they cannot.**
+  * cd82: `palette_diff(template-group, block-group) = 2`, constant — the
+    block already has the template's two colours; the goal is their
+    *arrangement*. In this vocabulary that is `shape_diff(template-black,
+    block-black) -> 0`: an equality with no gradient, which is exactly
+    where "never align two grids" leaves it. The cd82 probe with group
+    residuals confirms: no group residual is a lever or collapses into any
+    advance.
+  * sp80: CONTROL says "moves *something*" — the move map has offsets but
+    **no entity is CONTROL**; every relation "moves under every action
+    alike" (a timer, `{#0,#7}`, one bar grouped from cell exchange);
+    FALLING: nothing. The honest brief for a game where the agent does not
+    know what it controls, and the second-game derivation the council
+    asked for: sp80's controllable objects are not entities at all
+    (the plan's "sp80 assigns no CONTROL" item, now located).

@@ -101,6 +101,7 @@ class Briefer:
         out.append(head)
 
         out.extend(self._things(agent))
+        out.extend(self._groups(agent))
         out.extend(self._control(agent))
         out.extend(self._relations(agent))
         out.extend(self._falling(agent))
@@ -138,9 +139,38 @@ class Briefer:
             out.append(f"  static ({len(static)}): {shown}{more}")
         return out
 
+    def _groups(self, agent) -> list[str]:
+        groups = agent.relations.groups()
+        if not groups:
+            return []
+        out = ["GROUPS (things that persistently sit inside one another or trade cells — a view, not a claim)"]
+        for g in groups[:6]:
+            cols = sorted({agent.regions._tracked[r][0] for r in g})
+            out.append(f"  {{{', '.join(f'#{r}' for r in sorted(g))}}} colours {cols}")
+        # Group-level residuals that have moved recently, or hold.
+        # Group-to-group rows first (two composite things compared), then
+        # group-to-singleton; within each, lowest residual first.
+        shown = 0
+        for (rel, ka, kb), rec in sorted(agent.relations.group_records.items(),
+                                         key=lambda kv: (kv[1].residual is None,
+                                                         not (len(kv[0][1]) > 1 and len(kv[0][2]) > 1),
+                                                         kv[1].residual or 0)):
+            if rec.residual is None or (rec.residual > 0 and not rec.moved and rec.defined_steps > 5 and shown):
+                continue
+            name = lambda k: "{" + ",".join(f"#{r}" for r in k) + "}" if len(k) > 1 else f"#{k[0]}"
+            line = f"  {rel}({name(ka)}, {name(kb)}) = {rec.residual}"
+            lever = rec.lever(_relations.DOWN)
+            if lever:
+                line += f"   {lever[0]} drives it down"
+            out.append(line); shown += 1
+            if shown >= 6:
+                break
+        return out
+
     def _control(self, agent) -> list[str]:
         moves = agent.moves.learned_moves
-        control = agent.belief.by_role(_belief.CONTROL)
+        canvas = agent._canvas_ids()
+        control = [b for b in agent.belief.by_role(_belief.CONTROL) if b.region_id not in canvas]
         lines = []
         for action, off in sorted(moves.items(), key=lambda kv: kv[0].name):
             # Name only the things THIS action is known to move: an entity
@@ -189,12 +219,14 @@ class Briefer:
             rec = agent.relations.records[key]
             rel, a, b = key
             anchor, other = (a, b) if degree[a] >= degree[b] else (b, a)
-            levers = tuple(rec.movers(_relations.DOWN)[:3])
-            risers = tuple(rec.movers(_relations.UP)[:2])
-            groups.setdefault((rel, anchor, levers, risers), []).append((other, rec.residual, t))
+            # Levers, not movers: an action that drives the residual more
+            # than the others do. A residual every action moves alike is
+            # the weather, and is said to be.
+            levers = (rec.lever(_relations.DOWN), rec.lever(_relations.UP))
+            groups.setdefault((rel, anchor, levers), []).append((other, rec.residual, t))
         rows = sorted(groups.items(), key=lambda g: -max(m[2] for m in g[1]))
         out = [f"RELATIONS (residual, 0 = holds; moved on this level, newest first)"]
-        for (rel, anchor, levers, risers), members in rows[:MAX_RELATIONS]:
+        for (rel, anchor, (down, up)), members in rows[:MAX_RELATIONS]:
             if len(members) == 1:
                 other, val, _t = members[0]
                 line = f"  {rel}(#{anchor},#{other}) = {val}"
@@ -202,10 +234,12 @@ class Briefer:
                 vals = ", ".join(f"#{o}={v}" for o, v, _t in members[:6])
                 more = f" … +{len(members) - 6}" if len(members) > 6 else ""
                 line = f"  {rel}(#{anchor}, each of {vals}{more})"
-            if levers:
-                line += "   fell under " + ", ".join(f"{act} x{n}" for act, n in levers)
-            if risers:
-                line += "   rose under " + ", ".join(f"{act} x{n}" for act, n in risers)
+            if down:
+                line += f"   {down[0]} drives it down (+{down[1]:.0%} over other actions)"
+            if up:
+                line += f"   {up[0]} drives it up (+{up[1]:.0%})"
+            if not down and not up:
+                line += "   moves under every action alike"
             out.append(line)
         if not recent:
             out.append("  nothing has moved yet")
@@ -218,11 +252,14 @@ class Briefer:
             n = sum(1 for s in steps if self._step - s < FALLING_WINDOW)
             if n >= 2 and key[1] in live and key[2] in live:
                 rec = agent.relations.records[key]
-                falling.append((n, key, rec.residual))
+                lever = rec.lever(_relations.DOWN)
+                if lever is None:
+                    continue        # falling on its own is a drain, not a candidate
+                falling.append((n, key, rec.residual, lever))
         falling.sort(key=lambda f: (-f[0], f[2] if f[2] is not None else 1e9))
-        out = [f"FALLING (driven down >= 2 times in the last {FALLING_WINDOW} steps)"]
-        for n, (rel, a, b), val in falling[:MAX_FALLING]:
-            out.append(f"  {rel}(#{a},#{b}) = {val}   down x{n}")
+        out = [f"FALLING (down >= 2 times in the last {FALLING_WINDOW} steps AND some action drives it)"]
+        for n, (rel, a, b), val, (act, lift) in falling[:MAX_FALLING]:
+            out.append(f"  {rel}(#{a},#{b}) = {val}   down x{n}, {act} drives it")
         if not falling:
             out.append("  nothing")
         return out

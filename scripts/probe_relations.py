@@ -120,23 +120,15 @@ def replay(entries: list[dict], game_id: str) -> dict:
     return summarise(snapshots, actions, advances, engine)
 
 
-def _selective_tally(by_action: dict, act: str, direction: str) -> bool:
-    tally = by_action[act]
-    n = sum(tally.values())
-    if tally[direction] < 2 or n < 4:
-        return False
-    rates = sorted(t[direction] / max(sum(t.values()), 1) for t in by_action.values())
-    median = rates[len(rates) // 2]
-    return tally[direction] / n - median >= 0.2
-
-
 def _selective(rec, act: str, direction: str) -> bool:
-    return _selective_tally(rec.by_action, act, direction)
+    lever = rec.lever(direction)
+    return lever is not None and lever[0] == act
 
 
 def _is_lever(by_action: dict, direction: str) -> bool:
     """Some action moves this residual in `direction` selectively."""
-    return any(_selective_tally(by_action, a, direction) for a in by_action)
+    rec = relations.PairRecord(); rec.by_action = by_action
+    return rec.lever(direction) is not None
 
 
 def summarise(snapshots, actions, advances, engine) -> dict:

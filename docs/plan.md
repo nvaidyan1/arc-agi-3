@@ -512,7 +512,18 @@ verdict, in force for everything below:
       residual.** (iii) is the gate. If it fails, the relation layer is
       decoration and the fallback is novelty certification over first-visit
       frame hashes — a different build.
-- [ ] **4b. grouping as a view** — `relations.groups()`: union-find over
+- [x] **4b. grouping as a view** — built; cd82 groups template, strip,
+      bucket and block halves unprompted. The exit criterion was wrong:
+      `palette_diff(block, template)` reads 2 and *cannot* fall, because
+      the block already has the template's colours and the goal is their
+      arrangement — expressible only as `shape_diff -> 0`, no gradient.
+      Recorded, not worked around (`history.md` 2026-09-14).
+- [ ] **4c. sp80: the controlled objects are not entities.** The move map
+      learns (0,4)/(20,0) but no tracked region is CONTROL, so the brief
+      says "moves something". Find why (size filter? colour shared with the
+      canvas? merged by `merge_enclosed`?) — this is the second game's
+      derivation the council required before the relation set is trusted.
+- [x] ~~**4b'.**~~ (merged into 4b above) `relations.groups()`: union-find over
       pairs whose `cell_exchange` or `containment == 0` has persisted k
       frames, recomputed each step, never stored; `palette_diff` /
       `count_diff` / `shape_diff` computed over the view as well as over
@@ -520,9 +531,14 @@ verdict, in force for everything below:
       single-colour entities, so the matching family is invisible to the
       layer until this exists. Exit: `palette_diff(block-view, template-view)`
       on cd82 reads 2 and falls under paint actions.
-- [ ] **5. event log** — one line per step of every residual that moved,
-      with the action. Exit: cd82 shows `palette_diff(block, template):
-      2 -> 1` attributed to a paint action.
+- [x] **5. the brief** (supersedes "event log") — `agent/brief.py`, shown
+      live in the recap's Brief card: THINGS / GROUPS / CONTROL / RELATIONS
+      (levers, or "moves under every action alike") / FALLING (only with a
+      lever) / OPEN / RECENT. The serialisation was designed before the
+      proposer, as the council asked, and reading it found three faults
+      the panels had hidden (canvas as relatum, drains as levers, canvas as
+      CONTROL). The original exit — `palette_diff 2 -> 1` on cd82 — was
+      impossible, see 4b.
 - [ ] **6. level-boundary diff as supervisor** — snapshot the residual
       vector at t-1 and t of every level advance; only residuals that
       collapsed at >=2 independent boundaries are admissible hypothesis

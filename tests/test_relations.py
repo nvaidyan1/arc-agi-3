@@ -164,3 +164,97 @@ def test_skipped_entities_take_part_in_nothing():
     out = e.update(t, t.keys(), "ACTION1", skip={9})
     assert not any(9 in k[1:] for k in out)
     assert out[("count_diff", 1, 2)] == 0          # the canvas is not counted either
+
+
+# ── the grouping view ───────────────────────────────────────────────────
+
+def frame_fill(x0, y0):
+    """A 5x5 frame of colour 2 around a 3x3 fill of colour 15 — an open
+    bucket would not be enclosed, but its fill sits inside its bbox."""
+    outer = sq(x0, y0, 5, 5) - sq(x0 + 1, y0 + 1, 3, 3) - {(x0 + 2, y0)}  # open at the top
+    return {1: (2, outer), 2: (15, sq(x0 + 1, y0 + 1, 3, 3))}
+
+
+def test_a_fill_inside_a_frame_groups_once_it_has_persisted():
+    e = RelationEngine()
+    for _ in range(2):
+        step(e, frame_fill(10, 10))
+    assert e.groups() == []                       # containment held 1 step so far
+    for _ in range(3):
+        step(e, frame_fill(10, 10))
+    assert e.groups() == [frozenset({1, 2})]
+
+
+def test_a_thing_passing_through_a_box_does_not_group():
+    e = RelationEngine()
+    big, small = (7, sq(0, 0, 10, 10)), (3, sq(20, 0))
+    step(e, {1: big, 2: small}); step(e, {1: big, 2: small})
+    step(e, {1: big, 2: (3, sq(3, 3))})          # inside for one step
+    step(e, {1: big, 2: (3, sq(20, 0))})
+    step(e, {1: big, 2: (3, sq(20, 0))})
+    assert e.groups() == []
+
+
+def test_regions_that_keep_trading_cells_group():
+    # A recolour mechanic: part of 1 becomes 2, step after step.
+    e = RelationEngine()
+    w = 6
+    for k in range(6):
+        step(e, {1: (7, sq(0, 0, w - k, 4) if w - k > 0 else frozenset({(0, 0)})),
+                 2: (3, sq(w - k, 0, k + 1, 4))}, action="ACTION5")
+    assert e.groups() == [frozenset({1, 2})]
+
+
+def test_group_palette_diff_is_over_the_union_of_colours():
+    e = RelationEngine()
+    def scene():
+        d = frame_fill(10, 10)                   # group {1,2}: colours {2,15}
+        d[3] = (15, sq(40, 40))                  # a lone pink thing
+        d[4] = (9, sq(50, 50))                   # a lone other thing
+        return d
+    for _ in range(5):
+        step(e, scene())
+    snap = e.snapshot()
+    assert snap[("palette_diff", (1, 2), (3,))] == 1      # {2,15} ^ {15} = {2}
+    assert snap[("palette_diff", (1, 2), (4,))] == 3      # {2,15} ^ {9}
+    assert ("palette_diff", (3,), (4,)) not in snap        # singleton pairs stay ordinary
+
+
+def test_groups_are_a_view_and_dissolve_when_the_evidence_stops():
+    e = RelationEngine()
+    for _ in range(5):
+        step(e, frame_fill(10, 10))
+    assert e.groups()
+    # The fill leaves the frame and stays out.
+    d = frame_fill(10, 10); d[2] = (15, sq(40, 40))
+    for _ in range(2):
+        step(e, d)
+    assert e.groups() == []
+
+
+# ── levers ──────────────────────────────────────────────────────────────
+
+def _tally(**kw):
+    rec = relations.PairRecord()
+    for act, (d, u, f) in kw.items():
+        rec.by_action[act] = {relations.DOWN: d, relations.UP: u, relations.FLAT: f}
+    return rec
+
+
+def test_a_residual_every_action_moves_alike_has_no_lever():
+    # The timer bar: falls on 9 of 10 steps whatever is pressed.
+    rec = _tally(ACTION1=(9, 0, 1), ACTION2=(9, 0, 1), ACTION3=(9, 0, 1), ACTION4=(9, 0, 1))
+    assert rec.movers(relations.DOWN)                    # it certainly moves
+    assert rec.lever(relations.DOWN) is None             # but nothing drives it
+
+
+def test_the_action_that_stands_out_is_the_lever():
+    rec = _tally(ACTION1=(8, 0, 2), ACTION2=(1, 2, 7), ACTION3=(0, 8, 2), ACTION4=(1, 1, 8))
+    act, lift = rec.lever(relations.DOWN)
+    assert act == "ACTION1" and lift > 0.5
+    assert rec.lever(relations.UP)[0] == "ACTION3"
+
+
+def test_a_lever_needs_tries():
+    rec = _tally(ACTION1=(2, 0, 0), ACTION2=(0, 0, 10))
+    assert rec.lever(relations.DOWN) is None             # 2 tries is a coincidence
