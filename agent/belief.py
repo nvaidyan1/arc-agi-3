@@ -45,12 +45,42 @@ Two properties keep it honest, and they are the same two that every lens in
 """
 from __future__ import annotations
 
+import math
+
 from constants import (
     BELIEF_CONTEXT_BASELINE,
+    BELIEF_HYSTERESIS,
     BELIEF_MIN_ACTIONS,
+    BELIEF_MIN_CERTAINTY,
     BELIEF_MIN_OBSERVATIONS,
     BELIEF_SELECTIVITY,
 )
+
+def _phi(z: float) -> float:
+    """Standard normal CDF, via erf — no scipy, and none needed."""
+    return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+
+
+def _one_sided(observed: float, threshold: float, n: int) -> float:
+    """Confidence that a proportion genuinely exceeds a fixed threshold."""
+    spread = threshold * (1 - threshold) / n
+    if spread <= 0:
+        return 1.0 if observed > threshold else 0.0
+    return _phi((observed - threshold) / math.sqrt(spread))
+
+
+# How an action changes a thing, in the only vocabulary available without
+# knowing anything about the game: what happened to its cells. Measured to
+# separate cleanly -- on wa30 the rotating object reads TURNED on 86 of 88
+# events while the sliding one reads MOVED on 73 of 73, and on cd82 the
+# stamina bar reads SHRANK under every action and never once GREW.
+MOVED = "moved"          # centroid shifted, size held
+TURNED = "turned"        # size held, cells changed, centroid did not move
+GREW = "grew"
+SHRANK = "shrank"
+APPEARED = "appeared"
+VANISHED = "vanished"
+MOTION_KINDS = (MOVED, TURNED)
 
 CONTROL = "control"
 AFFECT = "affect"
@@ -62,8 +92,8 @@ UNASSIGNED = "unassigned"
 class Belief:
     """One entity's accumulated evidence, and the role it currently earns."""
 
-    __slots__ = ("region_id", "colour", "acted", "changed", "displaced",
-                 "last_size", "last_cells")
+    __slots__ = ("region_id", "colour", "acted", "changed", "kinds",
+                 "last_size", "last_cells", "_held")
 
     def __init__(self, region_id: int, colour: int) -> None:
         self.region_id = region_id
@@ -73,9 +103,12 @@ class Belief:
         # whole basis of every role below — a rate needs its denominator.
         self.acted: dict[str, int] = {}
         self.changed: dict[str, int] = {}
-        # Times this entity's change looked like going somewhere, rather
-        # than merely being different. Splits CONTROL from AFFECT.
-        self.displaced = 0
+        # Per action, a tally of HOW it changed. Knowing only *that* an
+        # action affects a thing is most of the way to useless: "ACTION5
+        # affects #12" and "ACTION5 grows #12 while ACTION3 moves it" are
+        # different amounts of understanding, and the second is available
+        # from the same observations.
+        self.kinds: dict[str, dict[str, int]] = {}
         self.last_size = 0
         # The cells this entity occupied on the PREVIOUS frame. Needed
         # because a change at its edge removes that cell from the region:
@@ -84,13 +117,36 @@ class Belief:
         # Measured cost of getting this wrong: the cd82 meter read 7%
         # responsive where it is really 77%, and stayed UNASSIGNED.
         self.last_cells: frozenset = frozenset()
+        # The last role this entity earned. Roles are still recomputed
+        # from evidence every time, but a held one is given a slightly
+        # lower bar to keep than it needed to win — without that, an
+        # entity sitting near the threshold flips on and off as evidence
+        # trickles in. Measured on cd82 before this: 12 of 17 entities
+        # gained a role, lost it and regained it, one of them seven times,
+        # and the Controls readout changed on 19% of steps.
+        self._held: str = UNASSIGNED
 
-    def observe(self, action: str, changed: bool, displaced: bool) -> None:
+    def observe(self, action: str, kind: str | None) -> None:
         self.acted[action] = self.acted.get(action, 0) + 1
-        if changed:
-            self.changed[action] = self.changed.get(action, 0) + 1
-        if displaced:
-            self.displaced += 1
+        if kind is None:
+            return
+        self.changed[action] = self.changed.get(action, 0) + 1
+        per = self.kinds.setdefault(action, {})
+        per[kind] = per.get(kind, 0) + 1
+
+    def kind_for(self, action: str | None) -> str | None:
+        """The way this action most often changes this entity."""
+        per = self.kinds.get(action or "", {})
+        return max(per, key=per.get) if per else None
+
+    @property
+    def dominant_kind(self) -> str | None:
+        """The way it most often changes at all, whatever the action."""
+        total: dict[str, int] = {}
+        for per in self.kinds.values():
+            for k, n in per.items():
+                total[k] = total.get(k, 0) + n
+        return max(total, key=total.get) if total else None
 
     @property
     def observations(self) -> int:
@@ -152,27 +208,153 @@ class Belief:
                 or len(self.acted) < BELIEF_MIN_ACTIONS):
             return UNASSIGNED
         _action, lift = self.selectivity
-        if lift >= BELIEF_SELECTIVITY:
-            return CONTROL if self.displaced else AFFECT
-        if self.responsiveness >= BELIEF_CONTEXT_BASELINE:
+        # Hysteresis: keeping a role needs less than winning it did.
+        bar = (BELIEF_SELECTIVITY - BELIEF_HYSTERESIS
+               if self._held in (CONTROL, AFFECT) else BELIEF_SELECTIVITY)
+        if lift >= bar:
+            if self._selective_certainty < BELIEF_MIN_CERTAINTY:
+                return UNASSIGNED
+            # Control is motion under my hand; anything else I merely act
+            # upon. Read from how the driving action changes it, not from
+            # a global flag, so an entity that both moves and grows is
+            # classified by what its *own* button does to it.
+            action, _l = self.selectivity
+            self._held = (CONTROL if self.kind_for(action) in MOTION_KINDS
+                          else AFFECT)
+            return self._held
+        ctx_bar = (BELIEF_CONTEXT_BASELINE - BELIEF_HYSTERESIS
+                   if self._held == CONTEXT else BELIEF_CONTEXT_BASELINE)
+        if self.responsiveness >= ctx_bar:
+            self._held = CONTEXT
             return CONTEXT
         if self.responsiveness == 0.0:
             return ENVIRONMENT
         return UNASSIGNED
 
+    @property
+    def _selective_certainty(self) -> float:
+        """Confidence that the winning action's rate really beats the rest.
+
+        Deliberately independent of `role`, because `role` consults it —
+        making this dispatch on the role instead produced infinite
+        recursion, caught by the tests.
+        """
+        action, _lift = self.selectivity
+        if action is None:
+            return 0.0
+        n_a = self.acted.get(action, 0)
+        hits_a = self.changed.get(action, 0)
+        n_rest = self.observations - n_a
+        hits_rest = sum(self.changed.values()) - hits_a
+        if not n_a or not n_rest:
+            return 0.0
+        p_a, p_rest = hits_a / n_a, hits_rest / n_rest
+        pooled = (hits_a + hits_rest) / (n_a + n_rest)
+        spread = pooled * (1 - pooled) * (1 / n_a + 1 / n_rest)
+        if spread <= 0:
+            return 1.0 if p_a > p_rest else 0.0
+        return _phi((p_a - p_rest) / math.sqrt(spread))
+
+    @property
+    def certainty(self) -> float:
+        """How sure we are of this role, 0-1 — NOT the size of the effect.
+
+        A lift of +100% seen four times is a weaker claim than +30% seen
+        two hundred times, and reporting the lift alone would say the
+        opposite. Sample size therefore enters the answer, which is what
+        stops a rarely-tried action from looking decisive on a handful of
+        tries.
+
+        It saturates: past a few hundred observations nearly any real
+        effect reads 100%, so this gates whether a role is claimed at all
+        while `strength` is what gets shown.
+        """
+        role = self.role
+        if role == ENVIRONMENT:
+            return 1.0 if self.observations else 0.0
+        if role == UNASSIGNED:
+            return 0.0
+        if role == CONTEXT:
+            n = self.observations
+            if not n:
+                return 0.0
+            return _one_sided(sum(self.changed.values()) / n,
+                              BELIEF_CONTEXT_BASELINE,
+    BELIEF_HYSTERESIS, n)
+        return self._selective_certainty
+
+    @property
+    def strength(self) -> float:
+        """How reliably the role's relationship holds, 0-1.
+
+        Distinct from `certainty`, and this is the one worth showing. With
+        a few hundred observations the statistical confidence saturates at
+        100% for every entity, so it discriminates nothing on screen; what
+        varies, and what a reader wants, is *how dependable* the relation
+        is:
+
+          CONTROL / AFFECT  P(this entity changes | its driving action)
+                            -- "press that and this responds, 93% of the time"
+          CONTEXT           P(it changes at all | any action)
+          ENVIRONMENT       how consistently it has stayed still
+
+        `certainty` is still what decides whether a row is worth showing;
+        `strength` is what the row says.
+        """
+        role = self.role
+        if role == ENVIRONMENT:
+            return 1.0
+        if role == UNASSIGNED:
+            return 0.0
+        if role == CONTEXT:
+            return self.responsiveness
+        action, _lift = self.selectivity
+        return self.rates.get(action, 0.0) if action else 0.0
+
     def describe(self) -> str:
         role = self.role
         if role in (CONTROL, AFFECT):
             drivers = self.drivers
-            named = ", ".join(f"{a} +{lift:.0%}" for a, lift in drivers[:3])
+            named = ", ".join(
+                f"{a} {self.kind_for(a) or 'changes'} it +{lift:.0%}"
+                for a, lift in drivers[:3])
             more = f" (+{len(drivers) - 3} more)" if len(drivers) > 3 else ""
-            verb = "I move this with" if role == CONTROL else "acted on by"
-            return f"{verb} {named}{more}"
+            return f"{named}{more}"
         if role == CONTEXT:
-            return f"changes whatever I press ({self.responsiveness:.0%} of steps)"
+            kind = self.dominant_kind or "changes"
+            return (f"{kind} whatever I press "
+                    f"({self.responsiveness:.0%} of steps)")
         if role == ENVIRONMENT:
             return "never changes"
         return "not enough evidence yet"
+
+
+def _centroid(cells) -> tuple[float, float]:
+    n = len(cells)
+    return (sum(c[0] for c in cells) / n, sum(c[1] for c in cells) / n)
+
+
+def _kind(belief, cells, hit: bool, first_seen: bool) -> str | None:
+    """How this entity changed, from its cells alone.
+
+    Nothing here knows anything about a game: the whole vocabulary is what
+    happened to a set of cells. Never classifies on the first sighting —
+    `last_cells` is initialised to the current cells, so without that guard
+    an entity that appears reads as having moved, and a recolour would be
+    described as motion, which is a claim about the world and the wrong one.
+    """
+    if first_seen:
+        return APPEARED if hit else None
+    if not hit or cells == belief.last_cells:
+        return None
+    if len(cells) != belief.last_size:
+        return GREW if len(cells) > belief.last_size else SHRANK
+    # Same size, different cells: either it went somewhere, or it turned
+    # on the spot. A rotation about a point holds the centroid; a
+    # translation does not.
+    before, after = _centroid(belief.last_cells), _centroid(cells)
+    shifted = abs(after[0] - before[0]) + abs(after[1] - before[1])
+    return MOVED if shifted > 0.5 else TURNED
 
 
 class WorldBelief:
@@ -203,17 +385,7 @@ class WorldBelief:
             # Union of where it is and where it just was, so a change at
             # the boundary counts for the entity that boundary belongs to.
             hit = bool(touched & (cells | belief.last_cells))
-            # Same size but DIFFERENT cells is the signature of going
-            # somewhere; a size change is growing, shrinking or draining.
-            # Never on the first sighting: `last_size` is initialised to
-            # the current size, so without this guard an entity that
-            # appears counts as having moved, and a recolour gets
-            # described as "I move this" — which is a claim about the
-            # world, and the wrong one.
-            displaced = (not first_seen and hit
-                         and len(cells) == belief.last_size
-                         and cells != belief.last_cells)
-            belief.observe(action, hit, displaced)
+            belief.observe(action, _kind(belief, cells, hit, first_seen))
             belief.last_size = len(cells)
             belief.last_cells = cells
 
@@ -223,10 +395,20 @@ class WorldBelief:
         return sorted(out, key=lambda b: -b.selectivity[1])
 
     def summary(self) -> list[tuple[int, str, str, str]]:
-        """(region id, colour, role, description) for every believed entity."""
-        return [(b.region_id, b.colour, b.role, b.describe())
+        """(region id, colour, role, description, strength) per entity.
+
+        A role whose statistical certainty is unconvincing is reported as
+        UNASSIGNED rather than shown with a low number: "we are not sure"
+        is a cleaner statement than a confident-looking row with a small
+        percentage beside it.
+        """
+        return [(b.region_id, b.colour, b.role, b.describe(), b.strength)
                 for b in sorted(self._beliefs.values(),
                                 key=lambda b: -b.observations)]
+
+    def ordered(self) -> list:
+        """The Belief objects behind `summary()`, in the same order."""
+        return sorted(self._beliefs.values(), key=lambda b: -b.observations)
 
     def clear(self) -> None:
         """New level: entity ids are gone, so the beliefs attached to them are too."""

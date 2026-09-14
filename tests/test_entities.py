@@ -153,11 +153,26 @@ def test_an_object_that_jumps_clear_of_itself_keeps_its_identity():
 
 def test_a_jump_too_far_is_a_different_object():
     # Measured: genuine reappearances sit at distance 3-5, and the nearest
-    # thing that is NOT the same object is at 10.
+    # thing that is NOT the same object is at 10. A far jump is only
+    # forgiven when it looks like a teleport -- same shape, and within a
+    # frame or two -- so let the shape memory lapse first.
+    t = entities.RegionTracker()
+    rid = next(iter(t.update([_blob(0, 0)])))
+    for _ in range(entities.SHAPE_REVIVE_WINDOW + 1):
+        t.update([])
+    got = t.update([_blob(40, 0)])
+    assert rid not in got
+
+
+def test_a_teleport_keeps_its_identity():
+    # What a RESET does: every object returns to its start in one frame.
+    # Neither overlap nor proximity can follow that, and minting a new id
+    # discards the beliefs attached to the old one -- including which
+    # action was learned to drive it.
     t = entities.RegionTracker()
     rid = next(iter(t.update([_blob(0, 0)])))
     got = t.update([_blob(40, 0)])
-    assert rid not in got
+    assert rid in got, "same shape, same colour, one frame later"
 
 
 def test_proximity_will_not_match_a_very_different_size():

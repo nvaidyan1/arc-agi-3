@@ -60,6 +60,9 @@
   .f-block{background:#3a2b16;color:var(--warn)}
   input[type=range]{width:100%;accent-color:var(--accent)}
   .empty{color:var(--dim);font-style:italic}
+  summary{font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+          color:var(--dim);font-weight:600;cursor:pointer;outline:none}
+  summary:hover{color:var(--ink)}
   .hint{color:var(--dim);font-size:11px}
   /* A row's label carries a native tooltip (title attr) explaining the
      term — hover it. Cursor says so without adding visible clutter. */
@@ -82,6 +85,12 @@
   .dot-target{background:#ff2fd0}
   /* Mask layer picker. Only one mask is shown at a time — overlaying all
      of them would be unreadable — so this is how you switch. */
+  /* Belief rows: entity, tag, certainty -- nothing else, so the panel can
+     be read at a glance. The evidence sits in the row's tooltip. */
+  .belrow{display:flex;align-items:center;gap:8px;font-family:var(--mono);
+          font-size:12px;padding:3px 0;cursor:help}
+  .belid{color:var(--ink);min-width:38px}
+  .belpct{margin-left:auto;color:var(--dim);font-variant-numeric:tabular-nums}
   .tr{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--dim);
       padding:1px 5px;border-radius:4px;margin-right:4px;border:1px solid transparent}
   /* An exclusive transition is the interesting one -- give it the only
@@ -155,11 +164,29 @@
       <div id="masklegend" class="legend"></div>
       <table id="ptable"></table>
     </div>
-    <div class="card"><h2>Evidence per action</h2><div id="evidence"></div>
-      <h2 style="margin-top:16px">Beliefs — what each entity is to me</h2>
-      <div id="beliefs"></div>
-      <h2 style="margin-top:16px">What each action does to colours</h2>
-      <div id="signature"></div>
+    <div>
+      <div class="card">
+        <h2>Controls — what each button does</h2>
+        <div id="controls"></div>
+        <!-- Collapsed by default: these are raw tallies, useful when
+             digging and noise the rest of the time. -->
+        <details style="margin-top:14px">
+          <summary>Evidence per action</summary>
+          <div id="evidence" style="margin-top:8px"></div>
+        </details>
+        <details style="margin-top:8px">
+          <summary>What each action does to colours</summary>
+          <div id="signature" style="margin-top:8px"></div>
+        </details>
+      </div>
+      <!-- Belief is its own panel, not a section of Evidence: it is a
+           different KIND of statement. Evidence counts what happened;
+           belief says what a thing is to the agent, and is the only panel
+           here that composes the others. -->
+      <div class="card" style="margin-top:14px">
+        <h2>Belief — what each entity is to me</h2>
+        <div id="beliefs"></div>
+      </div>
     </div>
   </div>
 </main>
@@ -227,12 +254,19 @@ function drawFrame(s){
 // which is a different question from "what did the game actually send"
 // (the Frame panel, left alone on purpose). Only one mask shows at a
 // time; overlaying all of them at once would be unreadable noise.
+// Environment (obstacles) and Explored were removed as mask layers, and
+// the removal is itself a finding: obstacles are stored in relative
+// displacement space, and on any game with two controllable objects the
+// move map is wrong, so converting them to board pixels lands off-board —
+// measured on wa30 at 94%, coordinates from -193 to 221 on a 64x64 board.
+// The mask was painting garbage the canvas silently clipped. The obstacle
+// COUNT and its off-board ratio stay in Perceptions, where the ratio is a
+// live check on whether the displacement space is sane at all. Explored
+// lived in the same broken space and overlapped Environment 63%.
 const LAYERS = [
   {key:"entities", label:"Entities", rgb:[150,200,255],
-   help:"Every contiguous region the agent groups as one thing, tracked " +
-        "across frames by overlap. This is the scene as it sees it — cd82 " +
-        "is 15 regions, not 4096 pixels. Grouping only; nothing here says " +
-        "which region is the player, the goal, or a hazard."},
+   help:"The scene as the agent groups it — one hue per entity. Grouping " +
+        "only; what each one IS to the agent is the Belief panel."},
   {key:"controlled", label:"Controlled", rgb:[90,235,170],
    help:"Every object confirmed to move when an action was taken — the " +
         "cells it moved INTO (the part that overlaps where it already was " +
@@ -240,23 +274,14 @@ const LAYERS = [
         "nothing translates. Check the Controls row below: two colours " +
         "there means two separately controllable objects."},
   {key:"interest", label:"Interest", rgb:[255,110,25],
-   help:"Where change has happened that the agent didn't cause itself — " +
-        "accumulated \"wanting\", not a claim about the goal (attention layer)."},
+   help:"Where change has happened that the agent didn't cause itself, " +
+        "accumulated over time. Not a claim about where the goal is."},
   {key:"affect", label:"Affect", rgb:[255,210,40],
-   help:"\"Thing I affect\": this step's changes left over after " +
-        "subtracting the agent's own movement and the stamina meter."},
-  {key:"environment", label:"Environment", rgb:[255,80,80],
-   help:"Positions where a learned move was tried and did not happen — " +
-        "this game's walls. Empty until a board position is confirmed " +
-        "(see Position, below) — these are stored relative to the agent, " +
-        "not as absolute pixels."},
-  {key:"explored", label:"Explored", rgb:[110,168,254],
-   help:"Every distinct position visited this attempt. Same requirement " +
-        "as Environment: empty with no confirmed board position."},
+   help:"This step's changes, minus the agent's own movement and the " +
+        "stamina meter."},
   {key:"clicked", label:"Clicked", rgb:[196,140,255],
    help:"Cells ACTION6 has already targeted, brighter where targeted " +
-        "more often. The one mask that works on games with no move map " +
-        "— which is most games where the others stay empty."},
+        "more often."},
 ];
 let activeLayer = "interest";
 
@@ -295,8 +320,16 @@ function drawMask(s){
   const peak = Math.max(1, ...cells.map(c => c[2] || 1));
   const [cr, cg, cb] = layer.rgb;
   for(const [x, y, w] of cells){
-    const t = Math.min((w || 1) / peak, 1);
-    mctx.fillStyle = `rgba(${cr},${cg},${cb},${(0.28 + 0.6*t).toFixed(2)})`;
+    if(activeLayer === "entities"){
+      // A distinct hue per region id. Painting every entity one colour
+      // and varying only opacity made neighbouring ids indistinguishable,
+      // so two separate objects read as one — the golden angle keeps
+      // consecutive ids far apart on the wheel.
+      mctx.fillStyle = `hsl(${((w||0) * 137.508) % 360} 75% 62% / 0.85)`;
+    } else {
+      const t = Math.min((w || 1) / peak, 1);
+      mctx.fillStyle = `rgba(${cr},${cg},${cb},${(0.28 + 0.6*t).toFixed(2)})`;
+    }
     mctx.fillRect(x, y, 1, 1);
   }
 
@@ -469,6 +502,9 @@ function describeDisplacement([dx, dy], anchorKnown){
 // agent treats all four as moving a single "me".
 // The entity list. Largest first, because the canvas is usually the
 // biggest region and seeing it named is a useful sanity check.
+// Kept but unused: the entity listing moved to the Belief panel, which
+// says what each one IS rather than only how big it is. Re-add the row if
+// sizes and positions are ever needed again.
 function entitiesRow(list, staminaId){
   if(!list || !list.length) return '<span class="empty">no regions yet</span>';
   const rows = list.slice(0, 8).map(([rid, colour, n, x, y, w, h]) =>
@@ -481,11 +517,58 @@ function entitiesRow(list, staminaId){
   return `<div class="hint">${list.length} tracked</div>` + rows + more;
 }
 
-function controlsRow(byAction, moves, turns){
+function controlsRow(byAction, moves, turns, beliefs){
   byAction = byAction || {}; moves = moves || {}; turns = turns || {};
   const acts = [...new Set([...Object.keys(moves), ...Object.keys(byAction),
                             ...Object.keys(turns)])].sort();
-  if(!acts.length) return '<span class="empty">nothing has moved yet</span>';
+  // Actions the move map says nothing about, but belief does. Previously
+  // these were shown only when the move map was entirely empty, so on
+  // cd82 ACTION5 -- which recolours rather than moves -- disappeared the
+  // moment the other four actions learned their offsets.
+  const extra = {};
+  for(const b of (beliefs || [])){
+    for(const [a, kind] of Object.entries(b.kinds || {})){
+      if(acts.includes(a)) continue;
+      (extra[a] ||= []).push({id: b.id, kind});
+    }
+  }
+  const extraRows = Object.keys(extra).sort().map(a => {
+    const byKind = {};
+    for(const e of extra[a]) (byKind[e.kind || "changes"] ||= []).push(`#${e.id}`);
+    return `<div>${a.replace("ACTION","A")} → `
+      + Object.entries(byKind).map(([k, ids]) =>
+          `<b>${k}</b> <span class="hint">${ids.join(", ")}</span>`).join(" · ")
+      + `</div>`;
+  }).join("");
+  if(!acts.length){
+    // The move map can be empty while BELIEF knows perfectly well which
+    // button drives what -- that is the situation on cd82, where no exact
+    // motion lens fires but action contrast still identifies the control.
+    // Saying "nothing has moved yet" there is the panel that knows less
+    // shouting over the panel that knows more.
+    // Name the KIND, not just "drives" -- the belief knows whether the
+    // action turns, moves, grows or shrinks the thing, and that is the
+    // whole content of "what does this button do".
+    const byAct = {};
+    for(const b of (beliefs || [])){
+      for(const [a, kind] of Object.entries(b.kinds || {}))
+        (byAct[a] ||= []).push({id: b.id, kind});
+      if(!Object.keys(b.kinds || {}).length)
+        for(const m of (b.why || "").matchAll(/ACTION\d/g))
+          (byAct[m[0]] ||= []).push({id: b.id, kind: null});
+    }
+    const rows = Object.keys(byAct).sort().map(a => {
+      const byKind = {};
+      for(const e of byAct[a]) (byKind[e.kind || "changes"] ||= []).push(`#${e.id}`);
+      const parts = Object.entries(byKind)
+        .map(([k, ids]) => `<b>${k}</b> <span class="hint">${ids.join(", ")}</span>`);
+      return `<div>${a.replace("ACTION","A")} → ${parts.join(" · ")}</div>`;
+    }).join("");
+    return rows
+      ? rows + '<div class="hint">from belief — no exact offset learned, '
+             + 'so there is no move map to show</div>'
+      : '<span class="empty">nothing has moved yet</span>';
+  }
   const colours = new Set(Object.values(byAction));
   const body = acts.map(a => {
     const colour = byAction[a], off = moves[a];
@@ -496,10 +579,19 @@ function controlsRow(byAction, moves, turns){
     // rather than squeezed into a direction.
     const spin = Object.entries(turns[a] || {})
       .map(([k, n]) => `${k.replace("rot","").replace("90","90° ")} ×${n}`).join(", ");
+    // Fall through to what belief knows rather than shrugging: an action
+    // with no stable offset may still have a perfectly clear effect.
+    const bkind = {};
+    for(const b of (beliefs || []))
+      if((b.kinds || {})[a]) (bkind[b.kinds[a]] ||= []).push(`#${b.id}`);
+    const believed = Object.entries(bkind)
+      .map(([k, ids]) => `<b>${k}</b> <span class="hint">${ids.join(", ")}</span>`)
+      .join(" · ");
     const dir = off
       ? `<b>${slotFor(off) || "no direction"}</b> <span class="hint">(${off[0]},${off[1]})</span>`
       : (spin ? `<b>turns</b> <span class="hint">${spin}</span>`
-              : '<span class="hint">moved, but no stable direction yet</span>');
+              : (believed
+                 || '<span class="hint">no stable effect learned yet</span>'));
     const both = off && spin ? ` <span class="hint">+ turns ${spin}</span>` : "";
     return `<div>${swatch}${a.replace("ACTION","A")} → ${dir}${both}</div>`;
   }).join("");
@@ -507,7 +599,7 @@ function controlsRow(byAction, moves, turns){
     ? `<div class="hint" style="color:var(--warn)">${colours.size} separate `
       + `objects — merged into one position by the move map</div>`
     : "";
-  return body + warn;
+  return body + extraRows + warn;
 }
 
 function actsLocallyBadge(v){
@@ -567,24 +659,20 @@ function render(){
     ["explored", `${p.visited} position${p.visited === 1 ? "" : "s"} visited`,
       "Distinct positions reached this attempt — steers exploration " +
       "toward ground not covered yet."],
-    ["obstacles", p.obstacles || null,
-      "Positions where a learned move was tried and did not happen — " +
-      "this game's version of a wall."],
     ["stamina", staminaBar(p.stamina_fraction, p.stamina_colour),
       "An on-screen quantity that drains during an attempt and refills " +
       "when it restarts — a lives counter, a step budget, whatever this " +
       "particular game renders."],
-    ["entities", entitiesRow(p.entities, p.stamina_entity),
-      "The scene grouped into contiguous regions and followed across " +
-      "frames. A tractable count here is the whole argument for the layer: " +
-      "beliefs can be attached to fifteen things, not to four thousand " +
-      "pixels."],
-    ["controls", controlsRow(p.controlled_by_action, p.moves, p.rotations_by_action),
-      "The learned move map: which object each action moves, and which " +
-      "way. Learned per game from 3+ consistent sightings, and kept for " +
-      "the whole game — it survives both death and a level change. More " +
-      "than one colour means several independently controllable objects, " +
-      "which the move map currently merges into a single position."],
+    ["obstacles", p.obstacles
+        ? `${p.obstacles}` + (p.obstacles_offboard > 0.2
+            ? ` <span class="hint" style="color:var(--warn)">`
+              + `(${(p.obstacles_offboard*100).toFixed(0)}% convert off-board — `
+              + `the move map is not trustworthy here)</span>` : "")
+        : null,
+      "Positions where a learned move was tried and did not happen. Stored " +
+      "relative to the agent, so if the move map is wrong they convert to " +
+      "coordinates that are not on the board — which is itself the signal " +
+      "that something upstream is broken."],
     ["clicking", actsLocallyBadge(p.acts_locally),
       "Does the coordinate action (ACTION6) change the cell it targets, " +
       "or something elsewhere on the board?"],
@@ -609,6 +697,12 @@ function render(){
   } else {
     $("weights").innerHTML = "";
   }
+
+  // The move map belongs with the other per-action facts, not buried
+  // mid-table in Perceptions — it answers "what does this button do",
+  // which is an Evidence question.
+  $("controls").innerHTML = controlsRow(
+    p.controlled_by_action, p.moves, p.rotations_by_action, s.evidence.beliefs);
 
   renderPad(s);
   // renderDecisionTable(d);   // ← uncomment for the raw fields
@@ -645,14 +739,23 @@ function render(){
   $("evidence").innerHTML = acts.length
     ? `<div class="hint" style="margin-bottom:6px">tried = chosen · changed = ` +
       `something moved on screen · affect = changed something that wasn't me · ` +
-      `vanish = an object disappeared · level-up = scored</div>`
-      + acts.map(a =>
-        `<div class="ev"><b>${a}</b> &nbsp;tried ${e.tries[a]||0}
-          &nbsp;changed ${e.changes[a]||0}
-          &nbsp;${affect(a)}
-          &nbsp;vanish ${e.vanishes[a]||0}
-          &nbsp;<span style="color:var(--good)">level-up ${e.level_ups[a]||0}</span></div>`
-      ).join("")
+      `vanish = an object disappeared · level-up = scored. ` +
+      `<b>x/y</b> = this attempt / lifetime — the first two reset on death.</div>`
+      + acts.map(a => {
+        // tried/changed reset every attempt by design; the lifetime total
+        // is shown beside them so a fresh attempt does not read as "this
+        // action has never been used".
+        const tt = (e.tries_total||{})[a]||0, ct = (e.changes_total||{})[a]||0;
+        const t = e.tries[a]||0, c = e.changes[a]||0;
+        return `<div class="ev"><b>${a}</b> &nbsp;tried ${t}`
+          + (tt !== t ? `<span class="hint">/${tt}</span>` : "")
+          + ` &nbsp;changed ${c}`
+          + (ct !== c ? `<span class="hint">/${ct}</span>` : "")
+          + ` &nbsp;${affect(a)}`
+          + ` &nbsp;vanish ${e.vanishes[a]||0}`
+          + ` &nbsp;<span style="color:var(--good)">level-up `
+          + `${e.level_ups[a]||0}</span></div>`;
+      }).join("")
     : '<span class="empty">no evidence yet</span>';
 
   // What each action actually DOES to colours, and which transitions only
@@ -667,16 +770,26 @@ function render(){
   const counts = s.evidence.belief_roles || {};
   const ROLE_CLASS = {control:"badge-local", affect:"badge-remote",
                       context:"badge-unknown", environment:"badge-unknown"};
+  // Entity, tag, and how dependable the relation is. A role is only
+  // claimed at all once it is statistically convincing (that test gates
+  // the assignment and is not shown, because past a few hundred
+  // observations it reads 100% for everything). What IS shown is how
+  // reliably the relation holds: for CONTROL/AFFECT, how often the entity
+  // responds to its driving action; for CONTEXT, how often it changes at
+  // all. Hover a row for the evidence behind it.
   $("beliefs").innerHTML = bel.length
-    ? `<div class="hint" style="margin-bottom:6px">`
-      + Object.entries(counts).filter(([, v]) => v)
-          .map(([k, v]) => `${k} ${v}`).join(" · ") + `</div>`
+    ? `<div class="hint" style="margin-bottom:7px">`
+      + Object.entries(counts).filter(([k, v]) => v && k !== "environment")
+          .map(([k, v]) => `${k} ${v}`).join(" · ")
+      + (counts.environment ? ` · <i>${counts.environment} static, hidden</i>` : "")
+      + `</div>`
       + bel.map(b =>
-        `<div class="ev"><span class="swatch" style="background:`
-        + `${PALETTE[b.colour]||'#000'}"></span>#${b.id} `
+        `<div class="belrow" title="${b.why}">`
+        + `<span class="swatch" style="background:${PALETTE[b.colour]||'#000'}"></span>`
+        + `<span class="belid">#${b.id}</span>`
         + `<span class="badge ${ROLE_CLASS[b.role]||'badge-unknown'}">`
         + `${b.role.toUpperCase()}</span>`
-        + `<span class="hint">${b.why}</span></div>`).join("")
+        + `<span class="belpct">${(b.strength*100).toFixed(0)}%</span></div>`).join("")
     : '<span class="empty">no entity has earned a role yet</span>';
 
   const sig = s.evidence.signature || {};

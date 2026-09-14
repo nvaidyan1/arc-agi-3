@@ -121,6 +121,20 @@ def _relative_to_board(agent, relative_cells) -> list[list[int]]:
     return [[origin[0] + dx, origin[1] + dy] for dx, dy in relative_cells]
 
 
+def _offboard_fraction(agent, frame) -> float | None:
+    """What share of known obstacles convert to coordinates off the board."""
+    blocked = {pos for pos, _a in (getattr(agent.obstacles, "_blocked", {}) or {})}
+    if not blocked:
+        return None
+    cells = _relative_to_board(agent, blocked)
+    if not cells:
+        return None
+    grid = frame.frame[-1] if frame.frame else []
+    rows = len(grid); cols = len(grid[0]) if rows else 0
+    off = sum(1 for x, y in cells if not (0 <= x < cols and 0 <= y < rows))
+    return round(off / len(cells), 3)
+
+
 def _weighted_cells(counts: dict) -> list[list]:
     """A cell->count dict as [x, y, count] triples, for a heatmap."""
     return [[x, y, n] for (x, y), n in counts.items()]
@@ -200,6 +214,13 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
             "moves": {a.name: list(v) for a, v in moves.items()},
             "visited": len(agent.moves.visited),
             "obstacles": len(getattr(agent.obstacles, "_blocked", {}) or {}),
+            # Obstacles live in relative displacement space. If the move
+            # map is wrong -- as it is on any game with two controllable
+            # objects -- converting them to board pixels lands off-board.
+            # Measured on wa30: 94% of them, at coordinates from -193 to
+            # 221 on a 64x64 board. Reporting the ratio turns a silently
+            # clipped mask into a visible diagnostic.
+            "obstacles_offboard": _offboard_fraction(agent, frame),
             "stamina_fraction": agent.stamina.stamina_fraction,
             "stamina_colour": agent.stamina.stamina_colour,
             "acts_locally": agent.clicks.acts_locally,
@@ -212,13 +233,7 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
             # completely tractable description — which is the argument for
             # this layer: a number that small can be reasoned about, while
             # 4096 pixels cannot.
-            "entities": sorted(
-                ([rid, colour, len(cells),
-                  min(c[0] for c in cells), min(c[1] for c in cells),
-                  max(c[0] for c in cells) - min(c[0] for c in cells) + 1,
-                  max(c[1] for c in cells) - min(c[1] for c in cells) + 1]
-                 for rid, (colour, cells) in agent.regions._tracked.items() if cells),
-                key=lambda r: -r[2])[:40],
+            "entity_count": len(agent.regions._tracked),
             "stamina_entity": agent.stamina.stamina_region,
             # Per action, the rotations it has been seen to cause. Sits
             # beside the move map because it answers the same question —
@@ -255,11 +270,6 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
                                for colour, cells in agent._controlled_cells.items()
                                for x, y in cells][:120],
                 "affect": [[x, y, 1] for x, y in agent._last_residual_cells[:120]],
-                "environment": _relative_to_board(
-                    agent, {pos for pos, _action in
-                            (getattr(agent.obstacles, "_blocked", {}) or {})}
-                )[:120],
-                "explored": _relative_to_board(agent, agent.moves.visited)[:120],
                 "clicked": _weighted_cells(getattr(agent.clicks, "_tries", {}) or {})[:120],
                 # Every tracked region, weighted by its id so distinct
                 # entities render as distinct bands.
@@ -278,6 +288,9 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
         "evidence": {
             "tries": {a.name: n for a, n in agent._action_tries.items()},
             "changes": {a.name: n for a, n in agent._action_changes.items()},
+            "tries_total": {a.name: n for a, n in agent._action_tries_total.items()},
+            "changes_total": {a.name: n
+                              for a, n in agent._action_changes_total.items()},
             "level_ups": {a.name: n for a, n in agent._action_level_ups.items()},
             "vanishes": {a.name: n for a, n in agent._action_vanishes.items()},
             "interactions": {a.name: n for a, n in agent._action_interactions.items()},
@@ -291,15 +304,21 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
             # evidence backs it: a dozen "never changes" rows are true and
             # useless, and they were crowding out the one entity an action
             # actually drives.
+            # ENVIRONMENT is excluded: "never changes" is true of most of
+            # the board and tells you nothing, and a dozen such rows were
+            # crowding out the entities an action actually drives.
             "beliefs": sorted(
-                ({"id": rid, "colour": colour, "role": role, "why": why}
-                 for rid, colour, role, why in agent.belief.summary()
-                 if role != "unassigned"),
-                key=lambda b: {"control": 0, "affect": 1,
-                               "context": 2, "environment": 3}[b["role"]],
+                ({"id": rid, "colour": colour, "role": role, "why": why,
+                  "strength": round(strength, 3)}
+                 for (rid, colour, role, why, strength), bel in
+                 zip(agent.belief.summary(), agent.belief.ordered())
+                 if role not in ("unassigned", "environment")),
+                key=lambda b: ({"control": 0, "affect": 1, "context": 2}[b["role"]],
+                               -b["strength"]),
             )[:12],
             "belief_roles": {
-                r: sum(1 for _i, _c, role, _w in agent.belief.summary() if role == r)
+                r: sum(1 for _i, _c, role, _w, _q in agent.belief.summary()
+                       if role == r)
                 for r in ("control", "affect", "context", "environment", "unassigned")
             },
         },

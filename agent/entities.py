@@ -34,12 +34,28 @@ recolouring of part of the whole.
 """
 from __future__ import annotations
 
-from constants import REGION_MATCH_DISTANCE, REGION_MATCH_SIZE_TOLERANCE
+from constants import (  # noqa: F401  (SHAPE_REVIVE_WINDOW re-exported for tests)
+    REGION_MATCH_DISTANCE,
+    REGION_MATCH_SIZE_TOLERANCE,
+    SHAPE_REVIVE_WINDOW,
+)
 
 
 def _centroid(cells) -> tuple[float, float]:
     n = len(cells)
     return (sum(c[0] for c in cells) / n, sum(c[1] for c in cells) / n)
+
+
+def _shape(cells) -> frozenset[tuple[int, int]]:
+    """The region's form, independent of where it sits.
+
+    Cells re-expressed relative to the region's own top-left, so the same
+    object in two places has the same shape. This is what lets a thing be
+    recognised after it teleports.
+    """
+    x0 = min(c[0] for c in cells)
+    y0 = min(c[1] for c in cells)
+    return frozenset((x - x0, y - y0) for x, y in cells)
 
 
 class RegionTracker:
@@ -52,6 +68,14 @@ class RegionTracker:
 
     def __init__(self) -> None:
         self._next_id = 0
+        self._step = 0
+        # When each id was last actually on screen. Shape matching is only
+        # allowed to revive something that vanished MOMENTS ago: a reset
+        # teleports an object within a single frame, whereas a region that
+        # has been gone for a hundred steps and is now matched by shape
+        # alone is far more likely a different thing that happens to look
+        # the same. Without this bound the pass will capture look-alikes.
+        self._last_seen: dict[int, int] = {}
         # id -> (colour, cells) as of the last frame it was SEEN in, kept
         # after it disappears. That memory is load-bearing rather than
         # tidy-minded: a stamina bar empties to nothing and then refills,
@@ -77,6 +101,7 @@ class RegionTracker:
         colours merge would quietly recreate the aggregate this layer
         exists to escape.
         """
+        self._step += 1
         candidates = []
         for colour, cells in regions:
             for old_id, (old_colour, old_cells) in self._tracked.items():
@@ -130,6 +155,42 @@ class RegionTracker:
                 used_old.add(old_id)
                 used_new.add(cells)
 
+        # Third pass: same shape, same colour, somewhere else entirely.
+        # A RESET teleports every object back to its start, so neither
+        # overlap nor proximity can follow it and the tracker mints a
+        # fresh id -- discarding every belief attached to the old one,
+        # including the action-to-entity mapping it had learned. Measured:
+        # a post-reset frame mints ids at ~20x the ordinary rate (cd82
+        # 1.7 per frame against 0.08).
+        #
+        # Matching on form is what survives a teleport. Where several
+        # remembered regions share a shape -- wa30 has three identical
+        # 4x4 frames -- the nearest wins, which pairs them correctly when
+        # they all return to the positions they were remembered at.
+        leftovers = [(c, cells) for c, cells in regions if cells not in used_new]
+        if leftovers:
+            candidates = []
+            for colour, cells in leftovers:
+                form = _shape(cells)
+                cx, cy = _centroid(cells)
+                for old_id, (old_colour, old_cells) in self._tracked.items():
+                    if old_id in used_old or old_colour != colour:
+                        continue
+                    if _shape(old_cells) != form:
+                        continue
+                    if self._step - self._last_seen.get(old_id, 0) > SHAPE_REVIVE_WINDOW:
+                        continue
+                    ox, oy = _centroid(old_cells)
+                    candidates.append((max(abs(cx - ox), abs(cy - oy)),
+                                       old_id, colour, cells))
+            candidates.sort(key=lambda c: c[0])
+            for _d, old_id, colour, cells in candidates:
+                if old_id in used_old or cells in used_new:
+                    continue
+                assigned[old_id] = (colour, cells)
+                used_old.add(old_id)
+                used_new.add(cells)
+
         for colour, cells in regions:
             if cells in used_new:
                 continue
@@ -141,8 +202,11 @@ class RegionTracker:
         # screen, so a region that comes back can be recognised as itself.
         # Only what is present right now is returned.
         self._tracked.update(assigned)
+        for rid in assigned:
+            self._last_seen[rid] = self._step
         return assigned
 
     def clear(self) -> None:
         """New level: the layout is gone, so no id survives it."""
         self._tracked.clear()
+        self._last_seen.clear()

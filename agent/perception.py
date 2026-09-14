@@ -136,6 +136,63 @@ def connected_regions(
     return out
 
 
+def merge_enclosed(
+    regions: list[tuple[int, frozenset[tuple[int, int]]]],
+) -> list[tuple[int, frozenset[tuple[int, int]]]]:
+    """Fold a region wholly surrounded by one other region into it.
+
+    Same-colour contiguity necessarily splits a bordered object in two: a
+    frame of one colour and a fill of another. Measured on wa30's first
+    frame, three objects are each a 12-cell 4x4 frame around a 4-cell 2x2
+    core — one thing on screen, two regions to us, which is why the entity
+    mask appeared to show two objects where there was plainly one.
+
+    Enclosure is a geometric fact, not a guess about what games contain:
+    every cell bordering the inner region from outside belongs to the same
+    outer region. That is as far as this goes — two shapes merely touching
+    stay separate, because "adjacent" is not "part of".
+
+    The merged region keeps the OUTER colour, since the frame is what
+    bounds the object; the caller sees one region where it saw two.
+    """
+    by_cells = {cells: (colour, i) for i, (colour, cells) in enumerate(regions)}
+    lookup: dict[tuple[int, int], int] = {}
+    for i, (_colour, cells) in enumerate(regions):
+        for cell in cells:
+            lookup[cell] = i
+
+    absorbed: dict[int, int] = {}
+    for i, (_colour, cells) in enumerate(regions):
+        outside = set()
+        for x, y in cells:
+            for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+                if (nx, ny) in cells:
+                    continue
+                owner = lookup.get((nx, ny))
+                if owner is None:          # board edge — not enclosed
+                    outside.add(None)
+                else:
+                    outside.add(owner)
+        if len(outside) == 1:
+            owner = next(iter(outside))
+            if owner is not None and owner != i:
+                absorbed[i] = owner
+
+    if not absorbed:
+        return regions
+    # Resolve chains (a core inside a frame inside a frame).
+    def root(i):
+        seen = set()
+        while i in absorbed and i not in seen:
+            seen.add(i); i = absorbed[i]
+        return i
+
+    merged: dict[int, set] = {}
+    for i, (_colour, cells) in enumerate(regions):
+        merged.setdefault(root(i), set()).update(cells)
+    return [(regions[i][0], frozenset(cells)) for i, cells in merged.items()]
+
+
 def detect_shift(
     prev_frame: FrameData,
     latest_frame: FrameData,

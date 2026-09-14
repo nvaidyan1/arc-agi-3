@@ -55,17 +55,27 @@ MIN_SHIFT_CELLS = 8
 # is well clear of the noise while leaving a true diagonal alone.
 SHIFT_AXIS_RATIO = 3
 
-# Experiment flag (docs/plan.md, "In flight"). When True, an action whose
-# effect no exact lens explains falls back to `perception.detect_shift`,
-# which tolerates a changing shape. This gives a move map to games that
-# have none -- switching on the frontier branch, the router, obstacle
-# detection and the affect gate on games that currently run as pure
-# bandits -- so it ships behind a flag and is A/B'd before it is trusted.
-# Read from the environment so an A/B can switch arms without editing a
-# file mid-experiment — editing the tree between sweeps is exactly how a
-# comparison gets silently corrupted. Defaults off; the notebook build
-# inlines this file verbatim, so a Kaggle run gets the default.
-USE_SHIFT_FALLBACK = os.environ.get("ARC_SHIFT_FALLBACK", "0") == "1"
+# When True, an action whose effect no exact lens explains falls back to
+# `perception.detect_shift`, which tolerates a changing shape.
+#
+# **Default ON as of the n=100 A/B** — the first change in this project to
+# earn a default by measurement. It alters behaviour on only 4 of 25 games
+# (ar25, cd82, cn04, tr87), so the 25-game aggregate dilutes it ~6x and is
+# a poor instrument; the pre-specified test is the affected games alone.
+#
+#   whole 25-game score    median 0.0106 -> 0.0190    p = 0.044
+#   the 4 affected games   median 0.0000 -> 0.0898    p < 0.0001
+#   cd82 clearing level 1      19/100 -> 40/100       p = 0.0017
+#   the 21 games it cannot touch                      p = 0.73   (nothing)
+#
+# Zero-scoring sweeps fell 13/100 -> 6/100, games reaching level 1 rose
+# 1.50 -> 2.01 per sweep, and the ON arm produced this project's first
+# level 2 in any recorded sweep (1 in 100 -- noted, not claimed).
+#
+# Still overridable by the environment, so an arm can be re-run without
+# editing the tree mid-experiment, which is exactly how a comparison gets
+# silently corrupted.
+USE_SHIFT_FALLBACK = os.environ.get("ARC_SHIFT_FALLBACK", "1") == "1"
 
 # ── Entities (grouping and following things) ────────────────────────────
 # `RegionTracker` matches a region to its previous self by overlap. An
@@ -84,6 +94,16 @@ REGION_MATCH_DISTANCE = 8
 # candidate is a different thing however close it sits.
 REGION_MATCH_SIZE_TOLERANCE = 0.3
 
+# How recently a region must have been on screen for a same-shape match to
+# revive its identity. A RESET teleports every object back to its start
+# within a single frame -- neither overlap nor proximity can follow that,
+# so the tracker minted fresh ids and threw away the beliefs attached to
+# the old ones, including the action-to-entity mapping. Measured: a
+# post-reset frame mints ids at ~20x the ordinary rate. Kept tight because
+# a region gone for a long time and matched on shape alone is more likely
+# a look-alike than a survivor.
+SHAPE_REVIVE_WINDOW = 3
+
 # ── Belief (what each entity is to me) ──────────────────────────────────
 # Roles are read from CONTRAST between actions, not from how busy an entity
 # is. Thresholds set from measurement on cd82, where the two extremes sit
@@ -94,7 +114,7 @@ REGION_MATCH_SIZE_TOLERANCE = 0.3
 # Evidence bars first, in the same spirit as MIN_MOVE_OBSERVATIONS: an
 # entity seen a handful of times has no role, and a role read from one
 # action is not a contrast at all.
-BELIEF_MIN_OBSERVATIONS = 12
+BELIEF_MIN_OBSERVATIONS = 20
 BELIEF_MIN_ACTIONS = 2
 # How far one action must stand out before the entity is called that
 # action's. Comfortably under the +41% that a real exclusive effect
@@ -105,6 +125,18 @@ BELIEF_SELECTIVITY = 0.20
 # the bar's measured 52-66% so it is caught, and above the 14-25% churn of
 # ordinary scenery.
 BELIEF_CONTEXT_BASELINE = 0.35
+# A role must also be statistically convincing, not merely large. This is
+# what stops a rarely-tried action looking decisive on a handful of tries.
+# Note it saturates: with a few hundred observations almost any real effect
+# clears it, which is why the UI shows `strength` (how dependable the
+# relation is) rather than this.
+BELIEF_MIN_CERTAINTY = 0.95
+# How much easier it is to KEEP a role than to win one. Without this an
+# entity hovering at the threshold flickers: measured on cd82, 12 of 17
+# entities gained a role, lost it and regained it -- one seven times --
+# and the readout changed on 19% of steps. Small enough that a role which
+# genuinely stops holding still drops.
+BELIEF_HYSTERESIS = 0.05
 
 # ── Environment (what resists me) ───────────────────────────────────────
 # One failed attempt is enough to call a move blocked: these games are

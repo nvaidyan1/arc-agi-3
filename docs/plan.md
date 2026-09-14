@@ -415,75 +415,125 @@ falsifiable and UNASSIGNED is a real answer.
       losses; cd82's bar contamination of "thing I affect" 100% -> 22%.
       Score effect measured at n=30 per arm: **p = 0.82, none**. Expected:
       nothing acts on stamina yet.
-- [x] **belief layer** — composes the lenses into a role per entity by
-      contrasting actions against a baseline. Recording-only.
-- [ ] **a consumer for beliefs.** Nothing reads `belief` to decide. The
-      obvious candidate is `_pick_coordinate`, which clicks the hottest
-      interest cell and could instead click the entity an action has been
-      *shown* to act through. **Aim it at depth, not breadth** — every
-      mechanism added so far (router, interest map, shift fallback) bought
-      more level-1 completions and never a level 2.
+- [x] **belief layer** — a role per entity, read from the contrast
+      *between* actions: `responsiveness` (baseline rate across all
+      actions) against `selectivity` (how far one action stands out).
+      That subtraction is the whole mechanism — cd82's stamina bar changes
+      on 52-66% of steps *whatever* is pressed, and before it that common
+      signal sat in every action's profile and drowned the one effect that
+      was action-specific. Recording-only.
+- [x] **how, not just that.** A role names the *kind* of effect, in a
+      vocabulary defined purely by what happened to a set of cells:
+      MOVED (centroid shifted), TURNED (size and centroid held, cells
+      changed), GREW / SHRANK, APPEARED / VANISHED. Live:
+      `wa30 #0 CONTROL — ACTION2 turned it +37%`,
+      `cd82 #13 CONTEXT — shrank whatever I press (55% of steps)`.
+      Note wa30's rotation is identified here by centroid-preservation
+      alone, independently of `detect_rotation` — two routes agreeing.
+- [x] **bordered objects are one thing.** Same-colour grouping necessarily
+      splits a frame from its fill: wa30's first frame had three objects
+      each a 12-cell 4x4 frame around a 4-cell 2x2 core, drawn as six
+      entities. `perception.merge_enclosed` folds a region whose every
+      outside neighbour belongs to one other region into it — enclosure is
+      geometry, not a guess. 12 non-canvas regions -> 8. Merely *touching*
+      still does not merge.
+- [ ] **`RECOLOURED` is missing from the kind vocabulary.** A recolour
+      presents as one entity shrinking while another grows in the same
+      place, so cd82's ACTION5 — whose whole effect is turning colour 0
+      into 15 across 400 cells, exclusively — reads as "no stable effect
+      learned yet". Inferable the same way as the rest (two entities,
+      overlapping cells, opposite size changes, same step) and not yet
+      built. This is a gap in the vocabulary, not caution about bias.
+- [ ] **roles still flicker.** With hysteresis and a 20-observation bar,
+      cd82's readout still changes on 16% of steps and 11 of 17 entities
+      gain a role, lose it and regain it. wa30 is stable (2%). The
+      evidence genuinely wobbles near the threshold; the panel reports it
+      faithfully rather than smoothing it.
 - [ ] `sp80` assigns no CONTROL despite having two controllable objects.
-- [ ] `displaced` is a size-and-cells proxy, good enough to separate
-      "moves" from "recolours" and not good enough to trust further.
 
-## In flight: the A/B
+## NEXT: connect beliefs to action
 
-Two steps, in this order, because the second cannot be measured honestly
-until the first is done.
+Everything below the belief layer is built, tested and inert. `belief`
+reads nothing into any decision, and that is the single reason the score
+has not moved: four recording-only layers were added and each moved it by
+nothing, exactly as each was predicted to.
 
-### 1. Entity-scoped stamina (the acceptance test has a known answer)
+**The candidate consumer.** `_pick_coordinate` currently clicks the hottest
+*interest* cell. Interest marks where change has happened — measured, that
+is not where the goal is, and routing toward it cost score. Belief marks
+what an action has been *shown* to do to a specific thing. On cd82 that is
+`ACTION5 -> #12/#14`; on wa30 `ACTION2 turns #0`. Clicking or acting
+through the entity a role points at is a different target from the hottest
+cell, and it is the first one this project has had that is grounded in
+evidence about an action rather than about a location.
 
-`StaminaDetector` reads **whole-board colour totals**, and that aggregate
-destroys a perfect signal. cd82's bar drains 64 cells to 0 — but 100
-static cells elsewhere share its colour, so the total only falls 164 → 100
-(61%), failing `STAMINA_MUST_EMPTY_TO` (25%) and the bar is never
-detected. Measured at the region level it reads 64 → 0 = 0% and passes
-cleanly.
+**Aim it at depth, not breadth.** This is the important part. Every
+mechanism added so far — router, interest map, shift fallback — bought more
+level-1 completions and never a level 2. Breadth at level 1 is worth 1/21
+of a game. A belief consumer aimed at "click better" is aimed where
+everything else was aimed and will likely land where everything else
+landed. Decide what a depth-shaped consumer looks like *before* building
+one.
 
-The cost of missing it is not hypothetical: cd82's bar changes on 77% of
-steps and **192 of 192 of those land in "thing I affect"**, because
-`residual_cells` only filters a *detected* stamina colour. Attention is
-polluted on three steps in four, on the game we had chosen as the clean
-testbed for goal identification.
+**Protocol** (the variance floor is known, so this is settled):
+n >= 30 per arm, medians, permutation test, never means — a single lucky
+sweep moves the mean 56% while the median holds (measured, p = 0.50).
+~15 min per arm. If the change touches only a few games, **test those
+games**: the shift fallback altered behaviour on 4 of 25, and the 25-game
+aggregate diluted it ~6x into near-insignificance (p = 0.044) while the
+affected-games test read p < 0.0001.
 
-So: group pixels into contiguous regions, track them across frames by
-overlap, and run the existing sawtooth logic per region rather than per
-colour. **Acceptance test: cd82's stamina is detected, and the other 9
-games that already detect one still do.** This is the smallest change that
-demonstrates entities earning their place, and it has an unambiguous right
-answer to check against.
+## Open: the agent has no model of RESET
 
-On the governing principle: grouping is *representation*, not ontology —
-it proposes "these pixels may be one thing" and asserts nothing about what
-that thing is, which the principle explicitly permits. The risk it carries
-is **coverage** failure (a game with non-contiguous motifs gets grouped too
-finely, so we detect less — graceful) rather than **ontology corruption**
-(asserting something false and building on it). Role assignment — "the one
-I control", "the one that is the goal" — is where the real risk lives and
-stays evidence-gated.
+The agent does not know that a reset restores the layout. It sees every
+object vanish and new ones appear.
 
-### 2. A/B: deformation-tolerant object tracking
+Measured: a post-reset frame mints region ids at **~20x** the ordinary rate
+(cd82 1.7 per frame against 0.08; wa30 25x; ls20 17x). Each fresh id
+discards the belief attached to the old one — **including the
+action-to-entity mapping already learned** — so the agent repeatedly
+forgets what it had worked out about a thing, then has to re-earn it.
 
-Every motion lens requires the shape to be **identical** before and after.
-cd82's controllable object deforms by ±1 to ±14 cells as it moves, so all
-of them refuse it — masking the bar does not help (0 detections before and
-after). A centroid test that tolerates deformation recovers a complete map:
-ACTION1 up / ACTION2 down / ACTION3 left / ACTION4 right, stride 11,
-**100% consistent across 179 observations**, on a game where we currently
-see nothing. It stays silent where it should: sb26 and tn36 find nothing,
-lp85 is noisy at 29%.
+Mitigated but not fixed. `RegionTracker` now has a third matching pass —
+same colour, same shape, reappearing within `SHAPE_REVIVE_WINDOW` frames —
+which recovers identity across a teleport by inference (cd82 42 -> 35 ids,
+ls20 19 -> 12). The real fix is to *tell* the tracker a reset happened,
+from `_reset_attempt`, rather than have it deduce this from shapes. That
+also removes the one assumption the shape pass carries: that a same-shaped
+thing reappearing moments later is the same thing, which is a guess, and
+is why the window is kept to 3 frames.
 
-This is a **real behaviour change**, not another recording-only layer: it
-would give a move map to some of the 11 games that have none, switching on
-the frontier branch, the router, obstacle detection and the `affect` gate
-on games that currently run as pure bandits. Given the router's history of
-costing score, it ships behind a flag and is measured before it is trusted.
+Related and unbuilt: nothing models "an action caused a rotation" as a
+*persistent fact about that action* in a form the router could plan with.
+Rotations are counted per action and shown, but a rotation does not compose
+into a position the way an offset does.
 
-**Protocol, now that the variance floor is known:** n>=30 per arm, compare
-**medians** with a permutation test, not means — the metric is heavy-tailed
-enough that a single lucky sweep moves the mean 56% while the median holds
-(measured, p=0.50). ~15 minutes per arm.
+## Resolved: the deformation-tolerant tracker (A/B, n=100 per arm)
+
+`perception.detect_shift` — a motion lens that tolerates a changing shape,
+because every exact lens demands the shape be identical and cd82's object
+deforms by up to 14 cells as it moves. **Default ON: the first change in
+this project to earn a default by measurement.**
+
+| test | OFF | ON | p |
+|---|---|---|---|
+| the 4 games it changes (pre-specified) | 0.0000 | 0.0898 | **< 0.0001** |
+| cd82 clearing level 1 (mechanistic prediction) | 19/100 | 40/100 | **0.0017** |
+| whole 25-game score | 0.0106 | 0.0190 | 0.044 |
+| the 21 games it cannot touch (sanity) | — | — | 0.73 |
+
+Zeros fell 13/100 -> 6/100; games reaching level 1 rose 1.50 -> 2.01 per
+sweep. The ON arm produced **one level 2** — the first in any recorded
+sweep here. n=1: noted, not claimed.
+
+Two guards were needed and both were caught by tests before any sweep ran:
+the **background is also a "mover"** (when an object goes right the canvas
+loses cells where it arrived and gains them where it left, so the canvas
+shifts *left* and is the larger candidate — unguarded this teaches a
+reversed offset for every action on every game), and **weak evidence must
+not contaminate strong** (the fallback is barred from any action an exact
+lens has ever explained; without that, ar25's ACTION1 went from a clean
+(0,3)x20 to (0,-5)x17 and fell out of the map).
 
 ## Naming: three things were all called "budget"
 
@@ -522,10 +572,10 @@ reads that exact attribute.
       debugging aid. `make backfill-summaries` recovered the four
       surviving runs (marked `backfilled`, scorer half unrecoverable).
       `make clean` spares `results/`.
-- [ ] **Variance floor still unmeasured.** The summaries make it cheap to
-      compute for the first time — run N sweeps at one unchanged commit
-      and read the spread. Until that number exists, no configuration
-      comparison in this document is defensible.
+- [x] **Variance floor measured** (n=30 at one unchanged commit): mean
+      0.0307, **median 0.0131**, sd 0.0490, range 0.0-0.194, top sweep 6.3x
+      the mean. Heavy-tailed, so compare medians. A sweep costs ~30-55s,
+      which is the whole reason any of the above became answerable.
 
 ## Docs
 
@@ -551,12 +601,20 @@ ROI/incrementalism, generalization-fit — see `history.md`, 2026-09-13)
 before choosing what to build next. Outcome, nothing rejected forever,
 just sequenced behind having an actual object/goal signal:
 
-- [ ] **Connected-component object extraction** (`scipy.ndimage.label`,
-      segmenting same-colored regions into objects) — RISKY for
-      generalization: assumes "object" = "contiguous same-colored blob,"
-      which a hidden game could simply not use (texture, single pixels,
-      non-contiguous motifs), corrupting everything built on top. Also:
-      `scipy` isn't installed.
+- [x] **Connected-component object extraction — BUILT, and the RISKY
+      verdict was too strong.** Now `perception.connected_regions`, pure
+      Python, no `scipy`. The original objection conflated two failure
+      modes: **coverage** failure (a game of non-contiguous motifs gets
+      grouped too finely, so we detect *less* — graceful, and no worse
+      than the nothing we had) and **ontology corruption** (asserting
+      something false and building on it). Grouping risks only the first,
+      because it proposes that some pixels may be one thing and says
+      nothing about what. What the caution was really about is **role
+      assignment**, which is where the risk genuinely lives and which
+      stays evidence-gated in `belief.py`. Decided by measurement in the
+      end: a signal that is perfect at the region level (cd82's bar,
+      64 cells -> 0) was unrecoverable at the colour level (164 -> 100,
+      61%, rejected).
 - [ ] **Single "Controllable_Agent" tracker** — RISKY: assumes exactly
       one persistent, controllable avatar exists, which ARC-AGI-3's
       abstract action set is deliberately designed to allow games to not

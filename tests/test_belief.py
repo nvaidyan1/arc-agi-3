@@ -24,9 +24,15 @@ sys.path.insert(0, str(ROOT / "vendor" / "ARC-AGI-3-Agents"))
 import belief  # noqa: E402
 
 
-def feed(b, action, changed, displaced=False, times=1):
+def feed(b, action, changed, displaced=False, times=1, kind=None):
+    """`changed=False` means nothing happened; otherwise a kind is recorded.
+
+    Defaults to GREW so a test that only cares about "did it change" gets a
+    non-motion kind, which is the AFFECT side of the split.
+    """
     for _ in range(times):
-        b.observe(action, changed, displaced)
+        b.observe(action, (kind or (belief.MOVED if displaced else belief.GREW))
+                  if changed else None)
 
 
 # ── role assignment ─────────────────────────────────────────────────────
@@ -52,17 +58,29 @@ def test_an_entity_driven_by_one_action_is_not_context():
     assert b.selectivity[0] == "ACTION5"
 
 
-def test_displacement_is_what_separates_control_from_affect():
-    # Identical evidence except that the entity was seen to move.
-    def make(displaced):
+def test_motion_is_what_separates_control_from_affect():
+    # Identical evidence except for HOW the entity changed. Control is
+    # motion under my hand; anything else I merely act upon.
+    def make(kind):
         b = belief.Belief(3, 7)
-        feed(b, "ACTION1", True, displaced=displaced, times=9)
+        feed(b, "ACTION1", True, kind=kind, times=9)
         feed(b, "ACTION1", False, times=1)
         feed(b, "ACTION2", False, times=10)
         return b
-    assert make(False).role == belief.AFFECT
-    assert make(True).role == belief.CONTROL
-    assert "I move this" in make(True).describe()
+    assert make(belief.GREW).role == belief.AFFECT
+    assert make(belief.MOVED).role == belief.CONTROL
+    assert make(belief.TURNED).role == belief.CONTROL, "turning is motion too"
+
+
+def test_the_description_says_HOW_not_just_that():
+    # "ACTION5 affects #12" and "ACTION5 grows #12" are different amounts
+    # of understanding, and the second costs nothing extra to record.
+    b = belief.Belief(3, 7)
+    feed(b, "ACTION1", True, kind=belief.SHRANK, times=9)
+    feed(b, "ACTION1", False, times=1)
+    feed(b, "ACTION2", False, times=10)
+    assert "shrank" in b.describe()
+    assert b.kind_for("ACTION1") == belief.SHRANK
 
 
 def test_an_entity_that_never_changes_is_environment():
@@ -129,7 +147,7 @@ def test_appearing_is_not_moving():
     # about the world, and the wrong one.
     w = belief.WorldBelief()
     w.update({1: (15, _cells((5, 5), (6, 5)))}, "ACTION5", [(5, 5), (6, 5)])
-    assert w._beliefs[1].displaced == 0
+    assert w._beliefs[1].kind_for("ACTION5") == belief.APPEARED
 
 
 def test_reset_steps_are_not_evidence():

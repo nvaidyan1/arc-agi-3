@@ -1473,3 +1473,78 @@ Two further bugs, both of the same family as the stamina one:
 `belief` is recording-only: nothing reads it to decide. That is deliberate
 — naming the consumer before wiring one is the lesson of three
 recording-only layers that moved the score zero.
+
+## 2026-09-13 — The A/B lands; belief learns to say *how*; identity survives a reset
+
+**The A/B, n=100 per arm.** `detect_shift` (deformation-tolerant motion)
+**default ON — the first change here to earn a default by measurement**:
+
+| test | OFF | ON | p |
+|---|---|---|---|
+| the 4 games it changes (pre-specified) | 0.0000 | 0.0898 | **< 0.0001** |
+| cd82 clearing level 1 (predicted from mechanism) | 19/100 | 40/100 | **0.0017** |
+| whole 25-game score | 0.0106 | 0.0190 | 0.044 |
+| the 21 games it cannot touch (sanity) | — | — | 0.73 |
+
+Zeros 13/100 -> 6/100, level-1 games 1.50 -> 2.01 per sweep, and the ON arm
+produced **one level 2**, the first in any recorded sweep. n=1: noted, not
+claimed.
+
+**A lesson about instruments, worth more than the result.** The flag alters
+behaviour on only **4 of 25 games** — verified by comparing action streams,
+which are byte-identical on the other 21. A 25-game aggregate therefore
+dilutes the effect ~6x, which is why the whole-sweep test reads a marginal
+p = 0.044 while the pre-specified subset reads p < 0.0001. Before this, a
+per-game table had been over-read: lp85's +33% was the largest number in it
+and lies on a game the flag **cannot touch** — pure sampling noise. Check
+which games a change can even reach before reading per-game differences.
+
+**Belief now says how, not just that.** Roles carry a kind — MOVED, TURNED,
+GREW, SHRANK, APPEARED, VANISHED — each defined only by what happened to a
+set of cells. wa30's rotating object reads TURNED by centroid-preservation,
+arriving at the same conclusion `detect_rotation` does by a different
+route. cd82's bar reads "shrank whatever I press", which is stamina's
+meaning derived rather than assumed.
+
+Asked why the Controls panel still said "drives" rather than the kind, the
+honest answer was that it was an oversight and not a principle: the belief
+object knew the kind and the panel built its own string and discarded it.
+Two bugs sat behind one symptom — the kind was never passed, and actions
+were shown from the move map *or* belief and never both, so the moment four
+actions learned offsets on cd82 the fifth vanished from the panel entirely.
+
+**Identity survives a reset (mostly).** A reset teleports every object home;
+neither overlap nor proximity can follow that, so fresh ids were minted and
+**every belief attached to the old ones was discarded, the learned
+action-to-entity mapping included**. Measured: post-reset frames mint ids at
+~20x the ordinary rate (cd82 1.7 per frame against 0.08). A third matching
+pass — same colour, same shape, reappearing within 3 frames — recovers it
+(cd82 42 -> 35 ids, ls20 19 -> 12). The window is tight on purpose: a
+same-shaped thing reappearing *moments* later is plausibly the same thing,
+one reappearing a hundred steps later is plausibly a look-alike. That
+tension surfaced as a failing test rather than as a guess, and both
+behaviours are now pinned.
+
+**Three GUI findings that were really engineering findings.**
+  * The `environment` mask was not merely redundant — **94% of its cells
+    were off-board** on wa30, at coordinates from -193 to 221 on a 64x64
+    grid, silently clipped by the canvas. Obstacles live in relative
+    displacement space, and where the move map is wrong the conversion is
+    meaningless. Removed as a mask; the *ratio* stays in Perceptions,
+    where it is a live check on whether that space is sane at all.
+  * `interest` and `affect` cover **100% of the same cells** on wa30 and
+    ls20 — interest is bumped *at* the residual cells, so it is affect
+    accumulated over time. Kept both; they answer different questions
+    per-step, but it is the same territory.
+  * The entity mask painted every region one blue with opacity by id, so
+    neighbouring ids were indistinguishable and two objects read as one.
+    One hue per entity now.
+
+**On the difference between certainty and strength.** A one-sided test that
+a role's defining inequality holds was built, measured, and found to read
+**100% for every entity** — past a few hundred observations nearly any real
+effect is significant, so it discriminates nothing on screen. It now gates
+whether a role is claimed at all (below 95%, UNASSIGNED), while what is
+*shown* is how dependable the relation is: `wa30 #0 100%` (ACTION2 moves it
+every time) against `cd82 #36 27%` (ACTION5 affects it sometimes). Correct
+and useless is still useless.

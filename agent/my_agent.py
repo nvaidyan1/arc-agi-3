@@ -175,6 +175,12 @@ class MyAgent(Agent):
         self._exact_actions: set[GameAction] = set()
         self._controlled_by_action: dict[str, int] = {}
         self._action_rotations: dict[GameAction, dict[str, int]] = {}
+        # Lifetime totals. `_action_tries` and `_action_changes` reset every
+        # attempt on purpose (contingency is re-measured per life), but a
+        # panel reading "tried 0" after two hundred presses looks broken
+        # rather than principled, so the running total is kept alongside.
+        self._action_tries_total: dict[GameAction, int] = {}
+        self._action_changes_total: dict[GameAction, int] = {}
 
         # ── Change-type census (recording only) ─────────────────────────
         # Deliberately not wired into action selection. Adding a signal
@@ -312,9 +318,14 @@ class MyAgent(Agent):
         # "must actually empty" test rejected it. Per region it reads 0%.
         # Only regions that could BE a meter are tracked, which also keeps
         # the per-step cost bounded.
-        regions = perception.connected_regions(
-            latest_frame, min_size=STAMINA_MIN_SIZE
+        # Merge a region wholly enclosed by another before tracking: a
+        # bordered object is one thing, and same-colour grouping alone
+        # splits it into frame and fill.
+        regions = perception.merge_enclosed(
+            perception.connected_regions(latest_frame, min_size=1)
         )
+        regions = [(c, cells) for c, cells in regions
+                   if len(cells) >= STAMINA_MIN_SIZE]
         tracked = self.regions.update(regions)
         self.stamina.update(
             {rid: len(cells) for rid, (_c, cells) in tracked.items()},
@@ -339,10 +350,13 @@ class MyAgent(Agent):
         changed = perception.diff_cells(prev_frame, latest_frame)
         origin = self.moves.displacement  # before any move updates it
         self._action_tries[action] = self._action_tries.get(action, 0) + 1
+        self._action_tries_total[action] = self._action_tries_total.get(action, 0) + 1
 
         moved = None
         if changed:
             self._action_changes[action] = self._action_changes.get(action, 0) + 1
+            self._action_changes_total[action] = (
+                self._action_changes_total.get(action, 0) + 1)
             self.clicks.observe_change(changed)
             moved = perception.detect_translation(prev_frame, latest_frame)
             if moved is not None:
