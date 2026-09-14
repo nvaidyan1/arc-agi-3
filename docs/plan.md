@@ -518,7 +518,7 @@ verdict, in force for everything below:
       the block already has the template's colours and the goal is their
       arrangement — expressible only as `shape_diff -> 0`, no gradient.
       Recorded, not worked around (`history.md` 2026-09-14).
-- [ ] **4c. sp80: the controlled objects are not entities.** The move map
+- [x] **4c. sp80: the controlled objects are not entities** — found and fixed: `merge_enclosed` absorbed any solitary object into the canvas. sp80 now reads a full d-pad on `#4`. Original note: The move map
       learns (0,4)/(20,0) but no tracked region is CONTROL, so the brief
       says "moves something". Find why (size filter? colour shared with the
       canvas? merged by `merge_enclosed`?) — this is the second game's

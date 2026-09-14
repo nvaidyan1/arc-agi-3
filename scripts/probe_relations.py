@@ -106,7 +106,8 @@ def replay(entries: list[dict], game_id: str) -> dict:
                     _c, size, offset, anchor = shifted
                     moves.observe_translation(acted, offset, size, anchor, game_id)
 
-        regions = perception.merge_enclosed(perception.connected_regions(frame, min_size=1))
+        regions = perception.merge_enclosed(perception.connected_regions(frame, min_size=1),
+                                            background=background)
         regions = [(c, cells) for c, cells in regions if len(cells) >= STAMINA_MIN_SIZE]
         expected = moves.learned_moves.get(acted) if acted is not None else None
         tracker.update(regions, expected_offset=expected)

@@ -1882,3 +1882,36 @@ screenshot named, from persistence of two relations, with no node stored.
     know what it controls, and the second-game derivation the council
     asked for: sp80's controllable objects are not entities at all
     (the plan's "sp80 assigns no CONTROL" item, now located).
+
+## 2026-09-14 — The second game finds a perception bug: solitary objects were the canvas
+
+**Motivation.** The council required the relation set to survive a second
+game's dump. sp80's brief said `CONTROL: moves *something*` — the move map
+had offsets, no entity was CONTROL, every relation "moved under every
+action alike", FALLING was empty.
+
+**Observation.** sp80's controllable object is an 80-cell bar of colour 9
+that touches nothing but canvas. `merge_enclosed` folds a region "wholly
+surrounded by one other region" into that region — built for a fill inside
+a frame — and the canvas satisfies that for anything floating alone on it.
+The bar was absorbed into the canvas on every frame. Every other object on
+sp80 survived only because it happened to touch a second region (the
+U-shapes touch the floor; the top piece touches the timer). `regions total
+8, tracked live 8`, and the bar in neither.
+
+**Built.** `merge_enclosed(regions, background=...)` never absorbs into
+the background colour (or, unknown, the largest region). Three tests.
+After: sp80 `#4 colour 9 80 cells CONTROL — ACTION1 -y, ACTION2 +y,
+ACTION3 -x, ACTION4 +x`, and FALLING carries `distance(#4, #5)` /
+`distance(#4, #6)` — the bar approaching the two 80-cell U-shapes, driven
+by ACTION2 and ACTION4 respectively. The brief went from "I do not know
+what I control" to a full d-pad and two candidate destinations, from one
+perception fix and no new vocabulary.
+
+**Inference.** This changes the region list on every game with a solitary
+object, hence the tracker, stamina, residual and interest — the default
+action stream moves. It is the third default-path change today without a
+parity measurement (identity, control, this); the debt is real and listed.
+The council's "derive from a second game" rule paid for itself on the first
+try, and not in the way expected: the vocabulary held, the perception
+under it did not.

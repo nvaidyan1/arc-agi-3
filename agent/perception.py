@@ -138,8 +138,19 @@ def connected_regions(
 
 def merge_enclosed(
     regions: list[tuple[int, frozenset[tuple[int, int]]]],
+    background: int | None = None,
 ) -> list[tuple[int, frozenset[tuple[int, int]]]]:
     """Fold a region wholly surrounded by one other region into it.
+
+    Never into the canvas. A solitary object floating on the background
+    is "wholly surrounded by one other region" too, and this used to
+    absorb it: on sp80 the controllable 80-cell bar touched nothing but
+    canvas and was folded into the canvas, so the move map learned its
+    offsets while no entity was ever CONTROL and the brief said "moves
+    something". Every other object on that board survived only because
+    it happened to touch a second region. The canvas is `background`
+    when the caller knows it, else the largest region — the one thing on
+    a board that is a surface rather than a shape.
 
     Same-colour contiguity necessarily splits a bordered object in two: a
     frame of one colour and a fill of another. Measured on wa30's first
@@ -161,6 +172,11 @@ def merge_enclosed(
         for cell in cells:
             lookup[cell] = i
 
+    if background is not None:
+        canvas = {i for i, (colour, _c) in enumerate(regions) if colour == background}
+    else:
+        canvas = {max(range(len(regions)), key=lambda i: len(regions[i][1]))} if regions else set()
+
     absorbed: dict[int, int] = {}
     for i, (_colour, cells) in enumerate(regions):
         outside = set()
@@ -175,7 +191,7 @@ def merge_enclosed(
                     outside.add(owner)
         if len(outside) == 1:
             owner = next(iter(outside))
-            if owner is not None and owner != i:
+            if owner is not None and owner != i and owner not in canvas:
                 absorbed[i] = owner
 
     if not absorbed:

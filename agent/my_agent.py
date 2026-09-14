@@ -359,7 +359,8 @@ class MyAgent(Agent):
         # bordered object is one thing, and same-colour grouping alone
         # splits it into frame and fill.
         regions = perception.merge_enclosed(
-            perception.connected_regions(latest_frame, min_size=1)
+            perception.connected_regions(latest_frame, min_size=1),
+            background=self._background,
         )
         regions = [(c, cells) for c, cells in regions
                    if len(cells) >= STAMINA_MIN_SIZE]

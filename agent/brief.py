@@ -196,8 +196,11 @@ class Briefer:
 
     def _relations(self, agent) -> list[str]:
         live = agent.regions.live
+        # Drift is a derivative of distance and reads 0 whenever things
+        # stop; it is kept in the engine for the probe and left out of the
+        # brief, where it only repeats what the distance row already says.
         recent = [(k, t) for k, t in self._last_moved.items()
-                  if k[0] not in _relations.EVIDENCE_ONLY
+                  if k[0] not in _relations.EVIDENCE_ONLY and k[0] != "distance_drift"
                   and self._step - t <= RELATION_MEMORY
                   and k[1] in live and k[2] in live]
         recent.sort(key=lambda kt: -kt[1])
@@ -249,6 +252,8 @@ class Briefer:
         live = agent.regions.live
         falling = []
         for key, steps in self._down_recent.items():
+            if key[0] == "distance_drift":
+                continue
             n = sum(1 for s in steps if self._step - s < FALLING_WINDOW)
             if n >= 2 and key[1] in live and key[2] in live:
                 rec = agent.relations.records[key]
