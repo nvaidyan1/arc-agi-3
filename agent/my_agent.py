@@ -498,7 +498,7 @@ class MyAgent(Agent):
         # in between is not its evidence.
         h = self.hypothesis
         if h is not None and self._decision.get("tier") == "hypothesis":
-            rec = self.relations.records.get(h.key)
+            rec = self.relations.record(h.key)
             status = h.observe(rec.residual if rec is not None else None)
             if status != hypothesis.LIVE:
                 self.proposer.close(h, self._level_step)
@@ -726,7 +726,7 @@ class MyAgent(Agent):
         # 17, 17); a path can. Falls back to the lever when no path.
         action = None
         routed = ""
-        if h.key[0] == "distance" and self.moves.learned_moves:
+        if h.key[0] == "distance" and self.moves.learned_moves and isinstance(h.key[1], int):
             action, routed = self._route_for(h, candidates)
         if action is None:
             action = next(a for a in candidates if a.name == h.action)

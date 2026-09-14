@@ -88,7 +88,8 @@ class Hypothesis:
 
     def describe(self) -> str:
         rel, a, b = self.key
-        return (f"drive {rel}(#{a},#{b}) {self.start}->0 with {self.action} "
+        name = lambda k: ("{" + ",".join(f"#{m}" for m in k) + "}") if isinstance(k, tuple) else f"#{k}"  # noqa: E731
+        return (f"drive {rel}({name(a)},{name(b)}) {self.start}->0 with {self.action} "
                 f"(lever +{self.lift:.0%}), step {self.spent}/{self.budget}, now {self.current}")
 
 
@@ -119,11 +120,14 @@ class Proposer:
         presses) and are never goals I can drive; the belief layer has
         already made that judgement, so it is reused rather than remade."""
         best = None
-        for key, rec in engine.records.items():
+        both = list(engine.records.items()) + list(getattr(engine, "group_records", {}).items())
+        for key, rec in both:
             rel, a, b = key
             if rel in _relations.EVIDENCE_ONLY or rel == "distance_drift":
                 continue
-            if a not in live or b not in live or a in exclude or b in exclude:
+            # Members: an int for a pair record, a tuple of ids for a group.
+            members = [m for side in (a, b) for m in (side if isinstance(side, tuple) else (side,))]
+            if any(m not in live or m in exclude for m in members):
                 continue
             if rec.residual is None or rec.residual <= 0:
                 continue

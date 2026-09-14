@@ -59,6 +59,10 @@ RELATIONS = (
     "distance_drift",  # |distance_t - distance_{t-1}|             symmetric
     "count_diff",      # |#entities coloured like a - like b|       symmetric
     "cell_exchange",   # cells a lost this step that b gained       directional
+    # Over the grouping view only (a composite against a composite or a
+    # thing), the matching family's two counting residuals:
+    "palette_missing", # colours of a that b lacks                  directional
+    "part_size_diff",  # sum over shared colours of |cells_a - cells_b|  symmetric
 )
 SYMMETRIC = frozenset({"palette_diff", "shape_diff", "distance",
                        "distance_drift", "count_diff"})
@@ -194,6 +198,18 @@ class RelationEngine:
         # member tuples, so a group whose membership changes is a new pair
         # of relata with a fresh record — a view has no identity to keep.
         self.group_records: dict[tuple, PairRecord] = {}
+        # A group is a view keyed by its members, and members change ids
+        # when a part is repainted (cd82: the block's pink half gets a new
+        # region id each time black is painted over it). Without
+        # continuity every such step started a fresh record and the paint
+        # action could never accumulate a lever on part_size_diff(template,
+        # block) — measured: 0 levers at 4 cd82 advances. So a new group
+        # key inherits the record of an earlier key with the same colours
+        # whose members it mostly shares — the tracker's overlap rule,
+        # applied to composites. `_alias` maps a member tuple to the tuple
+        # its records live under.
+        self._alias: dict[tuple, tuple] = {}
+        self._unit_colours: dict[tuple, frozenset[int]] = {}
 
     # ── update ──────────────────────────────────────────────────────────
 
@@ -248,8 +264,32 @@ class RelationEngine:
         for key, value in out.items():
             self.records.setdefault(key, PairRecord()).observe(value, action)
         for key, value in self._group_residuals().items():
-            self.group_records.setdefault(key, PairRecord()).observe(value, action)
+            rel, ka, kb = key
+            canon = (rel, self._canonical(ka), self._canonical(kb))
+            self.group_records.setdefault(canon, PairRecord()).observe(value, action)
         return out
+
+    def _canonical(self, members: tuple) -> tuple:
+        """The member tuple this unit's records live under: itself, or an
+        earlier unit with the same colours sharing at least half its
+        members. Singletons are their own key."""
+        if len(members) == 1:
+            return members
+        if members in self._alias:
+            return self._alias[members]
+        colours = self._unit_colours.get(members)
+        best, best_overlap = None, 0
+        mine = set(members)
+        for other, canon in self._alias.items():
+            if self._unit_colours.get(canon) != colours:
+                continue
+            overlap = len(mine & set(other))
+            if overlap * 2 >= max(len(mine), len(other)) and overlap > best_overlap:
+                best, best_overlap = canon, overlap
+        canon = best if best is not None else members
+        self._alias[members] = canon
+        self._unit_colours.setdefault(canon, colours)
+        return canon
 
     # ── the grouping view ───────────────────────────────────────────────
 
@@ -293,30 +333,63 @@ class RelationEngine:
                       key=lambda g: min(g))
 
     def _group_residuals(self) -> dict[tuple, int | None]:
-        """palette_diff and shape_diff between every pair of groups, and
-        between each group and each live singleton. Set cardinality and
-        translation-normalised equality only — no alignment, as ever."""
+        """Residuals between every pair of groups, and between each group
+        and each live singleton. Set cardinality, counting, and
+        translation-normalised equality only — no alignment, as ever.
+
+        Two of these exist because the matching family was measured to be
+        inexpressible without them (cd82: four level advances with no
+        coordinate, and the first A/B loss). `palette_missing(A, B)` is
+        the colours of A that B lacks — 0 says "everything A is made of,
+        B has too", which is the correlation a template and its copy show
+        before any painting has happened. `part_size_diff(A, B)` sums, over
+        the colours they share, how far apart their cell counts per colour
+        are — a *proportion* residual with a gradient, so the paint action
+        that changes the mix becomes a lever. Arrangement stays what it
+        was: `shape_diff = 0` at the end, or nothing. The snake reading of
+        the same primitives: two things with identical descriptors are the
+        same kind, and what one did is evidence about the other — that is
+        the next view, not this one.
+        """
         groups = self.groups()
         if not groups:
             return {}
         grouped = set().union(*groups)
-        units: list[tuple[tuple, frozenset[int], frozenset]] = []
+        units: list[tuple[tuple, frozenset[int], frozenset, dict[int, int]]] = []
         for g in groups:
             cells = frozenset().union(*(self._now[r].cells for r in g))
             cols = frozenset().union(*(self._now[r].colours for r in g))
-            units.append((tuple(sorted(g)), cols, cells))
+            self._unit_colours[tuple(sorted(g))] = cols
+            per_colour: dict[int, int] = {}
+            for r in g:
+                for c in self._now[r].colours:
+                    per_colour[c] = per_colour.get(c, 0) + len(self._now[r].cells)
+            units.append((tuple(sorted(g)), cols, cells, per_colour))
         for rid in sorted(self.live):
             if rid in self._now and rid not in grouped:
                 d = self._now[rid]
-                units.append(((rid,), d.colours, d.cells))
+                units.append(((rid,), d.colours, d.cells,
+                              {c: len(d.cells) for c in d.colours}))
         out: dict[tuple, int | None] = {}
-        for i, (ka, ca, cea) in enumerate(units):
-            for kb, cb, ceb in units[i + 1:]:
+        for i, (ka, ca, cea, na) in enumerate(units):
+            for kb, cb, ceb, nb in units[i + 1:]:
                 if len(ka) == 1 and len(kb) == 1:
                     continue        # singleton pairs are the ordinary records
                 out[("palette_diff", ka, kb)] = len(ca ^ cb)
                 out[("shape_diff", ka, kb)] = 0 if _shape(cea) == _shape(ceb) else None
+                out[("palette_missing", ka, kb)] = len(ca - cb)
+                out[("palette_missing", kb, ka)] = len(cb - ca)
+                shared = ca & cb
+                out[("part_size_diff", ka, kb)] = (
+                    sum(abs(na[c] - nb[c]) for c in shared) if shared else None)
         return out
+
+    def record(self, key: tuple):
+        """The record for a pair key or a group key, or None."""
+        if key in self.records:
+            return self.records[key]
+        rel, ka, kb = key
+        return self.group_records.get((rel, self._alias.get(ka, ka), self._alias.get(kb, kb)))
 
     # ── the relations ───────────────────────────────────────────────────
 

@@ -2130,3 +2130,38 @@ loss is the cost of aiming at whatever moves; the level-boundary diff (step
 ACTION5 was the lever that mattered there. Not promoted to default: p =
 0.08 on the pre-specified test, and the cd82 regression is real. Next:
 step 6, then re-run this A/B.
+
+## 2026-09-14 — The matching family gets its two counting residuals
+
+**Motivation.** The user's question: does anything in the belief hint that
+cd82's block and template are correlated in their colours? Partly —
+`palette_diff(template-group, block-group) = 2`, muddied by the frame and
+interior folded into the template's group; `shape_diff` is the endpoint
+with no gradient. The council's rule for a new primitive was met twice
+(cd82's four absent advances in (a); the A/B loss), with two candidate
+second games from the cold reads (ar25, ka59).
+
+**Built, over the grouping view only, counting only, no alignment.**
+`palette_missing(A, B)` = colours of A that B lacks (directional):
+block -> template reads **0** on cd82 — "everything the block is made of,
+the template has". `part_size_diff(A, B)` = over shared colours, the summed
+difference in cells per colour: a *proportion* residual with a gradient, so
+the paint action can become its lever. Arrangement stays `shape_diff = 0`.
+Group records gained **continuity**: a group whose member is reborn under
+a new id inherits the record of the earlier group with the same colours
+sharing at least half its members — the tracker's overlap rule applied to
+composites. The proposer now bets on group residuals too.
+
+**Second-game check.** `part_size_diff` moves on cd82, ar25 **and** ka59
+(all three recordings), so it ships. ka59's brief now reads
+`palette_diff = shape_diff = part_size_diff = 0` between its two rooms —
+the cold reader's mirror hypothesis, confirmed by the structure. On cd82's
+recorded advances the new residual is present but not yet a *lever*: the
+bandit pressed ACTION5 too rarely in those runs for a rate contrast to
+form. The proposer, live, still spends its cd82 budget on bucket-related
+`part_size_diff` noise (bucket re-rasterisation changes its part sizes).
+
+**Next primitive, from the user's snake example, not built:** *kinds* —
+things with identical descriptors are the same kind, and what one did
+(ate, drained, scored) is evidence about the others. A view over equal
+shape and palette, with beliefs transferring across it. Listed as 4d.

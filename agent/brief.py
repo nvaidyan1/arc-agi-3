@@ -133,9 +133,10 @@ class Briefer:
         if h is not None:
             out.append(f"  testing: {h.describe()}")
         if proposer and proposer.log:
+            name = lambda k: ("{" + ",".join(f"#{m}" for m in k) + "}") if isinstance(k, tuple) else f"#{k}"  # noqa: E731
             for key, action, start, end, status, spent in proposer.log[-3:]:
                 rel, a, b = key
-                out.append(f"  {status}: {rel}(#{a},#{b}) {start}->{end} with {action} in {spent} steps")
+                out.append(f"  {status}: {rel}({name(a)},{name(b)}) {start}->{end} with {action} in {spent} steps")
         return out
 
     def _things(self, agent) -> list[str]:
@@ -194,7 +195,7 @@ class Briefer:
                                          key=lambda kv: (kv[1].residual is None,
                                                          not (len(kv[0][1]) > 1 and len(kv[0][2]) > 1),
                                                          kv[1].residual or 0)):
-            if rec.residual is None or (rec.residual > 0 and not rec.moved and rec.defined_steps > 5 and shown):
+            if rec.residual is None:
                 continue
             name = lambda k: "{" + ",".join(f"#{r}" for r in k) + "}" if len(k) > 1 else f"#{k[0]}"
             line = f"  {rel}({name(ka)}, {name(kb)}) = {rec.residual}"
@@ -202,7 +203,7 @@ class Briefer:
             if lever:
                 line += f"   {lever[0]} drives it down"
             out.append(line); shown += 1
-            if shown >= 6:
+            if shown >= 8:
                 break
         return out
 

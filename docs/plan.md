@@ -532,6 +532,14 @@ verdict, in force for everything below:
       single-colour entities, so the matching family is invisible to the
       layer until this exists. Exit: `palette_diff(block-view, template-view)`
       on cd82 reads 2 and falls under paint actions.
+- [x] **4d. the matching family's residuals** — `palette_missing` and
+      `part_size_diff` over the grouping view, counting only; group-record
+      continuity across member rebirth. Moves on cd82, ar25, ka59.
+- [ ] **4e. kinds as a view** — things with identical shape and palette
+      are one kind; what one instance did (drained stamina, vanished,
+      scored) is evidence about the rest. The user's snake example: eat
+      one food, expect the same of its lookalikes. A view over equal
+      descriptors with belief transfer; None until two instances exist.
 - [x] **5. the brief** (supersedes "event log") — `agent/brief.py`, shown
       live in the recap's Brief card: THINGS / GROUPS / CONTROL / RELATIONS
       (levers, or "moves under every action alike") / FALLING (only with a

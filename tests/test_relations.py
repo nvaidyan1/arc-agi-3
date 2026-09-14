@@ -258,3 +258,77 @@ def test_the_action_that_stands_out_is_the_lever():
 def test_a_lever_needs_tries():
     rec = _tally(ACTION1=(2, 0, 0), ACTION2=(0, 0, 10))
     assert rec.lever(relations.DOWN) is None             # 2 tries is a coincidence
+
+
+# ── the matching family: palette_missing and part_size_diff ─────────────
+
+def template_and_block(black_rows):
+    """A framed template (yellow frame 4, black 0 on top, pink 15 below) and
+    a free-standing two-colour block whose top `black_rows` rows are black."""
+    frame = sq(0, 0, 8, 8) - sq(1, 1, 6, 6)
+    t_black, t_pink = sq(1, 1, 6, 3), sq(1, 4, 6, 3)
+    b_black = sq(30, 30, 6, black_rows) if black_rows else frozenset()
+    b_pink = sq(30, 30 + black_rows, 6, 6 - black_rows)
+    d = {1: (4, frame), 2: (0, t_black), 3: (15, t_pink), 5: (15, b_pink)}
+    if b_black:
+        d[4] = (0, b_black)
+    return d
+
+
+def paint(e, rows_sequence):
+    """Step through black_rows values; each change trades cells between the
+    block's halves, which is what groups them (adjacency alone never does)."""
+    for rows in rows_sequence:
+        step(e, template_and_block(rows), action="ACTION5")
+
+
+def test_palette_missing_says_the_block_is_made_only_of_template_colours():
+    e = RelationEngine()
+    paint(e, (1, 2, 3, 2, 3))                                     # four exchanges: grouped
+    snap = e.snapshot()
+    assert snap[("palette_missing", (4, 5), (1, 2, 3))] == 0     # block -> template: nothing missing
+    assert snap[("palette_missing", (1, 2, 3), (4, 5))] == 1     # template -> block: the frame colour
+
+
+def test_part_size_diff_falls_as_the_proportions_are_painted_toward_the_template():
+    e = RelationEngine()
+    paint(e, (1, 2, 3, 2, 3, 2))                                  # well past the grouping bar
+    values = []
+    for rows in (1, 2, 3):                                        # painting black downward
+        step(e, template_and_block(rows), action="ACTION5")
+        values.append(e.snapshot().get(("part_size_diff", (1, 2, 3), (4, 5))))
+    # template: black 18, pink 18. block rows=1: black 6 / pink 30 -> |18-6|+|18-30| = 24;
+    # rows=2: 12/24 -> 12; rows=3: 18/18 -> 0.
+    assert values == [24, 12, 0]
+    rec = e.group_records[("part_size_diff", (1, 2, 3), (4, 5))]
+    assert rec.by_action["ACTION5"][relations.DOWN] >= 2
+
+
+def test_part_size_diff_is_none_with_no_shared_colour():
+    e = RelationEngine()
+    d = template_and_block(1); d[6] = (9, sq(50, 50, 4, 4)); d[7] = (11, sq(50, 55, 4, 2))
+    for _ in range(5):
+        step(e, d)
+    # {6,7} never groups (not enclosed, no exchange); as a singleton each has no shared colour.
+    assert e.snapshot()[("part_size_diff", (1, 2, 3), (6,))] is None
+
+
+def test_a_group_whose_part_is_reborn_keeps_its_record():
+    # The block's pink half gets a new id after each paint (as cd82's does);
+    # the template-vs-block record must carry on and the paint action must
+    # accumulate its lever on it.
+    e = RelationEngine()
+    paint(e, (1, 2, 3, 2, 3, 2))
+    before = e.group_records[("part_size_diff", (1, 2, 3), (4, 5))].by_action["ACTION5"][relations.DOWN]
+    assert before >= 1
+    # Pink half reborn as #9; it keeps trading cells with the black half
+    # as painting continues, so the pair re-groups — and must inherit.
+    for rows in (3, 2, 3, 2, 3):
+        d = template_and_block(rows); d[9] = d.pop(5)
+        step(e, d, action="ACTION5")
+    keys = [k for k in e.group_records
+            if k[0] == "part_size_diff" and k[1] == (1, 2, 3) and len(k[2]) > 1]
+    assert keys == [("part_size_diff", (1, 2, 3), (4, 5))], keys  # one group record, the old one
+    rec = e.group_records[keys[0]]
+    assert rec.by_action["ACTION5"][relations.DOWN] > before        # the lever kept accumulating
+    assert e.record(("part_size_diff", (1, 2, 3), (4, 9))) is rec  # new members resolve to it
