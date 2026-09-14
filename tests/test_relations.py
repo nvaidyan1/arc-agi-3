@@ -318,7 +318,10 @@ def test_a_group_whose_part_is_reborn_keeps_its_record():
     # the template-vs-block record must carry on and the paint action must
     # accumulate its lever on it.
     e = RelationEngine()
-    paint(e, (1, 2, 3, 2, 3, 2))
+    # Exchange evidence accrues per direction, so the halves group on the
+    # fifth step; two more paint steps give the record one DOWN before the
+    # rebirth we are about to test.
+    paint(e, (1, 2, 3, 2, 3, 2, 3, 2))
     before = e.group_records[("part_size_diff", (1, 2, 3), (4, 5))].by_action["ACTION5"][relations.DOWN]
     assert before >= 1
     # Pink half reborn as #9; it keeps trading cells with the black half

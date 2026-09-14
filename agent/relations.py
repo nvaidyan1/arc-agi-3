@@ -324,8 +324,14 @@ class RelationEngine:
                 continue
             if rel == "containment" and rec.holding_streak >= min_steps:
                 union(a, b)
-            elif rel == "cell_exchange" and rec.positive_steps >= min_steps:
-                union(a, b)
+            elif rel == "cell_exchange":
+                # Trading cells is symmetric evidence: a paint that goes
+                # back and forth alternates direction, and counting each
+                # direction alone made a repainted pair take twice as long
+                # to be one thing again.
+                back = self.records.get(("cell_exchange", b, a))
+                if rec.positive_steps + (back.positive_steps if back else 0) >= min_steps:
+                    union(a, b)
         members: dict[int, set[int]] = {}
         for rid in parent:
             members.setdefault(find(rid), set()).add(rid)

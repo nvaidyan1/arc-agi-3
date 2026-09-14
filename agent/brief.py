@@ -181,30 +181,37 @@ class Briefer:
         for g in groups[:6]:
             cols = sorted({agent.regions._tracked[r][0] for r in g})
             out.append(f"  {{{', '.join(f'#{r}' for r in sorted(g))}}} colours {cols}")
-        # Group-level residuals that have moved recently, or hold.
-        # Group-to-group rows first (two composite things compared), then
-        # group-to-singleton; within each, lowest residual first. Only rows
-        # whose members are all on screen: group records outlive the
-        # groups they describe, and the cn04 cold read found rows citing
-        # entities that were no longer there.
+        # One line per pair of groups (composites compared with composites
+        # first, then a group against a lone thing): the whole profile of
+        # the pair on one row, most-related pairs first. A flat sort by
+        # residual put eight palette_missing = 1 rows ahead of the one
+        # part_size_diff row that carries the gradient on cd82.
         live = agent.regions.live
-        rows = [(k, r) for k, r in agent.relations.group_records.items()
-                if all(m in live for m in k[1]) and all(m in live for m in k[2])]
-        shown = 0
-        for (rel, ka, kb), rec in sorted(rows,
-                                         key=lambda kv: (kv[1].residual is None,
-                                                         not (len(kv[0][1]) > 1 and len(kv[0][2]) > 1),
-                                                         kv[1].residual or 0)):
+        profiles: dict[tuple, dict] = {}
+        for (rel, ka, kb), rec in agent.relations.group_records.items():
             if rec.residual is None:
                 continue
-            name = lambda k: "{" + ",".join(f"#{r}" for r in k) + "}" if len(k) > 1 else f"#{k[0]}"
-            line = f"  {rel}({name(ka)}, {name(kb)}) = {rec.residual}"
-            lever = rec.lever(_relations.DOWN)
-            if lever:
-                line += f"   {lever[0]} drives it down"
-            out.append(line); shown += 1
-            if shown >= 8:
-                break
+            if not all(m in live for m in ka) or not all(m in live for m in kb):
+                continue
+            pair = (ka, kb) if (ka, kb) in profiles or (kb, ka) not in profiles else (kb, ka)
+            profiles.setdefault(pair, {})[(rel, ka, kb)] = rec
+        name = lambda k: ("{" + ",".join(f"#{r}" for r in k) + "}") if len(k) > 1 else f"#{k[0]}"  # noqa: E731
+
+        def relatedness(item):
+            (ka, kb), recs = item
+            missing = [r.residual for (rel, a, b), r in recs.items() if rel == "palette_missing"]
+            return (not (len(ka) > 1 and len(kb) > 1), min(missing) if missing else 99)
+
+        for (ka, kb), recs in sorted(profiles.items(), key=relatedness)[:6]:
+            parts = []
+            for (rel, a, b), rec in sorted(recs.items(), key=lambda kv: kv[0][0]):
+                arrow = "" if (a, b) == (ka, kb) else "\u2190"    # directional, read the other way
+                txt = f"{rel}{arrow} {rec.residual}"
+                lever = rec.lever(_relations.DOWN)
+                if lever:
+                    txt += f" ({lever[0]} drives it down)"
+                parts.append(txt)
+            out.append(f"  {name(ka)} vs {name(kb)}: " + "; ".join(parts))
         return out
 
     def _control(self, agent) -> list[str]:
