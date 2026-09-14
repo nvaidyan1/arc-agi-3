@@ -197,6 +197,21 @@ USE_BELIEF_TARGET = os.environ.get("ARC_BELIEF_TARGET", "0") == "1"
 # through, and it is deliberately left alone.
 USE_PER_LEVEL_ROUTE_GATE = os.environ.get("ARC_ROUTE_PER_LEVEL", "0") == "1"
 
+# ── Hypotheses (the first consumer of the brief) ────────────────────────
+# Default OFF: the loop is built and measured before it earns a default.
+# When on, `_select` takes a new tier below epsilon: if a live hypothesis
+# names a legal action, take it. Nothing else in the policy changes.
+USE_PROPOSER = os.environ.get("ARC_PROPOSER", "0") == "1"
+# Actions a hypothesis may spend before it expires unpaid; how many steps
+# without a fall before it is falsified; how long a falsified or expired
+# key waits before the enumerator may propose it again. The budget is the
+# council's "price every test in actions": eight is under a fifth of a
+# short attempt, and a residual that has not moved in three presses of the
+# action that supposedly moves it is not being moved by it.
+HYPOTHESIS_BUDGET = 8
+HYPOTHESIS_PATIENCE = 3
+HYPOTHESIS_COOLDOWN = 40
+
 # ── Environment (what resists me) ───────────────────────────────────────
 # One failed attempt is enough to call a move blocked: these games are
 # deterministic, so the same action from the same position gives the same

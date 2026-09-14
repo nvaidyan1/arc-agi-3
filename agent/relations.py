@@ -166,9 +166,13 @@ class PairRecord:
                  if (n := sum(t.values())) >= LEVER_MIN_TRIES}
         if len(rates) < 2:
             return None
-        ordered = sorted(rates.values())
-        median = ordered[len(ordered) // 2]
         best = max(rates, key=rates.get)
+        # Against the median of the OTHER actions: with two actions the
+        # pooled median is the best action's own rate and no lever could
+        # ever exist, which is wrong — one button that moves a thing and
+        # one that does not is the plainest lever there is.
+        others = sorted(r for a, r in rates.items() if a != best)
+        median = others[len(others) // 2]
         lift = rates[best] - median
         if self.by_action[best][direction] < 2 or lift < LEVER_MIN_LIFT:
             return None

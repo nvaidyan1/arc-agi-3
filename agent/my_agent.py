@@ -68,6 +68,7 @@ from agents.agent import Agent
 import belief
 import brief
 import entities
+import hypothesis
 import navigation
 import perception
 import relations
@@ -83,6 +84,7 @@ from constants import (
     STAMINA_MIN_SIZE,
     USE_BELIEF_TARGET,
     USE_PER_LEVEL_ROUTE_GATE,
+    USE_PROPOSER,
     USE_SHIFT_FALLBACK,
     VANISH_WEIGHT,
 )
@@ -146,6 +148,12 @@ class MyAgent(Agent):
         # The text a hypothesis proposer would read (agent/brief.py).
         # Recording-only; composed on demand by the recap.
         self.brief = brief.Briefer()
+        # The first consumer (agent/hypothesis.py): a residual to drive to
+        # zero with the action that has been seen to drive it, verified
+        # over the next few frames. Only acts under USE_PROPOSER.
+        self.proposer = hypothesis.Proposer()
+        self.hypothesis: hypothesis.Hypothesis | None = None
+        self._level_step = 0
         self.interest = InterestMap()
         self.clicks = ClickTargeting()
         self.route = navigation.Route()
@@ -281,6 +289,9 @@ class MyAgent(Agent):
         self.belief.clear()
         self.relations.clear()
         self.brief.clear()
+        self.proposer.clear()
+        self.hypothesis = None
+        self._level_step = 0
         # `_observe_frame` has already run this step and holds the new
         # layout's regions under ids the tracker has just forgotten; left
         # in place they would seed beliefs for ids that never recur
@@ -481,6 +492,17 @@ class MyAgent(Agent):
         self.relations.update(self.regions._tracked, self.regions.live, action.name,
                               skip=self._canvas_ids())
         self.brief.record(self, action.name, getattr(action, "action_data", None))
+        self._level_step += 1
+        # Verify the live hypothesis against what its action just did to
+        # its residual. Only steps taken under it count; an epsilon step
+        # in between is not its evidence.
+        h = self.hypothesis
+        if h is not None and self._decision.get("tier") == "hypothesis":
+            rec = self.relations.records.get(h.key)
+            status = h.observe(rec.residual if rec is not None else None)
+            if status != hypothesis.LIVE:
+                self.proposer.close(h, self._level_step)
+                self.hypothesis = None
 
         # Two consumers, two different gates. As a *reward* the residual
         # is only meaningful once we know our own effect — with no move
@@ -651,6 +673,9 @@ class MyAgent(Agent):
         if random.random() < EXPLORATION_EPSILON:
             self._decision["tier"] = "epsilon"
             action = random.choice(candidates)
+        elif USE_PROPOSER and (chosen := self._hypothesis_action(candidates)) is not None:
+            self._decision["tier"] = "hypothesis"
+            return chosen
         elif strong_route:
             self._decision["tier"] = "route_strong"
             return self._take_route(position, moves, well_evidenced=True)
@@ -673,6 +698,63 @@ class MyAgent(Agent):
             action = self._weighted_choice(candidates)
 
         return self._finish(action, latest_frame)
+
+    def _hypothesis_action(self, candidates) -> GameAction | None:
+        """The live hypothesis's action if it is legal, else propose one.
+
+        The proposer reads the relation records the brief is built from
+        and returns None when no live pair has a legal lever — the common
+        case early in a level, and on games where nothing has been shown
+        to move anything — in which case the tiers below decide as before.
+        """
+        legal = {a.name for a in candidates}
+        h = self.hypothesis
+        if h is not None and h.action not in legal:
+            self.proposer.close(h, self._level_step)
+            h = self.hypothesis = None
+        if h is None:
+            context = {b.region_id for b in self.belief.by_role(belief.CONTEXT)}
+            h = self.proposer.propose(self.relations, self.regions.live, legal,
+                                      self._level_step, exclude=context)
+            self.hypothesis = h
+        if h is None:
+            return None
+        # A distance hypothesis is a destination, and the router already
+        # knows how to reach one: plan from the controlled thing to the
+        # other entity and take the first step, verifying on the residual
+        # as before. One lever repeated cannot turn a corner (tu93: 17,
+        # 17, 17); a path can. Falls back to the lever when no path.
+        action = None
+        routed = ""
+        if h.key[0] == "distance" and self.moves.learned_moves:
+            action, routed = self._route_for(h, candidates)
+        if action is None:
+            action = next(a for a in candidates if a.name == h.action)
+        action.reasoning = f"hypothesis: {h.describe()}{routed}"
+        self._last_click = None
+        self._last_action = action
+        return action
+
+    def _route_for(self, h, candidates):
+        """First step of a path that brings the controlled thing to the
+        other member of a distance hypothesis, or (None, "")."""
+        control = {b.region_id for b in self.belief.by_role(belief.CONTROL)}
+        _rel, a, b = h.key
+        if a in control and b not in control:
+            target_id = b
+        elif b in control and a not in control:
+            target_id = a
+        else:
+            return None, ""
+        pixel = self.belief._beliefs[target_id].centroid if target_id in self.belief._beliefs else None
+        target = self.moves.to_relative(pixel) if pixel is not None else None
+        if target is None:
+            return None, ""
+        moves = {act: off for act, off in self.moves.learned_moves.items() if act in candidates}
+        path = navigation.plan(self.moves.displacement, target, moves, self.obstacles.is_blocked)
+        if not path:
+            return None, ""
+        return path[0], f"; routed toward #{target_id} ({len(path)} steps)"
 
     def _maintain_route(self, candidates, moves, position) -> bool:
         """Keep the route honest, and report whether it deserves priority.

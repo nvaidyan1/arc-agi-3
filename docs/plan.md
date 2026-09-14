@@ -498,7 +498,7 @@ verdict, in force for everything below:
 - [x] **4. `probe_relations.py`** — replay recordings through the engine.
       **Run 2026-09-14 (4 sweeps, 11 advances): (i) 25/25, (ii) 18/25,
       (iii) literal 36%, (iii') 55% — passes; after the merge_enclosed fix
-      (iii') 82%, sp80 0/3 -> 3/3.** Literal (iii) is
+      (iii') 82%; corrected to **64%** once the probe skipped the canvas as the agent does — cd82's levers were `distance(*, canvas)`. sp80 0/3 -> 3/3 stands.** Literal (iii) is
       unmeasurable by construction (the solved frame is never shown), so
       the gate is (iii'): falling AND action-selectively driven. Every hit
       is `distance`/`containment`; `palette_diff` and `shape_diff` never
@@ -558,7 +558,16 @@ verdict, in force for everything below:
             [x] click coordinates in RECENT, [x] extent w x h per thing,
             [x] no stale ids in GROUPS rows, [ ] blocked moves from the
             obstacle map (tu93's reader: "which presses were blocked").
-      - [ ] **(c) both cleared — wire the proposer** — brief in; a goal
+      - [x] **(c) the enumerating proposer + verification loop** —
+            `agent/hypothesis.py`, `ARC_PROPOSER` default OFF, A/B
+            base vs proposer n=30 launched 2026-09-14. Next for it: the
+            level-boundary diff to tell it which residuals ever mattered;
+            walls (a lever that does not move the residual from here should
+            consult the obstacle map before being falsified); the LLM
+            proposer behind the same `Hypothesis` type — development-time
+            only, since the competition notebook has no internet and no
+            `anthropic` SDK is installed here.
+      - [ ] **(c') the LLM proposer** — brief in, `Hypothesis` out — brief in; a goal
             predicate over relation keys, a progress coordinate and a few
             actions out; verified by residual movement within k frames;
             every test priced in actions; per-episode, nothing cached.

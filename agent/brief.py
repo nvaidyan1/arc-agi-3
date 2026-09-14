@@ -113,6 +113,7 @@ class Briefer:
             out.append("ACTIONS available: " + ", ".join(names)
                        + ("  (ACTION6 takes an x,y)" if any(n == "ACTION6" for n in names) else ""))
 
+        out.extend(self._hypothesis(agent))
         out.extend(self._things(agent))
         out.extend(self._groups(agent))
         out.extend(self._control(agent))
@@ -122,6 +123,20 @@ class Briefer:
         out.append("RECENT")
         out.extend(f"  {e}" for e in self._events)
         return "\n".join(out)
+
+    def _hypothesis(self, agent) -> list[str]:
+        h = getattr(agent, "hypothesis", None)
+        proposer = getattr(agent, "proposer", None)
+        if h is None and not (proposer and proposer.log):
+            return []
+        out = ["HYPOTHESIS"]
+        if h is not None:
+            out.append(f"  testing: {h.describe()}")
+        if proposer and proposer.log:
+            for key, action, start, end, status, spent in proposer.log[-3:]:
+                rel, a, b = key
+                out.append(f"  {status}: {rel}(#{a},#{b}) {start}->{end} with {action} in {spent} steps")
+        return out
 
     def _things(self, agent) -> list[str]:
         live = agent.regions.live

@@ -2046,3 +2046,48 @@ ones: ar25's reader chose the one entity with a "shrinks under ACTION5"
 belief over the shape relation because shape said nothing — the
 equality-only rule is right for *goals* and wrong for *description*, and
 extents fix that without aligning anything. Proceed to (c).
+
+**Relation probe, corrected (canvas excluded as the agent does):** (i)
+25/25, (ii) 18/25, (iii) literal 6/11, **(iii') 7/11 = 64%** — passes,
+down from the 82% that counted `distance(*, canvas)` as levers on cd82.
+cd82 now contributes 0/4: none of its advances has a lever coordinate in
+this vocabulary, consistent with (a).
+
+## 2026-09-14 — (c) The first consumer: hypotheses that must earn their keep
+
+**Built.** `agent/hypothesis.py`. A hypothesis is `residual(rel, a, b) -> 0`
+with the action that has been seen to drive it (the lever), a budget of 8
+actions, and three deaths: *held* at 0, *falsified* when the residual rises
+twice running or does not fall in 3 presses, *expired* at budget while still
+falling. Falsified and expired keys cool down for 40 steps. The enumerator
+proposes the live pair with the clearest legal lever, excluding pairs with a
+CONTEXT member (belief's judgement, reused) and click levers (no coordinate
+to click). A `distance` hypothesis is a destination: the router plans from
+the controlled thing to the other member and the first step is taken,
+verified on the residual as before. New `hypothesis` tier in `_select`,
+below epsilon, behind `ARC_PROPOSER` (default OFF). The brief gained a
+HYPOTHESIS section (what is being tested, the last three outcomes). 173
+tests. Default stream untouched with the flag off.
+
+**Observation — first live run, three games, seed 8.** The tier takes
+60-70% of steps. sp80: `distance(#4, U-shape) 26 -> 22 -> 18 -> 14` under
+ACTION2 — the loop doing what it is for. cd82: before the CONTEXT
+exclusion it bet on `containment(stamina bar, block)` with a +30% lever
+earned on four presses; 18 falsified, 3 expired, and level 1 — which the
+bandit had reached by stumbling onto ACTION5 — not reached. tu93: 19
+falsified in a row, most at "3, 3, 3": a lever that does not move the
+residual from where the thing now stands, i.e. a wall, which the lever
+tally cannot see. **A/B launched: base vs proposer, n=30, frozen tree.**
+
+**Inference, ahead of the number.** This is the first policy change fed
+by the brief, and the honest expectation is that it can lose: it displaces
+the bandit that has been finding level-ups by accident, and it aims at
+whatever moves, not at what matters — the level-boundary diff (step 6) is
+what would tell it which residuals have ever mattered. The measurement is
+the point; the vocabulary grows from what this loop falsifies.
+
+Constraint surfaced for the LLM proposer: no `anthropic` SDK or key in
+this environment, and the competition notebook has no internet. The LLM is
+a development-time proposer for growing the vocabulary; the competition
+path is the enumerator, or a local model. Interface is the same
+`Hypothesis` either way.
