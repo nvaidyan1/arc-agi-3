@@ -72,6 +72,7 @@ import hypothesis
 import navigation
 import perception
 import relations
+import supervisor
 from attention import ClickTargeting, InterestMap
 from constants import (
     EXPLORATION_EPSILON,
@@ -154,6 +155,10 @@ class MyAgent(Agent):
         self.proposer = hypothesis.Proposer()
         self.hypothesis: hypothesis.Hypothesis | None = None
         self._level_step = 0
+        # What has ever mattered, read at level advances and typed by
+        # colour (agent/supervisor.py). A property of the game: survives
+        # levels and resets, dies with the game.
+        self.supervisor = supervisor.BoundarySupervisor()
         self.interest = InterestMap()
         self.clicks = ClickTargeting()
         self.route = navigation.Route()
@@ -265,6 +270,9 @@ class MyAgent(Agent):
         # Tell the tracker, so the next frame is matched against the
         # attempt's starting layout and identities survive the teleport.
         self.regions.expect_home()
+        # The frames before a death were not the run-up to an advance.
+        if hasattr(self, "supervisor"):
+            self.supervisor.clear_window()
 
     def _reset_level(self) -> None:
         """A new level is a new layout, so position-keyed knowledge dies.
@@ -331,6 +339,12 @@ class MyAgent(Agent):
 
         if latest_frame.levels_completed != self._map_level:
             self._map_level = latest_frame.levels_completed
+            # Read the boundary before the level's records are cleared:
+            # which residuals were falling into this advance, and under
+            # what. The last action taken is the winning move.
+            self.supervisor.on_advance(
+                self.relations, self._colour_of,
+                self._last_action.name if self._last_action is not None else None)
             self._reset_level()
 
         if len(frames) >= 2 and self._last_action is not None:
@@ -491,6 +505,7 @@ class MyAgent(Agent):
         self.belief.update(self._tracked_live, action.name, changed)
         self.relations.update(self.regions._tracked, self.regions.live, action.name,
                               skip=self._canvas_ids())
+        self.supervisor.observe(self.relations.snapshot())
         self.brief.record(self, action.name, getattr(action, "action_data", None))
         self._level_step += 1
         # Verify the live hypothesis against what its action just did to
@@ -613,6 +628,10 @@ class MyAgent(Agent):
             # to offer, so it had to smear the credit.
             self.interest.bump(sorted(lost_cells), INTEREST_VANISH_WEIGHT)
 
+    def _colour_of(self, rid: int) -> int | None:
+        entry = self.regions._tracked.get(rid)
+        return entry[0] if entry is not None else None
+
     def _canvas_ids(self) -> set[int]:
         """The largest live region of the background colour, if any.
 
@@ -714,8 +733,11 @@ class MyAgent(Agent):
             h = self.hypothesis = None
         if h is None:
             context = {b.region_id for b in self.belief.by_role(belief.CONTEXT)}
-            h = self.proposer.propose(self.relations, self.regions.live, legal,
-                                      self._level_step, exclude=context)
+            h = self.proposer.propose(
+                self.relations, self.regions.live, legal, self._level_step,
+                exclude=context, prior=self.supervisor.prior,
+                typer=lambda key: supervisor.type_of(key, self._colour_of),
+                won=self.supervisor.won)
             self.hypothesis = h
         if h is None:
             return None

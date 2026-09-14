@@ -169,6 +169,8 @@ def test_level_proven_dies_with_the_level_but_action_credit_does_not():
     agent.proposer = hypothesis.Proposer()
     agent.hypothesis = None
     agent._level_step = 0
+    import supervisor
+    agent.supervisor = supervisor.BoundarySupervisor()
     agent.moves = MoveModel()
     agent.route = navigation.Route()
     agent.clicks = ClickTargeting()

@@ -113,12 +113,21 @@ class Proposer:
             self.cool(h.key, step)
 
     def propose(self, engine, live, legal: set[str], step: int,
-                exclude: set[int] = frozenset()) -> Hypothesis | None:
+                exclude: set[int] = frozenset(), prior=None, typer=None,
+                won: dict[str, int] | None = None) -> Hypothesis | None:
         """`exclude` is for entities belief has judged CONTEXT — things
         that change whatever is pressed. Their relations can carry a
         lever by chance (cd82's stamina bar earned a +30% lever on four
         presses) and are never goals I can drive; the belief layer has
-        already made that judgement, so it is reused rather than remade."""
+        already made that judgement, so it is reused rather than remade.
+
+        `prior(typed_key) -> int` and `typer(key) -> typed_key` come from
+        the level-boundary supervisor: a candidate whose colour-typed
+        relation has fallen into a past advance ranks first, then one
+        whose lever has been a winning move (`won`), then by lever
+        strength. Weights, not rules — every other candidate stays
+        proposable."""
+        won = won or {}
         best = None
         both = list(engine.records.items()) + list(getattr(engine, "group_records", {}).items())
         for key, rec in both:
@@ -140,7 +149,8 @@ class Proposer:
                 # where to click.
                 continue
             action, lift = lever
-            cand = (lift, -rec.residual, key)
+            mattered = prior(typer(key)) if (prior and typer) else 0
+            cand = (mattered, won.get(action, 0), lift, -rec.residual, key)
             if best is None or cand > best[0]:
                 best = (cand, Hypothesis(key=key, action=action, lift=lift, start=rec.residual))
         return best[1] if best else None

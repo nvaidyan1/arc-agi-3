@@ -589,7 +589,7 @@ verdict, in force for everything below:
       Reasoning: build the layers in parallel with the consumer rather than
       mastering one spot at a time; the consumer's failures are the only
       principled source of new primitives.
-- [ ] **6. level-boundary diff as supervisor** — snapshot the residual
+- [x] **6. level-boundary diff as supervisor** — `agent/supervisor.py`, wired into the proposer's ranking and the brief (MATTERED). Re-run of the proposer A/B pending. — snapshot the residual
       vector at t-1 and t of every level advance; only residuals that
       collapsed at >=2 independent boundaries are admissible hypothesis
       targets. A hypothesis is admissible only if its residual is finite

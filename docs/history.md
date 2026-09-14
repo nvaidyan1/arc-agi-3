@@ -2165,3 +2165,18 @@ form. The proposer, live, still spends its cd82 budget on bucket-related
 things with identical descriptors are the same kind, and what one did
 (ate, drained, scored) is evidence about the others. A view over equal
 shape and palette, with beliefs transferring across it. Listed as 4d.
+
+## 2026-09-14 — Step 6: the level-boundary diff as supervisor
+
+**Built.** `agent/supervisor.py`. Keeps the last 8 residual vectors; at a
+level advance — read *before* the level's records are cleared — finds the
+residuals that were falling into it under a lever (the relation probe's
+(iii') test, live) and records them **typed by colour**, since ids die
+with the level and colours do not: "part_size_diff between a {0,15} thing
+and a {0,4,5,15} thing fell into the advance", plus the winning move. A
+death clears the window (the frames before it were not a run-up). The
+proposer ranks a candidate whose type has mattered first, then one whose
+lever has won, then by lever strength — weights, never rules, because
+goals may change per level. The brief gained MATTERED, including the count
+of advances with *no* expressible coordinate, so the vocabulary's blind
+spots are counted rather than hidden. Per episode only. 183 tests.

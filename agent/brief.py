@@ -114,6 +114,9 @@ class Briefer:
                        + ("  (ACTION6 takes an x,y)" if any(n == "ACTION6" for n in names) else ""))
 
         out.extend(self._hypothesis(agent))
+        sup = getattr(agent, "supervisor", None)
+        if sup is not None:
+            out.extend(sup.describe())
         out.extend(self._things(agent))
         out.extend(self._groups(agent))
         out.extend(self._control(agent))
