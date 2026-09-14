@@ -666,6 +666,11 @@ reads that exact attribute.
 - [x] Per-step JSON logging (`recordings/<run-timestamp>/<game_id>.jsonl`),
       on by default in `play_local.py`. Bulky and gitignored — a debugging
       convenience, not the record.
+- [x] **Sweep summary retention: the latest 10 are committed, the rest are
+      pruned** (2026-09-14, user decision — ~410 files had accumulated).
+      The aggregate numbers every past comparison rests on live in
+      `history.md`, which is the record; the JSON is the raw material for
+      the *current* question only. `git log` still has every pruned file.
 - [x] **Durable sweep summaries** (`scripts/sweep_summary.py`,
       `results/sweeps/<run-id>.json`, committed). Carries the scorer's
       per-level actions/scores/baselines, the action index of every
