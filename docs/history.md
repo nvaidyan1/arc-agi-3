@@ -2217,3 +2217,89 @@ is the grouping view being too eager on that board and is noted.
 has a kind whose members vanish with a stamina change; it holds on the
 unit test and waits for a game that has it. 193 tests. Built on the
 `next-step` worktree branch while the proposer A/B ran on a frozen main.
+
+## 2026-09-14 — Exploration inside the proposer: the floor fails, the diagnosis holds
+
+**Hypothesis.** cd82 loses under the proposer because its paint action is
+never pressed enough to earn a lever; a floor of 4 presses per legal
+action per level, winning moves first, would let it.
+
+**Observation — 8 touched games x 30 seeds, base vs proposer+floor.**
+cd82 16 -> **3** (A/B #2: 2 — unchanged), sp80 25 -> **15**, m0r0 9 -> **6**,
+cn04 3 -> 9, ar25 9 -> 10, ls20 5 -> 1. Median +0.004, p = 0.74. Reverted
+to probing only *winning moves from earlier levels*.
+
+**Diagnosis, from one traced run.** ACTION5 was pressed 76 times; **8
+presses painted anything**. Painting lands only when the bucket stands at
+the right angle to the block — the effect is **conditional on position**,
+and the lever contrast (rate under this action vs the others) cannot see
+an effect that fires on 1 press in 10. When it did paint, the kind drift
+went 30 -> 60 -> 80: the wrong colour onto the wrong half, so the few
+"drive it down" bets were honestly falsified. The bandit clears cd82 with
+8-21 paint presses because its random walk samples (position, action)
+pairs the movement hypotheses never visit.
+
+**Inference.** The missing structure is the one the user named earlier and
+§8 of the architecture lists: **conditional effects** — a lever *given*
+another residual's value ("ACTION5 moves part_size_diff(template, block)
+when distance(bucket, block) <= d"). General: eat-when-touching,
+push-when-adjacent, paint-when-aligned. That, not more presses, is what
+would let the enumerator find cd82's move; it is also the first primitive
+the LLM proposer would need to be able to *say*. Next.
+
+## 2026-09-14 — 7a: conditional levers, preconditions, and what cd82's paint is conditional on
+
+**Built (H001, `research/hypotheses/H001_conditional_affordance.md`).**
+`PairRecord.by_action_given[condition][action]`: the movement tallies split
+by a precondition read from the frame *before* the action —
+`adjacent:-x`, `apart:+y`, …: whether the controlled thing touched the
+nearest non-control member of the pair, and on which side.
+`conditional_lever()`: an action that moves the residual under one
+condition more than it does under the others *and* more than the other
+actions do under that condition. `Hypothesis.precondition`; the verifier
+now reports per-step `supported / against / precondition_unmet /
+inconclusive`, and a step under an unmet precondition costs budget but is
+not evidence; the router carries the controlled thing to the required side
+first. The brief says "ACTION5 drives it down when the controlled thing is
+adjacent on side -x". 205 tests.
+
+**Observation — three readings of the same record on cd82, seed 8.**
+  1. Adjacency alone: *every* orbit position of the bucket touches the
+     block's bounding box, so the condition never varied and no contrast
+     could form. The paint press on `part_size_diff(template content,
+     block)` read `down 3, up 8, flat 87`.
+  2. The residual reached **0 at step 320 — proportions matched — and the
+     level did not clear**, then rose again. Arrangement, as predicted.
+  3. By side: from `-x`, ACTION5 `down 2, up 1, flat 3`; from `+x`
+     `0, 2, 6`; from `+y` `0, 2, 0`; from `-y` `1, 2, 20`. A conditional
+     lever forms: `ACTION5 | adjacent:-x, +0.30`. The mix within a side
+     is the factor still unmodelled — the *selected paint colour*, which is
+     the state of a strip entity the swatch click changes.
+
+**Inference.** The condition vocabulary now has two general members
+(adjacency, side), both from the reviewer's list, and the first fired
+nowhere while the second fired at once — which is the argument for adding
+conditions one at a time against a game that needs them. cd82's full rule
+is two-factor (side × selected colour); the second factor is "the state of
+another entity", the next generalisation. E-7a (touched 8 games × 30
+seeds) launched to see what side alone buys.
+
+**E-7a (touched 8 games x 30 seeds, base vs proposer with conditional
+levers).** Median 0.040 -> 0.110, p = 0.20. Per game reaching L1: sp80
+16 -> 25, ar25 9 -> **15** (A/B #2: 10), m0r0 0 -> 6, cn04 3 -> 5, sk48
+0 -> 1; **cd82 16 -> 2 — unchanged**; ls20 5 -> 0, tr87 1 -> 0.
+
+**Inference.** H001's second falsifier is met: the conditional lever
+appears on cd82 and cd82 does not recover. The lever was not the
+bottleneck. cd82's rule is two-factor — side × selected paint colour — and
+the second factor is the *state of another entity* (which swatch is
+marked), which no condition in the vocabulary reads; and even with the
+proportions matched (residual 0 at step 320 of the traced run) the level
+needs the *arrangement*, which has no gradient by design. Three attempts
+at cd82 through the enumerator (exploration floor, adjacency, side) have
+each moved the diagnosis and not the number. The navigational games keep
+their gains and ar25 improved again. Decision left to the user: a third
+condition (another entity's state), or accept cd82 as the open case the
+enumerator cannot express and move to the LLM proposer, which can *state*
+a two-factor rule from a brief that now shows side-conditional levers and
+the swatch strip as a thing ACTION6 turns.

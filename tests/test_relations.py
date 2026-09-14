@@ -335,3 +335,69 @@ def test_a_group_whose_part_is_reborn_keeps_its_record():
     rec = e.group_records[keys[0]]
     assert rec.by_action["ACTION5"][relations.DOWN] > before        # the lever kept accumulating
     assert e.record(("part_size_diff", (1, 2, 3), (4, 9))) is rec  # new members resolve to it
+
+
+# ── conditional levers (H001) ───────────────────────────────────────────
+
+def test_bbox_gap_is_zero_when_touching_and_grows_with_distance():
+    assert relations.bbox_gap((0, 0, 2, 2), (3, 0, 5, 2)) == 0      # touching
+    assert relations.bbox_gap((0, 0, 2, 2), (4, 0, 6, 2)) == 1
+    assert relations.bbox_gap((0, 0, 2, 2), (1, 1, 3, 3)) == 0      # overlapping
+    assert relations.bbox_gap((0, 0, 2, 2), (10, 12, 12, 14)) == 9      # 12 - 2 - 1
+
+
+def _cond(rec, cond, act, d, u, f):
+    rec.by_action_given.setdefault(cond, {})[act] = {relations.DOWN: d, relations.UP: u, relations.FLAT: f}
+    t = rec.by_action.setdefault(act, {relations.DOWN: 0, relations.UP: 0, relations.FLAT: 0})
+    t[relations.DOWN] += d; t[relations.UP] += u; t[relations.FLAT] += f
+
+
+def test_a_lever_that_only_works_when_adjacent_is_conditional_not_absent():
+    # cd82's paint: presses when apart do nothing; presses when adjacent
+    # move the residual. Other actions do nothing either way.
+    rec = relations.PairRecord()
+    _cond(rec, relations.APART, "ACTION5", 0, 0, 30)
+    _cond(rec, relations.ADJACENT, "ACTION5", 6, 0, 2)
+    for a in ("ACTION1", "ACTION2", "ACTION3", "ACTION4"):
+        _cond(rec, relations.APART, a, 0, 0, 10); _cond(rec, relations.ADJACENT, a, 0, 0, 4)
+    assert rec.lever(relations.DOWN) is None                    # 6/38 overall: invisible
+    act, cond, lift = rec.conditional_lever(relations.DOWN)
+    assert (act, cond) == ("ACTION5", relations.ADJACENT) and lift > 0.6
+
+
+def test_an_action_that_works_everywhere_is_not_conditional():
+    rec = relations.PairRecord()
+    _cond(rec, relations.APART, "ACTION3", 8, 0, 2)
+    _cond(rec, relations.ADJACENT, "ACTION3", 8, 0, 2)
+    _cond(rec, relations.APART, "ACTION4", 0, 8, 2)
+    _cond(rec, relations.ADJACENT, "ACTION4", 0, 8, 2)
+    assert rec.lever(relations.DOWN) is not None
+    assert rec.conditional_lever(relations.DOWN) is None
+
+
+def test_a_drain_is_not_conditional_either():
+    rec = relations.PairRecord()
+    for a in ("ACTION1", "ACTION2", "ACTION3"):
+        _cond(rec, relations.APART, a, 9, 0, 1); _cond(rec, relations.ADJACENT, a, 9, 0, 1)
+    assert rec.conditional_lever(relations.DOWN) is None
+
+
+def test_the_engine_tallies_by_the_precondition_before_the_action():
+    # Control thing #1 far from #2 (apart), then adjacent; #2 shrinks only
+    # in the adjacent step.
+    e = RelationEngine()
+    far = {1: (7, sq(0, 0)), 2: (3, sq(20, 20, 4, 4)), 3: (9, sq(40, 0))}
+    step(e, far, action="ACTION1", live=far.keys()); e.update(far, far.keys(), "ACTION1", control={1})
+    e.update(far, far.keys(), "ACTION5", control={1})           # apart, nothing happens
+    near = {1: (7, sq(16, 20)), 2: (3, sq(20, 20, 4, 4)), 3: (9, sq(40, 0))}
+    e.update(near, near.keys(), "ACTION4", control={1})         # moved next to #2
+    shrunk = {1: (7, sq(16, 20)), 2: (3, sq(20, 20, 4, 3)), 3: (9, sq(40, 0))}
+    e.update(shrunk, shrunk.keys(), "ACTION5", control={1})     # adjacent: #2 loses a row
+    rec = e.records[("count_diff", 2, 3)]                       # any residual of pair (2,3) will do
+    assert rec.by_action_given
+    rec2 = e.records[("containment", 1, 2)]
+    conds = set(rec2.by_action_given)
+    assert any(c.startswith(relations.APART) for c in conds)
+    adjacent = [c for c in conds if c.startswith(relations.ADJACENT)]
+    assert adjacent == ["adjacent:-x"]                          # #1 sat left of #2
+    assert "ACTION5" in rec2.by_action_given["adjacent:-x"]

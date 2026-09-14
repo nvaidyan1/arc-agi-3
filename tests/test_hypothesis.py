@@ -111,3 +111,76 @@ def test_an_undecidable_step_costs_budget_but_is_not_evidence():
     h.observe(None); h.observe(None)
     assert h.status == hypothesis.LIVE and h.spent == 2
     assert h.observe(9) == hypothesis.LIVE
+
+
+# ── the exploration floor ───────────────────────────────────────────────
+
+def _agent_with(tries, won=None, legal=("ACTION1", "ACTION2", "ACTION3", "ACTION4", "ACTION5", "ACTION6")):
+    import my_agent, supervisor
+    from arcengine import GameAction
+    a = object.__new__(my_agent.MyAgent)
+    a._level_tries = dict(tries)
+    a.supervisor = supervisor.BoundarySupervisor(); a.supervisor.won = dict(won or {})
+    a._last_click = None; a._last_action = None
+    return a, [GameAction[n] for n in legal]
+
+
+def test_an_untried_action_is_not_probed_on_its_own():
+    # Measured and reverted: a blanket floor did not recover cd82 and cost
+    # the navigational games. Only winning moves are probed.
+    a, cands = _agent_with({"ACTION1": 9, "ACTION2": 9, "ACTION3": 9, "ACTION4": 9, "ACTION5": 0})
+    assert a._probe_action(cands) is None
+
+
+def test_a_winning_move_stops_being_probed_once_tried_enough():
+    from constants import HYPOTHESIS_PROBE_TRIES
+    a, cands = _agent_with({"ACTION5": HYPOTHESIS_PROBE_TRIES}, won={"ACTION5": 1})
+    assert a._probe_action(cands) is None
+
+
+def test_a_click_is_never_a_bare_probe():
+    a, cands = _agent_with({"ACTION1": 9}, legal=("ACTION1", "ACTION6"))
+    assert a._probe_action(cands) is None
+
+
+def test_a_winning_move_from_an_earlier_level_is_probed_first():
+    a, cands = _agent_with({}, won={"ACTION5": 1})
+    assert a._probe_action(cands).name == "ACTION5"
+
+
+# ── preconditions and the outcome taxonomy (H001) ───────────────────────
+
+def test_an_unmet_precondition_costs_budget_but_is_not_evidence():
+    h = make(10); h.precondition = ("adjacent:-x", 2)
+    for _ in range(HYPOTHESIS_PATIENCE + 1):
+        assert h.observe(10, met=False) == hypothesis.LIVE       # would have falsified if counted
+    assert h.unmet == HYPOTHESIS_PATIENCE + 1
+    assert h.observe(9, met=True) == hypothesis.LIVE
+    assert h.outcomes[-1] == hypothesis.SUPPORTED
+
+
+def test_expiry_spent_on_the_precondition_cools_briefly():
+    from constants import HYPOTHESIS_COOLDOWN
+    p = hypothesis.Proposer()
+    h = make(10); h.precondition = ("adjacent:-x", 2)
+    for _ in range(HYPOTHESIS_BUDGET):
+        h.observe(10, met=False)
+    assert h.status == hypothesis.EXPIRED
+    p.close(h, step=100)
+    assert p._cooldown[h.key] == 100 + HYPOTHESIS_COOLDOWN // 4
+
+
+def test_the_proposer_bets_on_a_conditional_lever_with_its_precondition():
+    rec = relations.PairRecord(); rec.residual = 30
+    def tally(cond, act, d, u, f):
+        rec.by_action_given.setdefault(cond, {})[act] = {relations.DOWN: d, relations.UP: u, relations.FLAT: f}
+        t = rec.by_action.setdefault(act, {relations.DOWN: 0, relations.UP: 0, relations.FLAT: 0})
+        t[relations.DOWN] += d; t[relations.UP] += u; t[relations.FLAT] += f
+    tally("apart:-y", "ACTION5", 0, 0, 30); tally("adjacent:-y", "ACTION5", 6, 0, 2)
+    for a in ("ACTION1", "ACTION2"):
+        tally("apart:-y", a, 0, 0, 10); tally("adjacent:-y", a, 0, 0, 4)
+    e = Engine(); e.records[("part_size_diff", 1, 2)] = rec
+    h = hypothesis.Proposer().propose(e, live={1, 2}, legal=LEGAL, step=0, control={1})
+    assert h is not None and h.action == "ACTION5"
+    assert h.precondition == ("adjacent:-y", 2)
+    assert "when adjacent on side -y of #2" in h.describe()

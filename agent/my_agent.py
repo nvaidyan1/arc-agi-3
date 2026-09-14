@@ -86,6 +86,7 @@ from constants import (
     STAMINA_MIN_SIZE,
     USE_BELIEF_TARGET,
     USE_PER_LEVEL_ROUTE_GATE,
+    HYPOTHESIS_PROBE_TRIES,
     USE_PROPOSER,
     USE_SHIFT_FALLBACK,
     VANISH_WEIGHT,
@@ -156,6 +157,7 @@ class MyAgent(Agent):
         self.proposer = hypothesis.Proposer()
         self.hypothesis: hypothesis.Hypothesis | None = None
         self._level_step = 0
+        self._level_tries: dict[str, int] = {}   # per action, this level
         # What has ever mattered, read at level advances and typed by
         # colour (agent/supervisor.py). A property of the game: survives
         # levels and resets, dies with the game.
@@ -309,6 +311,7 @@ class MyAgent(Agent):
         self.proposer.clear()
         self.hypothesis = None
         self._level_step = 0
+        self._level_tries = {}
         self.kinds.new_level()
         self._kinds_now = []
         # `_observe_frame` has already run this step and holds the new
@@ -515,7 +518,7 @@ class MyAgent(Agent):
         # aiming at them (docs/history.md, 2026-09-14).
         self.belief.update(self._tracked_live, action.name, changed)
         self.relations.update(self.regions._tracked, self.regions.live, action.name,
-                              skip=self._canvas_ids())
+                              skip=self._canvas_ids(), control=self._control_ids())
         self.supervisor.observe(self.relations.snapshot())
         self._kinds_now = kinds.compute_kinds(self.relations, self.belief, self.regions.live,
                                               background=self._background)
@@ -523,13 +526,14 @@ class MyAgent(Agent):
                           self.stamina.stamina_fraction)
         self.brief.record(self, action.name, getattr(action, "action_data", None))
         self._level_step += 1
+        self._level_tries[action.name] = self._level_tries.get(action.name, 0) + 1
         # Verify the live hypothesis against what its action just did to
         # its residual. Only steps taken under it count; an epsilon step
         # in between is not its evidence.
         h = self.hypothesis
         if h is not None and self._decision.get("tier") == "hypothesis":
             rec = self.relations.record(h.key)
-            status = h.observe(rec.residual if rec is not None else None)
+            status = h.observe(rec.residual if rec is not None else None, met=h.pending_met)
             if status != hypothesis.LIVE:
                 self.proposer.close(h, self._level_step)
                 self.hypothesis = None
@@ -763,15 +767,35 @@ class MyAgent(Agent):
             self.proposer.close(h, self._level_step)
             h = self.hypothesis = None
         if h is None:
+            probe = self._probe_action(candidates)
+            if probe is not None:
+                return probe
             context = {b.region_id for b in self.belief.by_role(belief.CONTEXT)}
             h = self.proposer.propose(
                 self.relations, self.regions.live, legal, self._level_step,
                 exclude=context, prior=self.supervisor.prior,
                 typer=lambda key: supervisor.type_of(key, self._colour_of),
-                won=self.supervisor.won, bonus=self._kind_bonus)
+                won=self.supervisor.won, bonus=self._kind_bonus,
+                control=self._control_ids())
             self.hypothesis = h
         if h is None:
             return None
+        # A hypothesis with a precondition is tested only once it holds;
+        # until then the router carries the controlled thing to the member
+        # it must be adjacent to, and those steps are recorded as
+        # PRECONDITION_UNMET rather than as evidence against the bet.
+        if h.precondition is not None:
+            h.pending_met = self._precondition_met(h)
+            if not h.pending_met:
+                step, note = self._route_to(h.precondition[1], candidates,
+                                            side=h.precondition[0].partition(":")[2])
+                if step is not None:
+                    step.reasoning = f"hypothesis: {h.describe()} — {note}"
+                    self._last_click = None
+                    self._last_action = step
+                    return step
+        else:
+            h.pending_met = True
         # A distance hypothesis is a destination, and the router already
         # knows how to reach one: plan from the controlled thing to the
         # other entity and take the first step, verifying on the residual
@@ -787,6 +811,73 @@ class MyAgent(Agent):
         self._last_click = None
         self._last_action = action
         return action
+
+    def _probe_action(self, candidates) -> GameAction | None:
+        """A winning move from an earlier level that this level has not yet
+        tried HYPOTHESIS_PROBE_TRIES times, or None.
+
+        Only winning moves. A blanket "press every action k times" floor
+        was measured (2026-09-14, 8 touched games x 30 seeds): cd82 did not
+        recover (16 -> 3 of 30) and the navigational gainers paid for it
+        (sp80 25 -> 15, m0r0 9 -> 6). cd82's paint action was pressed 76
+        times in one run and painted 8 times: its effect is conditional on
+        where the bucket stands, which no count of presses reveals and the
+        lever contrast cannot see. Clicks are never probed bare."""
+        won = self.supervisor.won
+        under = [a for a in candidates
+                 if a is not GameAction.ACTION6 and a.name in won
+                 and self._level_tries.get(a.name, 0) < HYPOTHESIS_PROBE_TRIES]
+        if not under:
+            return None
+        under.sort(key=lambda a: (-won[a.name], self._level_tries.get(a.name, 0), a.name))
+        action = under[0]
+        n = self._level_tries.get(action.name, 0)
+        action.reasoning = (f"probe: {action.name} won {won[action.name]}x on earlier levels, "
+                            f"tried {n}/{HYPOTHESIS_PROBE_TRIES} on this one")
+        self._last_click = None
+        self._last_action = action
+        return action
+
+    def _control_ids(self) -> set[int]:
+        return {b.region_id for b in self.belief.by_role(belief.CONTROL)}
+
+    def _precondition_met(self, h) -> bool:
+        """Is the controlled thing within ADJACENT_GAP of the precondition's
+        member right now? False when either is off screen."""
+        cond, member = h.precondition
+        adjacency, _, side = cond.partition(":")
+        tracked = self.regions._tracked
+        if member not in self.regions.live or member not in tracked:
+            return False
+        md = relations.Descriptor.of(*tracked[member])
+        for c in self._control_ids():
+            if c in self.regions.live and c in tracked:
+                cd = relations.Descriptor.of(*tracked[c])
+                near = relations.bbox_gap(cd.bbox, md.bbox) <= relations.ADJACENT_GAP
+                if near == (adjacency == relations.ADJACENT) and (
+                        not side or relations.side_of(cd.centroid, md.centroid) == side):
+                    return True
+        return False
+
+    def _route_to(self, target_id: int, candidates, side: str = ""):
+        """First step of a path that brings the controlled thing next to
+        `target_id` — on `side` of it when given — or (None, "")."""
+        pixel = self.belief._beliefs[target_id].centroid if target_id in self.belief._beliefs else None
+        if pixel is not None and side and target_id in self.regions._tracked:
+            # Aim past the member's edge on that side by the two half-extents.
+            md = relations.Descriptor.of(*self.regions._tracked[target_id])
+            half_m = ((md.bbox[2] - md.bbox[0]) // 2 + 1, (md.bbox[3] - md.bbox[1]) // 2 + 1)
+            half_c = (self.moves.controlled_size ** 0.5) // 2 + 1
+            axis, sign = (0, -1) if side == "-x" else (0, 1) if side == "+x" else (1, -1) if side == "-y" else (1, 1)
+            pixel = list(pixel); pixel[axis] += sign * int(half_m[axis] + half_c); pixel = tuple(pixel)
+        target = self.moves.to_relative(pixel) if pixel is not None else None
+        if target is None or not self.moves.learned_moves:
+            return None, ""
+        moves = {act: off for act, off in self.moves.learned_moves.items() if act in candidates}
+        path = navigation.plan(self.moves.displacement, target, moves, self.obstacles.is_blocked)
+        if not path:
+            return None, ""
+        return path[0], f"moving to satisfy the precondition (#{target_id}, {len(path)} steps)"
 
     def _route_for(self, h, candidates):
         """First step of a path that brings the controlled thing to the

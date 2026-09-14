@@ -26,6 +26,22 @@ tests for a sawtooth. `acts_locally` stays `None` until evidence exists.
 **`None` is a first-class outcome**, and that is the defence against
 building an agent that is excellent at the games we happened to look at.
 
+Two further rules, added 2026-09-14 after an external review
+(`reviewer_c_09_14_2026.MD`) named what the project had already been living
+by for a day:
+
+> **No representation without a consumer.** A layer nothing reads cannot
+> move the score, and three recording-only layers proved it. Build the
+> consumer, or the layer waits.
+>
+> **No hypothesis without a falsifier.** Every bet the agent makes names
+> the observation that would kill it, and the verifier reports *which*
+> way it died — wrong, precondition unmet, inconclusive — not a boolean.
+
+And one softening of the first rule, from the same review: **priors may
+generate hypotheses, never conclusions.** "Similar things may behave
+alike" is allowed to propose; only evidence may promote.
+
 Corollary for review: game *type* is an output, never an architectural
 input. No `if maze: use_bfs()`. BFS is what the router does *because* a
 move map and obstacle map were discovered — not because anything
@@ -618,6 +634,19 @@ verdict, in force for everything below:
       pairs x relations x (targets, for ACTION6), gated by reachability;
       every hypothesis test costs actions from the depth-weighted budget and
       must be priced.
+- [x] **exploration floor inside the proposer — measured and reverted.**
+      Pressing every legal action 4x per level: cd82 16 -> 3, sp80 25 -> 15,
+      m0r0 9 -> 6 (8 touched games x 30 seeds). The paint action's effect is
+      *conditional on position* (76 presses, 8 paints), which no count of
+      presses reveals. Kept: probing winning moves from earlier levels.
+- [x] **7a. conditional levers** — built (adjacency + side, preconditions, outcome taxonomy, routing to the side). E-7a: cd82 unchanged (16 -> 2), gains held/rose elsewhere (ar25 9 -> 15). cd82's rule is two-factor (side x selected colour) plus arrangement; open. Original note: — a lever *given* another residual's
+      value: per (relation, pair, action), tally movement split by a
+      condition such as `distance(CONTROL thing, member) <= d` (nearest
+      first). Says "ACTION5 drives part_size_diff(template, block) down
+      when the bucket is adjacent" — eat-when-touching, push-when-adjacent,
+      paint-when-aligned. Hypotheses then carry a precondition the router
+      can satisfy first. Exit: cd82's paint lever appears in the brief with
+      its condition; cd82 recovers on 30 seeds without costing sp80/m0r0.
 - [ ] **rename `stamina` -> `sawtooth_region`** and strip the
       refill-on-reset semantics from its description: the council's one
       finding against existing code — a slot whose test was written first
@@ -750,8 +779,9 @@ reads that exact attribute.
 - [x] Per-step JSON logging (`recordings/<run-timestamp>/<game_id>.jsonl`),
       on by default in `play_local.py`. Bulky and gitignored — a debugging
       convenience, not the record.
-- [x] **Sweep summary retention: the latest 10 are committed, the rest are
-      pruned** (2026-09-14, user decision — ~410 files had accumulated).
+- [x] **Sweep summary retention: the latest 5 are committed, the rest are
+      pruned** (2026-09-14, user decision; was 10 — experiment tracking moves
+      to `research/`, and ~410 files had accumulated before the first prune).
       The aggregate numbers every past comparison rests on live in
       `history.md`, which is the record; the JSON is the raw material for
       the *current* question only. `git log` still has every pruned file.

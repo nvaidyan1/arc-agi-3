@@ -1,13 +1,16 @@
 # ARC-AGI-3 Agent — How It Works
 
 This describes what the agent **actually does**, in enough detail that you
-should not need to open the code. Jargon is defined where it first appears.
+should not need to open the code, and honestly enough that you can tell us
+where it is wrong. Jargon is defined where it first appears.
 
 For the design rules we hold ourselves to, see `plan.md` ("Governing
 principle"). For the experiments behind each decision — including the ones
-that failed — see `history.md`. This document is deliberately limited to
-what exists and what it achieves; a section at the end lists what doesn't
-exist yet, separately, so the two never blur.
+that failed — see `history.md`. For the external review that reshaped the
+second half of the design, see `council_2026-09-14_belief.md`. This
+document is limited to what exists and what it has been measured to do; a
+section near the end lists what does not exist yet, separately, so the two
+never blur.
 
 ---
 
@@ -15,336 +18,296 @@ exist yet, separately, so the two never blur.
 
 The agent plays video games it has never seen before.
 
-Each game gives it a **64×64 grid of coloured cells** (16 possible
-colours) and accepts **8 actions**: `RESET`, five simple buttons
-(`ACTION1`–`5`, `ACTION7`), and one "click" action (`ACTION6`) that takes
-an x,y coordinate on the grid. That's all. No labels, no instructions, no
-description of what the game is or how to win.
+Each game gives it a **64×64 grid of coloured cells** (16 possible colours)
+and accepts **8 actions**: `RESET`, five simple buttons (`ACTION1`–`5`,
+`ACTION7`), and one "click" action (`ACTION6`) that takes an x,y coordinate
+on the grid. That is all. No labels, no instructions, no description of
+what the game is or how to win. Games have several levels; the hidden
+evaluation set is unseen; evaluation runs offline on Kaggle with no network
+access.
 
-The agent isn't told whether it's controlling a character, painting a
-picture, matching shapes, or something with no name. It has to work that
-out — or, more precisely, it has to behave sensibly *without ever
-necessarily working it out*.
-
-**Scoring is brutal and it shapes everything.** For each level completed:
+**Scoring shapes everything.** For each level completed:
 
 ```
 score = (human_baseline_actions / actions_you_took)² × 100
 ```
 
-and **zero** if the level isn't completed. Note the square. Human
-baselines for the first level are around 7 actions (vc33), 22 (ls20), 39
-(sp80), 59 (dc22). Completing sp80's first level in 100 actions scores
-15.2; in 400 actions it scores 0.95. **A 4× difference in speed is a 16×
-difference in score.** Finishing is not enough; finishing fast is the
-entire game.
+zero if the level is not completed, and a game's score is the
+**level-index-weighted** average over all its levels — so a first level is
+worth 1/28 of a seven-level game, and depth dominates speed. Human
+baselines for a first level are around 7–60 actions; we take ~100–400.
 
 ---
 
 ## 2. What the agent does, in one paragraph
 
 It plays by experiment. Each turn it compares the new screen against the
-previous one, and tries to explain the difference: *did a shape move? did
-something change colour? did something appear or vanish?* It accumulates
-those explanations into small models — which button moves things and by
-how much, where movement is blocked, which colour is counting down like a
-timer, which parts of the screen have been worth touching. Then it picks
-an action: usually the one whose track record is best, sometimes a
-deliberate random one, sometimes a move into territory it hasn't visited,
-and occasionally a planned multi-step walk toward a location it has
-reason to care about. Nothing is hard-coded per game.
+previous one and tries to explain the difference in a vocabulary that
+assumes nothing about games: *did a shape move, turn, grow, shrink, appear,
+vanish?* It groups pixels into regions, gives regions identities that
+survive movement, death and reset, and accumulates evidence about each one:
+which actions change it, and how. From those it reads **relational roles**
+— *the thing my buttons move, the thing one button acts on, the thing that
+changes whatever I press, the thing that never changes* — and **relations
+between things**, each expressed as a **residual**: a number that is 0 when
+the relation holds and larger the further it is from holding. The whole
+state is serialised as a short text, **the brief**, which is what a
+hypothesis proposer reads. A proposer (today an enumerator; an LLM is the
+next step) bets that some residual is worth driving to zero with the action
+that has been seen to move it, spends a small budget of actions testing the
+bet, and is falsified when the residual does not move. Level advances are
+the one certified signal, and what was falling into an advance is
+remembered — by colour, not by identity — as *what has mattered*. Nothing
+is hard-coded per game, and every layer may answer "I don't know".
 
 ---
 
 ## 3. Vocabulary
 
-These terms recur throughout the codebase and the rest of this document.
-
 | Term | What it means here |
 |---|---|
-| **Lens** | A test that asks "does *this* explanation fit what just happened?" and answers either with the explanation or with **nothing**. Returning nothing is a normal, correct outcome. |
-| **Frame** | One screenshot: the 64×64 grid after an action has settled. |
-| **Diff** | The set of cells whose colour changed between two frames. |
-| **Translation** | A shape moving: the exact set of cells that lost a colour is the same set that gained it, shifted by one consistent offset. |
-| **Move map** | The learned table of *which button produces which movement*, e.g. `ACTION1 → up 5 pixels`. Built from evidence, never assumed. |
-| **Displacement** | Where the controlled shape is **relative to where this attempt started** — not an absolute screen position. |
-| **Anchor** | Where the controlled shape is in **absolute screen pixels**. Needed because some things are tracked relative and some absolute. |
-| **Residual** | The part of a change that is *not* explained by our own movement or by the timer ticking. In other words: something we affected that isn't us. |
-| **Interest map** | A per-pixel score of "something notable happened here". Decays over time. **Not** a map of goals — see §5.4. |
-| **Router** | A pathfinder. Given the move map and the obstacle map, it works out the button sequence that walks from where we are to a target square. It does **not** decide where to go; it's given a destination. |
-| **Frontier** | Squares reachable in one move that this attempt hasn't visited yet. Moving to one is "cover new ground". |
-| **Meter / budget** | An on-screen bar that **depletes and refills** — a life or step counter. Tells you how long you have left. |
-| **Drain** | Something that depletes and **never refills** — e.g. a progress bar filling in. Looks similar, means the opposite. See §5.3. |
-| **Habituation** | Ignoring a spot that has been clicked before and did nothing. |
-| **Level-up** | The game reporting that a level was completed. The only signal that matches what's scored. |
+| **Lens** | A test that asks "does *this* explanation fit what just happened?" and answers with the explanation or with **nothing**. Returning nothing is a normal, correct outcome. |
+| **Frame** | One screenshot after an action has settled (games send animation sub-frames; we read the last). |
+| **Region / entity** | A contiguous same-colour blob, given a stable id by the tracker so it can be followed over time. |
+| **Live / ghost** | Whether a tracked entity is on screen now. The tracker remembers what has gone (so a bar that empties is recognised when it refills); beliefs and relations act only on what is live. |
+| **Canvas** | The level's background colour, the largest region of it. A surface, not a thing: excluded as a relatum. |
+| **Move map** | Learned table of *which button produces which displacement*, e.g. `ACTION1 → (0, −5)`. Built from evidence, never assumed. |
+| **Role** | A relational judgement about an entity from the contrast between actions: `CONTROL` (my actions determine what happens to it), `AFFECT` (one action acts on it), `CONTEXT` (it changes whatever I press — a timer, a bar), `ENVIRONMENT` (never changes), `UNASSIGNED` (not enough evidence). Never `PLAYER`, `GOAL`, `ENEMY`. |
+| **Group** | Two or more regions that persistently sit inside one another or trade cells. A *view* recomputed each step, never a stored object: a partition has no falsifier. |
+| **Kind** | Two or more units with the same palette and part count (exact when outlines match too). Same stuff; the members may have different roles. |
+| **Residual** | A relation between two things as a number: 0 means it holds, larger means further from holding, `None` means undecidable. Unknown is `None`, never `False`. |
+| **Lever** | The action that moves a residual *more than the other actions do*. A residual every action moves alike (a timer draining) has movers but no lever. |
+| **Brief** | The state as ~45 lines of text — what a proposer would be sent. |
+| **Hypothesis** | "Drive this residual to 0 with this action", with a budget of actions, verified each step and falsified when the residual rises twice or stalls. |
+| **Supervisor** | Reads each level advance: which residuals were falling into it under a lever. Remembers them by colour as *what has mattered*, and the winning move. |
+| **Router** | A pathfinder over the move map and known walls. Given a destination, never picks one. |
+| **Sawtooth / stamina** | An on-screen quantity that drains during an attempt and refills on reset. The game's per-attempt resource. |
 
 ---
 
-## 4. A worked example
+## 4. A worked example: cd82
 
-Concretely, playing `ls20`:
+A bucket orbits a two-colour block; painting the block from different
+angles makes it match a two-colour template in the corner; swatches along
+the top choose the paint colour. Nothing below was told any of that.
 
-1. **Steps 1–10.** The agent presses buttons semi-randomly. After each
-   press it compares frames. Several times, a 4-cell shape is in a
-   different place — the *translation* lens fires.
-2. **~Step 12.** `ACTION1` has now produced the offset `(0, -5)` three
-   times with no disagreement, so it enters the **move map**: *ACTION1
-   moves something up by 5 pixels*. Eventually all four directions are
-   learned — on ls20 this comes out perfectly, 122 observations with zero
-   contradictions. The 5-pixel stride also reveals the game's logical
-   cell size, which nobody told us.
-3. **Ongoing.** The agent now prefers moves that land somewhere it hasn't
-   been (the **frontier**), rather than wandering at random.
-4. **When a move fails.** It presses `ACTION4` expecting to move right;
-   the shape doesn't move. That `(position, ACTION4)` pair is recorded as
-   **blocked**. It won't waste budget there again. This cut wasted moves
-   on ls20 from 63% to 21%.
-5. **Meanwhile.** A colour is quietly tracked falling from 84 cells to 0
-   over an attempt, then jumping back to 84. That sawtooth identifies it
-   as a **budget**: 84 units at 2 per action ≈ 42 actions per life.
-6. **When something vanishes.** A block of cells turns into background.
-   That's recorded as sub-goal progress, and those exact pixels gain
-   **interest**.
-7. **Choosing.** Most turns it picks the action with the best track
-   record; 25% of turns it picks at random on purpose; when the frontier
-   has somewhere new, it goes there.
+1. **Regions and identity.** Same-colour flood fill gives ~15 regions.
+   The tracker follows each by overlap; when the bucket hops 11–15 cells it
+   is followed by *explained motion* — it landed where the move map said
+   the action would put it. On death, the tracker is told a RESET happened
+   and matches the restored layout against the attempt's starting layout,
+   so identities survive teleports. Solitary objects are never folded into
+   the canvas (a bug found on a second game, sp80, whose controller had
+   been invisible for exactly that reason).
+2. **Control.** All four d-pad buttons move the bucket at equal rates, so
+   no button "stands out" — the older rate contrast called it weather.
+   Control is read as *determinism*: each button always does one fixed,
+   different thing to it. `#8, #9: CONTROL — ACTION3 −x, ACTION4 +x…`
+3. **Groups.** Frame+fill of the bucket, the template's frame + interior +
+   two colour parts, and the block's two halves (which trade cells under
+   the paint action) each read as one thing — from persistence of two
+   relations, with no object ever stored.
+4. **Relations.** `palette_missing(block → template) = 0` — everything the
+   block is made of, the template has. `part_size_diff(template content,
+   block) = 30` — their colour proportions differ by 30 cells, and it
+   falls under `ACTION5`. `shape_diff` will read 0 exactly when the
+   arrangement matches; it has no gradient, deliberately — comparing two
+   grids cell-by-cell after aligning them *is* template-matching, encoded,
+   and we refuse it.
+5. **Kinds.** `kind {0,15}×2: {template content} static · {block} changes
+   under my actions — drifted from the static one: part_size_diff 30`.
+   Same stuff, one never changes, one I change, and by how much.
+6. **Brief.** All of the above, plus available actions, blocked moves, what
+   is undecidable, and the last eight steps as events, in ~45 lines.
+7. **Hypotheses.** The enumerator bets on the residual with the clearest
+   lever and tests it for up to 8 actions. On cd82 it bets on movement
+   (the bucket approaching things) and never on painting, because the
+   paint action has rarely been pressed and so has never *earned* a lever
+   — the current known failure (§8).
+8. **Supervisor.** When a level is cleared, the residuals that were falling
+   into it under a lever are recorded by colour; on the next level, the
+   proposer ranks those first. On ar25 this produced this project's first
+   level-2 clears.
 
-On a game with no movement at all — say `ft09`, where clicking paints
-cells — steps 2–4 simply never happen. The move map stays empty, the
-router never runs, blocked-move detection never fires. The agent falls
-back to click targeting. **Nothing breaks, and nothing is forced.**
+On a click-only game such as `vc33`, steps 2, 7 and 8 mostly do not fire:
+no move map, no CONTROL, no lever, no hypothesis — and the brief says so.
+**Nothing breaks, and nothing is forced.**
 
 ---
 
 ## 5. The layers
 
-Seven modules, each answering one question. The names describe *roles*,
-not game contents — there is no `objects.py` or `goals.py`, because those
-words would assume things a game might not contain.
+Fourteen modules, each answering one question. Names describe *roles*,
+never game contents.
 
-### 5.1 `perception.py` — *what happened?*
+| module | question it answers |
+|---|---|
+| `perception.py` | What happened between two frames? Regions, diffs, translation / shift / rotation lenses, recolour vs create/destroy, enclosure merging (never into the canvas). |
+| `entities.py` | Which region is the same region as last frame? Overlap → explained motion → proximity → identical shape within 3 frames; reset told, matched against the home layout; live vs remembered. |
+| `control.py` | What can I make happen? The move map (3+ sightings, 60% majority — refuses genuinely ambiguous buttons), displacement and anchor. |
+| `constraints.py` | What limits me? Walls (position, action); the stamina sawtooth (must refill — a drain that never refills is progress, not budget). |
+| `attention.py` | Where is change concentrated? The interest map and click targeting with habituation and click-locality. |
+| `belief.py` | What is each entity *to me*? Per-action change tallies in a cell vocabulary; roles by contrast and by determinism; hysteresis so roles do not flicker; UNASSIGNED first-class. |
+| `relations.py` | How do things stand to each other? Residuals over all live pairs (`palette_diff`, `shape_diff`, `containment`, `distance`, `distance_drift`, `count_diff`, `cell_exchange`); the grouping view and frame content; group residuals (`palette_missing`, `part_size_diff`); per-action movement tallies and levers. |
+| `kinds.py` | Which things are the same stuff? Kinds over units; role asymmetry and drift within a kind; what vanished, and how stamina moved when it did. |
+| `brief.py` | What would I tell a proposer? The serialisation: THINGS, GROUPS, KINDS, CONTROL, RELATIONS, FALLING, OPEN, RECENT, HYPOTHESIS, MATTERED. |
+| `hypothesis.py` | What is worth betting on? The enumerating proposer and the verification loop: budget, held / falsified / expired, cooldown. |
+| `supervisor.py` | What has ever mattered? The level-boundary diff: residuals falling into an advance under a lever, typed by colour; winning moves. |
+| `navigation.py` | How do I get there? Bounded BFS over the move map with walls as removed edges; destination given, never chosen. |
+| `my_agent.py` | Given all that, what do I do next? The only place evidence becomes a decision: epsilon → hypothesis (flagged) → route → frontier → weighted track record. |
+| `constants.py` | Every tunable, grouped by layer, each with the measurement that set it and the flags (`ARC_PROPOSER`, `ARC_BELIEF_TARGET`, `ARC_ROUTE_PER_LEVEL`, `ARC_SHIFT_FALLBACK`). |
 
-Stateless tests over a pair of frames. Given the same two frames they
-always return the same answer, which is why this layer carries most of
-the unit tests.
+Two boundaries are load-bearing: **perception returns evidence, never
+decisions** (no `is_goal()`), and **navigation takes a destination, never
+picks one**. Policy lives in `my_agent.py` alone.
 
-- **`diff_cells`** — which cells changed. (Subtlety: a frame arrives as
-  several animation sub-frames within one action; we read the *settled*
-  last one. Reading the mid-animation frame drops move-map consistency
-  from 43–64% to 21–29% on an animated game.)
-- **`detect_translation`** — did one shape move, and by how much? Returns
-  the colour, size, offset, and the pre-move anchor. Fires on **14 of 25
-  games**; silent on the rest, which is correct rather than a gap.
-- **`expected_move_occurred`** — a weaker check: did *anything* shift by
-  the offset we expected? Used to tell "blocked" from "moved", because
-  the strict test misses ~4% of real moves and each miss would be logged
-  as a phantom wall.
-- **`classify_change`** — the change types translation doesn't cover.
-  Measured across 533 transitions: translation is only **31%** of what
-  games do, **53%** is recolouring in place, **16%** is things appearing
-  or disappearing. The test uses the **canvas** (the level's starting
-  background colour): a change *touching* the canvas creates or destroys
-  something; a change *between two non-background colours* just relabels
-  something already there.
-- **`residual_cells`** — what changed that our own movement and the timer
-  don't explain.
+### Directory
 
-**This layer reports evidence and never interprets it.** There is no
-`is_goal()` here, by rule.
-
-### 5.2 `control.py` — *what can I make happen?*
-
-`MoveModel` holds the move map. An action enters it only after **3+
-sightings of the same offset and a 60% majority**. This threshold earns
-its keep: on `m0r0`, `ACTION1` moves one way 15 times and the other way
-13 times, and the model correctly **refuses to learn it**. A confident
-wrong answer there would poison the router, the obstacle map, and the
-frontier all at once.
-
-It also tracks where the controlled shape is, in both relative
-(displacement) and absolute (anchor) terms, and converts between them.
-The absolute position is re-derived from what's actually on screen each
-time rather than accumulated, so it can't quietly drift.
-
-### 5.3 `constraints.py` — *what limits me?*
-
-Two different limits, both discovered:
-
-- **`ObstacleMap`** — where a known move fails. Keyed by *position and
-  action*, which is also its own sanity check: a real wall blocks in
-  specific places, while a broken move map would fail everywhere.
-- **`StaminaDetector`** — finds an on-screen budget by its **sawtooth**: it
-  must fall during an attempt *and* return to the same starting value
-  afterwards. Fires on ~9 of 25 games.
-
-**The refill requirement is the important part.** `dc22` has a colour
-that declines steadily all game — because the player is filling the board
-in. That's a **drain** (how much of the level is done), not a **budget**
-(how much is left before dying). They look almost identical and imply
-*opposite* behaviour: a budget near zero means hurry, a drain near zero
-means you're nearly finished. Reading dc22's progress bar as a timer
-would have the agent panicking exactly when it's winning.
-
-### 5.4 `attention.py` — *what's worth investigating?*
-
-`InterestMap` scores pixels where something notable happened — a residual
-change, something vanishing, a level completing — weighted by how good
-the evidence was, and decaying so stale spots fade.
-
-**Interest is not the same as a goal, and the distinction is expensive.**
-An entry means *"change happened here that I didn't cause"*. It does
-**not** mean *"the win condition is here"*. We measured what happens when
-those get conflated (§7).
-
-We checked this map was worth building before building it: these spots
-**cluster tightly** rather than scattering — on the games we score, 8–29
-cells out of 4096 carry half the weight. Had they been evenly spread, a
-map of them would have carried no information.
-
-`ClickTargeting` picks where to click, in order of evidence quality:
-learned interest → recently changed *and* distinct → recently changed →
-anything non-background → random. It skips spots that were clicked and
-did nothing (**habituation**), and prefers never-clicked spots — earlier
-measurement found ~half of all clicks were exact repeats, pure waste.
-
-It also learns whether clicking affects *the cell you touched* or
-*something elsewhere*. On `ft09` a click changes the cell under the
-cursor (and exactly 38 cells each time); on `vc33` it never does and
-changes 1–2 cells somewhere else. That matters: when clicks act at a
-distance, the cells that changed are the *effect*, so aiming at them is a
-category error. Respecting this cut repeat waste from ~50% to 1–3%.
-
-### 5.5 `navigation.py` — *how do I get there?*
-
-A pathfinder (breadth-first search) over the move map, treating known
-blocked moves as walls. Given a target square, it returns the button
-sequence to reach it.
-
-**It is deliberately dumb, and that's a constraint.** It takes a
-destination; it never picks one. An earlier version reached into the
-interest map to choose its own target, which quietly made navigation the
-privileged strategy — the agent routed because it *could*, not because
-the situation called for it.
-
-If the target isn't exactly reachable (common: the target may not sit on
-the move map's 5-pixel grid), it returns the route to the closest
-reachable square rather than refusing. If no move map exists, it returns
-nothing and the agent does something else.
-
-Plans are checked as they execute: if a step doesn't land where predicted
-— an unknown obstacle — the rest of the plan was computed for a position
-we never reached, so it's discarded.
-
-### 5.6 `my_agent.py` — *what should I do next?*
-
-The only place evidence from the other layers becomes a decision. Each
-turn it picks exactly one of:
-
-1. **Random** (25% of the time) — deliberately, so under-tried actions
-   keep getting sampled.
-2. **Route** — follow a plan, but only toward a target with real
-   accumulated evidence behind it, and only while no action has already
-   proven itself.
-3. **Frontier** — move somewhere this attempt hasn't been.
-4. **Best track record** — a weighted draw where each action's score
-   combines: *did it change anything* (common), *did it affect something
-   other than us* (×3), *did it make something vanish* (×8), *did it
-   complete a level* (×20). Level-ups dominate whenever they've ever
-   happened.
-
-### 5.7 `constants.py`
-
-Every tunable, grouped by layer, each with a comment saying what
-measurement set it. Several carry explicit warnings about relationships
-that would break if tuned in isolation.
+```
+agent/
+  perception.py    lenses over frame pairs: regions, diffs, motion, recolour, enclosure
+  entities.py      RegionTracker — stable ids across hops, deaths and resets; live vs ghost
+  control.py       MoveModel — which button moves the controlled thing by how much; position
+  constraints.py   ObstacleMap (walls) and StaminaDetector (the sawtooth resource)
+  attention.py     InterestMap and ClickTargeting — where change concentrates, where to click
+  belief.py        Belief per entity: per-action evidence, kinds of change, relational roles
+  relations.py     RelationEngine — residuals between things, groups, group residuals, levers
+  kinds.py         kinds view: same palette and parts; role asymmetry, drift, vanish transfer
+  brief.py         Briefer — the ~45-line text a hypothesis proposer reads
+  hypothesis.py    Hypothesis + enumerating Proposer — bets on a residual, verified, budgeted
+  supervisor.py    BoundarySupervisor — what fell into each level advance, typed by colour
+  navigation.py    plan() and Route — BFS over the move map, drift-checked as it executes
+  my_agent.py      MyAgent — the layer stack wired together and the one decision per step
+  constants.py     tunables and experiment flags, each with the measurement behind it
+scripts/
+  play_local.py         run the agent on the real games locally; per-step JSONL with frames
+  recap.py + template   step through one run in the browser: frame, masks, belief, the brief
+  probe_relations.py    the relation gate: do residuals fall into level advances under a lever
+  probe_brief_recall.py is the goal coordinate in the brief before an advance
+  sweep_summary.py      durable per-sweep record (scores, levels, completion indices, git sha)
+  analyse_sweeps.py     compare recorded sweeps by configuration
+  build_notebook.py     splice agent/*.py into the Kaggle submission notebook
+  verify_packaging.py   prove the notebook's module layout imports in a clean interpreter
+tests/                  193 unit tests; the refusals are tested as carefully as the successes
+```
 
 ---
 
 ## 6. What it achieves
 
-Honest numbers, on the 25 games available locally, at 400 actions each:
+Measured, not estimated. Every comparison below is n = 30 sweeps of all 25
+public games per arm, seed-paired, medians, permutation test, with the
+games a change *cannot touch* checked first.
 
-| | |
+| configuration | median score | mean | level-2 clears (of 30 sweeps) |
+|---|---|---|---|
+| default agent (proposer off) | 0.0145 | 0.038 | 0 |
+| proposer on (`ARC_PROPOSER=1`) | 0.0443 | 0.058 | **2** (ar25) |
+
+The proposer's gain reads p = 0.065 on the pre-specified whole-sweep test:
+promising, not yet promoted. The 17 games it cannot touch score
+identically in both arms. Of the 8 it touches, five gain (sp80, m0r0 —
+which had never reached level 1 in any base sweep — ar25, cn04, sk48) and
+three lose (cd82, ls20, tr87). The gainers are games whose level is
+cleared by *reaching* something; cd82's is cleared by a paint action the
+movement hypotheses now crowd out.
+
+Representation quality is measured separately from score, because a
+representation nothing consumes cannot move the score (§7):
+
+| test | result |
 |---|---|
-| Games where a move map forms | 16 of 25 |
-| Games where a budget meter is found | ~9 of 25 |
-| Aggregate score per sweep | mean ~0.027, best ~0.15 |
-| Sweeps producing any completion | 13 of 14 |
+| Residuals falling into a level advance under a lever (11 recorded advances) | 7 / 11 |
+| Goal coordinate present in the brief 3–8 steps before an advance | 7 / 11 advances; 0 "in the engine but crowded out of the text"; the 4 misses are cd82's paint advances |
+| Cold readers (a model that saw only the brief) stating a checkable goal | 3 / 5 games |
+| Default action stream after the identity/control/perception changes | byte-identical to the previous baseline on 30 seed-paired sweeps |
 
-**For scale: one level of sp80 completed in our typical ~400 actions is
-worth about 0.95 out of a per-level maximum of 100.** The agent reliably
-completes a first level on a handful of games and is roughly 10–50×
-slower than a human at it. Because scoring is quadratic, that gap is
-almost the whole distance between where we are and a competitive score.
+A sweep of 25 games costs ~75 seconds, which is the only reason any of
+these numbers exist.
 
 ---
 
-## 7. Two things we learned the hard way
+## 7. Things we learned the hard way
 
-Both are in the code as comments now, because both are counter-intuitive
-enough to be re-broken by a well-meaning future change.
+Each is in the code as a comment, because each is counter-intuitive enough
+to be re-broken by a well-meaning change.
 
-**Routing more made the score worse.** Across three configurations the
-relationship was monotonic: more routing produced *more reliable*
-completion (5/9 → 7/8 sweeps scoring non-zero) and a *lower* score (mean
-0.0511 → 0.0164). This isn't a contradiction — it's the quadratic. The
-interest map marks where things *happened*, not where the *goal* is, so
-walking deliberately to a hotspot spends real actions on a destination
-with no established link to winning. Every high score came from
-stumbling onto the goal early. **Directed movement toward a non-goal is
-worse than undirected search that might get lucky.**
-
-**A signal nothing acts on cannot help.** We measurably improved the
-sub-goal detector — and the score didn't move, because nothing downstream
-could use it. Improving perception on top of a policy that can't consume
-it is a reliable way to spend effort for nothing.
-
----
-
-## 8. What is *not* built
-
-Listed separately so nothing above is mistaken for a plan, and nothing
-here is mistaken for a feature.
-
-- **No goal detection.** The agent has no mechanism for identifying a win
-  condition. This is the single biggest gap, and §7 explains why it's the
-  one that matters.
-- **No hypothesis ledger.** No explicit tracked beliefs with confidences,
-  no experiments chosen to discriminate between competing explanations.
-- **No causal graph.** Contingency is learned per action, not as a
-  network of cause and effect.
-- **No rotation, reflection, scaling, splitting or merging detection.**
-  Only translation, recolouring, and appearance/disappearance — which
-  covered 99% of measured transitions, so there's no evidence these are
-  needed yet.
-- **No probabilistic confidence.** Thresholds are hard cutoffs (3
-  sightings, 60% majority) rather than posteriors.
-- **No cross-game learning.** Nothing carries between games, by choice —
-  and `m0r0`'s ambiguous control mapping is direct evidence that a
-  "ACTION1 usually means left" prior would actively mislead.
-- **The budget meter is detected but unused.** Measured cost per action
-  is flat, so knowing time is short doesn't change which action is best.
-  It would need a goal to be useful.
+- **Routing toward change made the score worse.** Where change *happened*
+  is not where the *goal* is; walking to it spends actions on a destination
+  with no established link to winning, and the score is quadratic in
+  actions. Every early high score came from stumbling onto the goal.
+- **A signal nothing acts on cannot help.** Three recording-only layers
+  each moved the score by exactly nothing, as predicted. The first thing to
+  consume the brief moved the median 3×.
+- **Read the brief as a proposer would, before building the proposer.**
+  Doing so found the canvas swamping every relation, a draining timer
+  posing as a lever, and the canvas itself earning CONTROL — none visible
+  in the panels that had displayed the same data.
+- **The solved frame is never observed.** The winning action produces the
+  *next level's* first frame, so "the goal residual collapses to 0" is
+  unmeasurable by construction; what can be measured is *falling, under a
+  lever*.
+- **Derive the vocabulary from a second game.** The relation set was first
+  written from one game and was that game read backwards. Checking on a
+  second game found not a vocabulary flaw but a perception bug — solitary
+  objects were being absorbed into the canvas — that had hidden an entire
+  game's controller.
+- **Never edit the agent while a measurement runs.** Sweeps import from
+  disk per process; one A/B was contaminated this way and is recorded as
+  such.
 
 ---
 
-## 9. The one rule
+## 8. What is *not* built, or not yet shown to work
+
+- **An action that has never moved a residual can never become a lever, so
+  the enumerator never proposes it.** cd82's paint action is only ever
+  pressed by the random bandit, which the proposer crowds out. This is the
+  known regression and the next thing to fix.
+- **No LLM proposer yet.** The interface is designed (brief in,
+  `Hypothesis` out) and the offline path is verified — Kaggle Models
+  attached to the notebook, served by vLLM from offline wheels, called as a
+  local OpenAI-compatible server — but nothing has been wired.
+- **Arrangement has no gradient.** `shape_diff` is 0 or undecidable, by
+  the rule against aligning grids. Proportion (`part_size_diff`) has one.
+- **Kind transfer is unexercised live.** "One of these vanished and stamina
+  rose, so expect the same of its lookalikes" holds on unit tests; no
+  recorded game has produced the event.
+- **No temporal or conditional structure** beyond eight steps of events and
+  per-action levers ("paint only lands when adjacent" is not expressible).
+- **Click-driven hypotheses.** A lever that is `ACTION6` carries no
+  coordinate, so no hypothesis is ever proposed through a click.
+- **No cross-game learning,** by choice: the evaluation philosophy is
+  explicit, and `m0r0`'s ambiguous buttons are direct evidence that an
+  "ACTION1 usually means left" prior would mislead.
+
+---
+
+## 9. Next in process
+
+Fix exploration inside the proposer so that a never-tried action can earn a
+lever (and the supervisor's winning moves are tried on the next level), then
+wire the LLM proposer behind the same `Hypothesis` interface, tested locally
+against a small model on the offline path Kaggle actually uses. Each step is
+gated by the same instrument as everything above: which games does it
+touch, does the affected game recover, and does the whole-sweep median move
+at n = 30.
+
+---
+
+## 10. The one rule
 
 > **No semantic slots without evidence.** Every interpretation must come
 > from a test that can return nothing. Structure may constrain *how* we
-> represent and test ideas; it must not constrain *which* entities,
-> goals, or game types can exist.
+> represent and test ideas; it must not constrain *which* entities, goals,
+> or game types can exist.
 
-Every component follows this. Translation detection doesn't claim games
-contain moving objects — it asks whether this particular change was a
-translation. The meter detector doesn't claim games have timers — it
-tests for a sawtooth. Click locality stays undecided until there's
-evidence. **Reporting nothing is a first-class answer.**
+Translation detection does not claim games contain moving objects — it asks
+whether this change was a translation. Roles are correlations with my own
+actions, never labels. Groups and kinds are views recomputed from evidence,
+never stored objects. Residuals are counts, never alignments. The supervisor
+weights, never asserts, and forgets everything at the end of the game.
+**Reporting nothing is a first-class answer.**
 
-The practical consequence: game *type* is an output, never an input.
-There is no `if maze: use_pathfinding()`. Pathfinding runs because a move
-map and an obstacle map happened to be discovered — which, on a game with
-no movement, they never are, and the agent simply does something else.
-
-The point isn't to be excellent at the 25 games we can see. It's to
+The point is not to be excellent at the 25 games we can see. It is to
 behave sensibly on the twenty-sixth.

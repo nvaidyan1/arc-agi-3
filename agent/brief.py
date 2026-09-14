@@ -140,9 +140,10 @@ class Briefer:
             out.append(f"  testing: {h.describe()}")
         if proposer and proposer.log:
             name = lambda k: ("{" + ",".join(f"#{m}" for m in k) + "}") if isinstance(k, tuple) else f"#{k}"  # noqa: E731
-            for key, action, start, end, status, spent in proposer.log[-3:]:
+            for key, action, start, end, status, spent, unmet in proposer.log[-3:]:
                 rel, a, b = key
-                out.append(f"  {status}: {rel}({name(a)},{name(b)}) {start}->{end} with {action} in {spent} steps")
+                extra = f", {unmet} with the precondition unmet" if unmet else ""
+                out.append(f"  {status}: {rel}({name(a)},{name(b)}) {start}->{end} with {action} in {spent} steps{extra}")
         return out
 
     def _things(self, agent) -> list[str]:
@@ -298,11 +299,13 @@ class Briefer:
             # Levers, not movers: an action that drives the residual more
             # than the others do. A residual every action moves alike is
             # the weather, and is said to be.
-            levers = (rec.lever(_relations.DOWN), rec.lever(_relations.UP))
+            down = rec.lever(_relations.DOWN)
+            cond = rec.conditional_lever(_relations.DOWN) if down is None else None
+            levers = (down, rec.lever(_relations.UP), cond)
             groups.setdefault((rel, anchor, levers), []).append((other, rec.residual, t))
         rows = sorted(groups.items(), key=lambda g: -max(m[2] for m in g[1]))
         out = [f"RELATIONS (residual, 0 = holds; moved on this level, newest first)"]
-        for (rel, anchor, (down, up)), members in rows[:MAX_RELATIONS]:
+        for (rel, anchor, (down, up, cond)), members in rows[:MAX_RELATIONS]:
             if len(members) == 1:
                 other, val, _t = members[0]
                 line = f"  {rel}(#{anchor},#{other}) = {val}"
@@ -312,9 +315,11 @@ class Briefer:
                 line = f"  {rel}(#{anchor}, each of {vals}{more})"
             if down:
                 line += f"   {down[0]} drives it down (+{down[1]:.0%} over other actions)"
+            elif cond:
+                line += f"   {cond[0]} drives it down when the controlled thing is {cond[1].replace(':', ' on side ')} (+{cond[2]:.0%})"
             if up:
                 line += f"   {up[0]} drives it up (+{up[1]:.0%})"
-            if not down and not up:
+            if not down and not up and not cond:
                 line += "   moves under every action alike"
             out.append(line)
         if not recent:

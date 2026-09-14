@@ -39,6 +39,10 @@ from constants import (
 )
 
 LIVE, HELD, FALSIFIED, EXPIRED = "live", "held", "falsified", "expired"
+# Per-step outcomes, so a failure says WHICH way it failed (reviewer C,
+# 2026-09-14: a boolean verifier collapses "the hypothesis is wrong" into
+# "its precondition was not met", and those are different layers).
+SUPPORTED, UNMET, INCONCLUSIVE, AGAINST = "supported", "precondition_unmet", "inconclusive", "against"
 
 
 @dataclass
@@ -50,6 +54,11 @@ class Hypothesis:
     budget: int = HYPOTHESIS_BUDGET
     history: list = field(default_factory=list)
     status: str = LIVE
+    # ("adjacent", member_id): the controlled thing must be within
+    # ADJACENT_GAP of this member before the action counts as a test.
+    precondition: tuple | None = None
+    outcomes: list = field(default_factory=list)   # per step: SUPPORTED / AGAINST / UNMET / INCONCLUSIVE
+    pending_met: bool = True                       # set by the policy at decision time
 
     @property
     def spent(self) -> int:
@@ -59,22 +68,34 @@ class Hypothesis:
     def current(self) -> int | None:
         return self.history[-1] if self.history else self.start
 
-    def observe(self, residual: int | None) -> str:
+    def observe(self, residual: int | None, met: bool = True) -> str:
         """Fold in the residual seen after one step taken under this
-        hypothesis, and return the status it now has."""
+        hypothesis, and return the status it now has.
+
+        `met`: did the precondition hold when the action was taken? A step
+        with it unmet costs budget and is recorded as PRECONDITION_UNMET;
+        it is not evidence about the residual and cannot falsify."""
         if self.status != LIVE:
+            return self.status
+        if not met:
+            self.history.append(None)
+            self.outcomes.append(UNMET)
+            if self.spent >= self.budget:
+                self.status = EXPIRED
             return self.status
         self.history.append(residual)
         values = [self.start] + [v for v in self.history]
         if residual is None:
             # The pair became undecidable (something left the screen). Not
             # evidence either way; it costs a step of budget and that is all.
-            pass
+            self.outcomes.append(INCONCLUSIVE)
         elif residual == 0:
+            self.outcomes.append(SUPPORTED)
             self.status = HELD
             return self.status
         else:
             defined = [v for v in values if v is not None]
+            self.outcomes.append(SUPPORTED if len(defined) >= 2 and defined[-1] < defined[-2] else AGAINST)
             if len(defined) >= 3 and defined[-1] > defined[-2] > defined[-3]:
                 self.status = FALSIFIED          # rose twice running
                 return self.status
@@ -86,10 +107,16 @@ class Hypothesis:
             self.status = EXPIRED
         return self.status
 
+    @property
+    def unmet(self) -> int:
+        return sum(1 for o in self.outcomes if o == UNMET)
+
     def describe(self) -> str:
         rel, a, b = self.key
         name = lambda k: ("{" + ",".join(f"#{m}" for m in k) + "}") if isinstance(k, tuple) else f"#{k}"  # noqa: E731
-        return (f"drive {rel}({name(a)},{name(b)}) {self.start}->0 with {self.action} "
+        cond = (f" when {self.precondition[0].replace(':', ' on side ')} of #{self.precondition[1]}"
+                if self.precondition else "")
+        return (f"drive {rel}({name(a)},{name(b)}) {self.start}->0 with {self.action}{cond} "
                 f"(lever +{self.lift:.0%}), step {self.spent}/{self.budget}, now {self.current}")
 
 
@@ -108,13 +135,18 @@ class Proposer:
         self._cooldown[key] = step + HYPOTHESIS_COOLDOWN
 
     def close(self, h: Hypothesis, step: int) -> None:
-        self.log.append((h.key, h.action, h.start, h.current, h.status, h.spent))
-        if h.status in (FALSIFIED, EXPIRED):
+        self.log.append((h.key, h.action, h.start, h.current, h.status, h.spent, h.unmet))
+        # An expiry spent mostly failing to reach the precondition says
+        # nothing about the residual; a short cooldown, not the full one.
+        if h.status == FALSIFIED or (h.status == EXPIRED and h.unmet * 2 < max(h.spent, 1)):
             self.cool(h.key, step)
+        elif h.status == EXPIRED:
+            self._cooldown[h.key] = step + HYPOTHESIS_COOLDOWN // 4
 
     def propose(self, engine, live, legal: set[str], step: int,
                 exclude: set[int] = frozenset(), prior=None, typer=None,
-                won: dict[str, int] | None = None, bonus=None) -> Hypothesis | None:
+                won: dict[str, int] | None = None, bonus=None,
+                control: set[int] = frozenset()) -> Hypothesis | None:
         """`exclude` is for entities belief has judged CONTEXT — things
         that change whatever is pressed. Their relations can carry a
         lever by chance (cd82's stamina bar earned a +30% lever on four
@@ -142,7 +174,18 @@ class Proposer:
                 continue
             if self._cooldown.get(key, -1) > step:
                 continue
+            precondition = None
             lever = rec.lever(_relations.DOWN)
+            if lever is None:
+                # No unconditional lever: is there a conditional one? The
+                # precondition names a non-control member the controlled
+                # thing must be adjacent to; the policy routes there first.
+                cl = rec.conditional_lever(_relations.DOWN)
+                if cl is not None and cl[1].startswith(_relations.ADJACENT):
+                    targets = [m for m in members if m not in control]
+                    if targets:
+                        lever = (cl[0], cl[2])
+                        precondition = (cl[1], targets[0])     # e.g. ("adjacent:-y", member)
             if lever is None or lever[0] not in legal or lever[0] == "ACTION6":
                 # ACTION6 needs a coordinate the lever does not carry; a
                 # click-driven hypothesis waits for a proposer that says
@@ -153,5 +196,6 @@ class Proposer:
             extra = bonus(key) if bonus else 0
             cand = (mattered, extra, won.get(action, 0), lift, -rec.residual, key)
             if best is None or cand > best[0]:
-                best = (cand, Hypothesis(key=key, action=action, lift=lift, start=rec.residual))
+                best = (cand, Hypothesis(key=key, action=action, lift=lift, start=rec.residual,
+                                         precondition=precondition))
         return best[1] if best else None

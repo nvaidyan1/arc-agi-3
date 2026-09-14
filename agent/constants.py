@@ -211,6 +211,11 @@ USE_PROPOSER = os.environ.get("ARC_PROPOSER", "0") == "1"
 HYPOTHESIS_BUDGET = 8
 HYPOTHESIS_PATIENCE = 3
 HYPOTHESIS_COOLDOWN = 40
+# How many times a WINNING move from an earlier level is tried on a new
+# level before the proposer goes back to betting on residuals. Only
+# winning moves: a blanket floor over every action was measured and lost
+# (see `_probe_action`).
+HYPOTHESIS_PROBE_TRIES = 4
 
 # ── Environment (what resists me) ───────────────────────────────────────
 # One failed attempt is enough to call a move blocked: these games are

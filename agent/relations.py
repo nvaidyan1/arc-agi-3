@@ -81,6 +81,12 @@ GROUP_MIN_STEPS = 3
 # median action's rate — the same +0.20 selectivity Belief uses.
 LEVER_MIN_TRIES = 4
 LEVER_MIN_LIFT = 0.20
+# A precondition worth tallying separately: the controlled thing's bounding
+# box within this many cells of a member of the pair, BEFORE the action.
+# Adjacency, not centroid distance — a 43-cell bucket touching an 80-cell
+# block has centroids ten cells apart.
+ADJACENT_GAP = 1
+ADJACENT, APART = "adjacent", "apart"
 
 
 @dataclass(frozen=True)
@@ -124,6 +130,12 @@ class PairRecord:
     # was taken. Only counted when both this and the previous residual were
     # defined — a None -> 3 transition is a question resolving, not motion.
     by_action: dict[str, dict[str, int]] = field(default_factory=dict)
+    # The same tallies split by a precondition that held BEFORE the action
+    # (`ADJACENT` / `APART`). An action with no unconditional effect can
+    # have a decisive conditional one: cd82's paint action was pressed 76
+    # times in one run and painted 8 — every time the bucket stood at the
+    # block. The unconditional contrast reads that as "no lever".
+    by_action_given: dict[str, dict[str, dict[str, int]]] = field(default_factory=dict)
     defined_steps: int = 0
     # Consecutive steps at 0 (the relation holding) and steps with a
     # positive value — the two kinds of persistence the grouping view
@@ -132,7 +144,8 @@ class PairRecord:
     holding_streak: int = 0
     positive_steps: int = 0
 
-    def observe(self, value: int | None, action: str | None) -> None:
+    def observe(self, value: int | None, action: str | None,
+                condition: str | None = None) -> None:
         self.previous, self.residual = self.residual, value
         if value is not None:
             self.defined_steps += 1
@@ -142,8 +155,12 @@ class PairRecord:
         else:
             self.holding_streak = 0
         if action and value is not None and self.previous is not None:
+            way = DOWN if value < self.previous else UP if value > self.previous else FLAT
             tally = self.by_action.setdefault(action, {DOWN: 0, UP: 0, FLAT: 0})
-            tally[DOWN if value < self.previous else UP if value > self.previous else FLAT] += 1
+            tally[way] += 1
+            if condition is not None:
+                given = self.by_action_given.setdefault(condition, {})
+                given.setdefault(action, {DOWN: 0, UP: 0, FLAT: 0})[way] += 1
 
     @property
     def moved(self) -> bool:
@@ -154,6 +171,31 @@ class PairRecord:
         """Actions that have moved this residual in `direction`, most first."""
         out = [(a, t[direction]) for a, t in self.by_action.items() if t[direction]]
         return sorted(out, key=lambda kv: -kv[1])
+
+    def conditional_lever(self, direction: str = DOWN) -> tuple[str, str, float] | None:
+        """(action, condition, lift): an action that moves this residual in
+        `direction` under one precondition more than it does otherwise AND
+        more than the other actions do under that same precondition.
+        Both contrasts, so that neither a drain (every action alike) nor
+        an action that works everywhere (an ordinary lever) reads as
+        conditional. None when nothing stands out."""
+        best = None
+        for cond, actions in self.by_action_given.items():
+            rates = {a: t[direction] / n for a, t in actions.items()
+                     if (n := sum(t.values())) >= LEVER_MIN_TRIES}
+            for a, r in rates.items():
+                if actions[a][direction] < 2:
+                    continue
+                elsewhere = [t for c, acts in self.by_action_given.items() if c != cond
+                             for a2, t in acts.items() if a2 == a]
+                n_else = sum(sum(t.values()) for t in elsewhere)
+                r_else = (sum(t[direction] for t in elsewhere) / n_else) if n_else >= 2 else 0.0
+                others = sorted(r2 for a2, r2 in rates.items() if a2 != a)
+                r_others = others[len(others) // 2] if others else 0.0
+                lift = r - max(r_else, r_others)
+                if lift >= LEVER_MIN_LIFT and (best is None or lift > best[2]):
+                    best = (a, cond, lift)
+        return best
 
     def lever(self, direction: str = DOWN) -> tuple[str, float] | None:
         """The action that moves this residual in `direction` MORE than the
@@ -211,6 +253,7 @@ class RelationEngine:
         self._alias: dict[tuple, tuple] = {}
         self._unit_colours: dict[tuple, frozenset[int]] = {}
         self._background: int | None = None
+        self._control: set[int] = set()
 
     # ── update ──────────────────────────────────────────────────────────
 
@@ -220,6 +263,7 @@ class RelationEngine:
         live: Iterable[int],
         action: str | None,
         skip: Iterable[int] = (),
+        control: Iterable[int] = (),
     ) -> dict[Key, int | None]:
         """Fold one frame in and return every residual.
 
@@ -245,6 +289,11 @@ class RelationEngine:
         self._prev = self._now
         self._now = {rid: Descriptor.of(colour, cells)
                      for rid, (colour, cells) in tracked.items() if rid not in skip}
+        # The precondition is read from the frame BEFORE this action —
+        # `_prev` now holds it — with the CONTROL set as it stood then;
+        # `control` is this step's, kept for the next.
+        control_prev = [self._prev[c] for c in self._control if c in self._prev]
+        self._control = set(control)
         for rid in self._now:
             self._first_seen.setdefault(rid, self._step)
 
@@ -265,12 +314,32 @@ class RelationEngine:
                 out[("containment", b, a)] = self._containment(b, a)
                 out[("cell_exchange", a, b)] = self._exchange(a, b)
                 out[("cell_exchange", b, a)] = self._exchange(b, a)
+        def condition_for(members) -> str | None:
+            """Where the controlled thing stood relative to the nearest
+            non-control member of this pair before the action:
+            'adjacent:-x' / 'apart:+y' and so on. Adjacency alone was
+            measured to be useless on cd82 — the bucket's every orbit
+            position touches the block — while WHICH SIDE it paints from
+            decides which half changes. None when there is no control
+            thing, or the pair is the control thing itself."""
+            if not control_prev:
+                return None
+            others = [self._prev[m] for m in members if m not in self._control and m in self._prev]
+            if not others:
+                return None
+            c, m = min(((c, m) for c in control_prev for m in others),
+                       key=lambda cm: bbox_gap(cm[0].bbox, cm[1].bbox))
+            gap = bbox_gap(c.bbox, m.bbox)
+            return f"{ADJACENT if gap <= ADJACENT_GAP else APART}:{side_of(c.centroid, m.centroid)}"
+
         for key, value in out.items():
-            self.records.setdefault(key, PairRecord()).observe(value, action)
+            self.records.setdefault(key, PairRecord()).observe(
+                value, action, condition_for(key[1:]))
         for key, value in self._group_residuals().items():
             rel, ka, kb = key
             canon = (rel, self._canonical(ka), self._canonical(kb))
-            self.group_records.setdefault(canon, PairRecord()).observe(value, action)
+            self.group_records.setdefault(canon, PairRecord()).observe(
+                value, action, condition_for(tuple(ka) + tuple(kb)))
         return out
 
     def _canonical(self, members: tuple) -> tuple:
@@ -495,6 +564,28 @@ def content(now: dict, g, background: int | None) -> tuple | None:
                                  if background is None or now[r].colours != {background}))
             return inner or None
     return None
+
+
+def side_of(control: tuple[float, float], member: tuple[float, float]) -> str:
+    """Which side of `member` the controlled thing is on, by the dominant
+    axis of the centroid difference: '-x' (left), '+x', '-y' (above), '+y'."""
+    dx, dy = control[0] - member[0], control[1] - member[1]
+    if abs(dx) >= abs(dy):
+        return "-x" if dx < 0 else "+x"
+    return "-y" if dy < 0 else "+y"
+
+
+SIDES = ("-x", "+x", "-y", "+y")
+
+
+def bbox_gap(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> int:
+    """Empty cells between two bounding boxes (Chebyshev): 0 when they
+    touch or overlap, 1 when one empty cell separates them."""
+    ax0, ay0, ax1, ay1 = a
+    bx0, by0, bx1, by1 = b
+    dx = max(0, bx0 - ax1 - 1, ax0 - bx1 - 1)
+    dy = max(0, by0 - ay1 - 1, ay0 - by1 - 1)
+    return max(dx, dy)
 
 
 def _chebyshev(p: tuple[float, float], q: tuple[float, float]) -> int:
