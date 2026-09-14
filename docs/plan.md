@@ -535,7 +535,7 @@ verdict, in force for everything below:
 - [x] **4d. the matching family's residuals** — `palette_missing` and
       `part_size_diff` over the grouping view, counting only; group-record
       continuity across member rebirth. Moves on cd82, ar25, ka59.
-- [ ] **4e. kinds as a view** — things with identical shape and palette
+- [x] **4e. kinds as a view** — `agent/kinds.py`; KINDS section in the brief; transfer weight in the proposer. cd82: template content and block read as one exact kind, one static, one drifting by part_size_diff 30. Transfer half not yet seen live. Original note: — things with identical shape and palette
       are one kind; what one instance did (drained stamina, vanished,
       scored) is evidence about the rest. The user's snake example: eat
       one food, expect the same of its lookalikes. A view over equal
