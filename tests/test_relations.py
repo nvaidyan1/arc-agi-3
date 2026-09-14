@@ -154,3 +154,13 @@ def test_moved_lists_only_residuals_that_changed_this_step():
     keys = {k for k, _p, _c in e.moved()}
     assert ("distance", 1, 2) in keys
     assert ("palette_diff", 1, 2) not in keys
+
+
+def test_skipped_entities_take_part_in_nothing():
+    # The canvas: live, tracked, and deliberately not a relatum.
+    e = RelationEngine()
+    t = frame(_1=(7, sq(0, 0)), _2=(3, sq(10, 0)), _9=(5, sq(0, 20, 30, 30)))
+    e.update(t, t.keys(), "ACTION1", skip={9})
+    out = e.update(t, t.keys(), "ACTION1", skip={9})
+    assert not any(9 in k[1:] for k in out)
+    assert out[("count_diff", 1, 2)] == 0          # the canvas is not counted either

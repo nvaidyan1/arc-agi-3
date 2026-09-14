@@ -66,9 +66,11 @@ from arcengine import FrameData, GameAction, GameState
 from agents.agent import Agent
 
 import belief
+import brief
 import entities
 import navigation
 import perception
+import relations
 from attention import ClickTargeting, InterestMap
 from constants import (
     EXPLORATION_EPSILON,
@@ -136,6 +138,14 @@ class MyAgent(Agent):
         # the consumer before wiring one is the point (three
         # recording-only layers this session moved the score zero).
         self.belief = belief.WorldBelief()
+        # Relations between entities, as residuals (agent/relations.py).
+        # Recording-only: nothing reads it to decide. It exists in the live
+        # agent so the brief a proposer would read can be seen in the recap
+        # exactly as it would be sent, not reconstructed offline.
+        self.relations = relations.RelationEngine()
+        # The text a hypothesis proposer would read (agent/brief.py).
+        # Recording-only; composed on demand by the recap.
+        self.brief = brief.Briefer()
         self.interest = InterestMap()
         self.clicks = ClickTargeting()
         self.route = navigation.Route()
@@ -269,6 +279,8 @@ class MyAgent(Agent):
         self.interest.clear()
         self.regions.clear()
         self.belief.clear()
+        self.relations.clear()
+        self.brief.clear()
         # `_observe_frame` has already run this step and holds the new
         # layout's regions under ids the tracker has just forgotten; left
         # in place they would seed beliefs for ids that never recur
@@ -465,6 +477,9 @@ class MyAgent(Agent):
         # memory here had beliefs forming about ghosts, and the router
         # aiming at them (docs/history.md, 2026-09-14).
         self.belief.update(self._tracked_live, action.name, changed)
+        self.relations.update(self.regions._tracked, self.regions.live, action.name,
+                              skip=self._canvas_ids())
+        self.brief.record(self, action.name)
 
         # Two consumers, two different gates. As a *reward* the residual
         # is only meaningful once we know our own effect — with no move
@@ -574,6 +589,21 @@ class MyAgent(Agent):
             # residual cell — the old histogram signal had no positions
             # to offer, so it had to smear the credit.
             self.interest.bump(sorted(lost_cells), INTEREST_VANISH_WEIGHT)
+
+    def _canvas_ids(self) -> set[int]:
+        """The largest live region of the background colour, if any.
+
+        Only the largest: the background colour can also fill a bounded
+        area that IS a thing (cd82's template interior is colour 5, the
+        canvas colour, at 156 cells). Everything but the biggest keeps its
+        place in the relations.
+        """
+        best, size = None, 0
+        for rid in self.regions.live:
+            colour, cells = self.regions._tracked[rid]
+            if colour == self._background and len(cells) > size:
+                best, size = rid, len(cells)
+        return {best} if best is not None else set()
 
     # ── Policy ──────────────────────────────────────────────────────────
 

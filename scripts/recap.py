@@ -300,6 +300,10 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
                     getattr(agent.clicks, "_effect", {}) or {})[:120],
             },
         },
+        # ── the brief: what a proposer would be sent, verbatim ───────────
+        # Composed live by the agent's own Briefer, not reconstructed here,
+        # so what the panel shows is exactly what would leave the agent.
+        "brief": agent.brief.compose(agent, level=frame.levels_completed),
         # ── evidence accumulated per action ──────────────────────────────
         "evidence": {
             "tries": {a.name: n for a, n in agent._action_tries.items()},

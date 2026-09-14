@@ -152,23 +152,36 @@ class RelationEngine:
         tracked: dict[int, tuple[int, frozenset[tuple[int, int]]]],
         live: Iterable[int],
         action: str | None,
+        skip: Iterable[int] = (),
     ) -> dict[Key, int | None]:
         """Fold one frame in and return every residual.
 
         `tracked` is the tracker's memory (all known ids, ghosts included);
         `live` is which of them are on screen now. Ghost pairs are computed
         so they land in the None queue rather than vanishing from view.
+
+        `skip` is for the canvas. It is a tracked region like any other, but
+        as a *relatum* it is the substrate everything else sits on: every
+        static thing's bounding box "contains" thousands of its cells and
+        the controlled thing trades cells with it on every move. Measured on
+        cd82's brief before this: all ten RELATIONS rows and six of eight
+        RECENT events were canvas noise. The caller decides what the canvas
+        is (the largest live region of the background colour); this layer
+        only agrees not to relate things to it.
         """
         self._step += 1
         self.live = set(live)
+        skip = set(skip)
         self._prev = self._now
         self._now = {rid: Descriptor.of(colour, cells)
-                     for rid, (colour, cells) in tracked.items()}
+                     for rid, (colour, cells) in tracked.items() if rid not in skip}
         for rid in self._now:
             self._first_seen.setdefault(rid, self._step)
 
         colour_counts: dict[int, int] = {}
         for rid in self.live:
+            if rid not in self._now:      # skipped (the canvas)
+                continue
             for c in self._now[rid].colours:
                 colour_counts[c] = colour_counts.get(c, 0) + 1
 
