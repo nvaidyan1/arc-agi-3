@@ -457,45 +457,96 @@ falsifiable and UNASSIGNED is a real answer.
       bounding-box extent, not size. cd82's bucket and ls20's sprite both
       read `control 100%` with a four-way map. See `history.md` 2026-09-14.
 
-## NEXT: a representation rich enough to carry a hypothesis
+## NEXT: relations as residuals, gated by a probe (council verdict 2026-09-14)
 
-Reframed 2026-09-14 after dumping the full belief state on cd82 and finding
-a list of individually-defensible monads that could not have supported any
-goal hypothesis (`history.md`, same date, "The gap between..."). Agreed
-build order, each step measured for which games it touches and for its
-refusals before any score is read, none of it cd82-specific:
+Reframed twice on 2026-09-14. First after dumping cd82's full belief and
+finding monads that could carry no hypothesis; then after a five-advisor
+council overruled two of the items that came out of that
+(`council_2026-09-14_belief.md` is the full record). Standing rules from the
+verdict, in force for everything below:
 
-- [x] **1. identity** — explained motion (follow what lands where my own
-      move map said), live vs remembered, reset told to the tracker rather
-      than deduced. Post-reset minting cd82 1.7/frame -> 0.
+  * A relation returns a **residual** `int | None`: 0 means it holds, None
+    means undecidable (ghost, appeared this step, history too short,
+    descriptor undefined). **Unknown is None, never False.**
+  * The residual **is** the progress measure. No separate progress function.
+  * **Never align two grids.** Residuals are set-cardinality and counting
+    only; cellwise comparison after alignment is template-matching, encoded.
+  * No thresholds: a similarity threshold is a prior. `shape_diff` is 0 on
+    equality and None otherwise. No rotation/scale-normalised signatures.
+  * **Composites are never built.** A partition has no falsifier. Where a
+    grouping is wanted it is a *view* over a persisting relation
+    (`cell_exchange`, `containment`), recomputed, never stored as a node.
+  * The relation set must survive derivation from a **second game's dump**;
+    anything only cd82 produces is a prior wearing a generic name.
+
+- [x] **1. identity** — explained motion, live vs remembered, reset told to
+      the tracker. Post-reset minting cd82 1.7/frame -> 0.
 - [x] **2. control by determinism** — see the item above.
-- [ ] **3. composites with parts** — group regions into one object on
-      evidence only: co-motion (identical displacement history), enclosure
-      (already built), or **cell exchange** (one region shrinks exactly
-      where another grows in the same step — which is also the RECOLOURED
-      event the vocabulary lacks). Never adjacency alone: two things
-      touching are not one thing. Groupings recomputed from evidence like
-      roles, never stamped.
-- [ ] **4. relations + event log** — binary predicates over all live
-      pairs (`same_palette`, `similar_shape`, `contains`, `adjacent`,
-      `constant_distance`, `count_match`, `distinguished`), per-object
-      invariant descriptors, and a one-line-per-step event log in the same
-      vocabulary. This is the state that could be handed to a hypothesis
-      generator; today nothing takes two entities as arguments.
-- [ ] **5. hypothesis interface** — goal as a *checkable predicate* over
-      the state plus a progress measure, verified against the next frames;
-      first driven by an enumerator over "make relation R hold between A
-      and B" for every R and pair, then by an LLM once the representation
-      is shown to carry the signal. Per-episode only, never cached across
-      games.
+- [x] ~~**3. composites with parts**~~ — **deleted by the council, not
+      deferred.** Co-motion, enclosure and cell exchange survive as
+      relations over flat entities.
+- [x] **3. `relations.py`** — offline, no policy change. Descriptors
+      `(colour(s), cells, bbox, shape)`, no normalisation. Six residuals over
+      all live pairs, ghosts included: `palette_diff` (|symmetric
+      difference|), `cell_exchange` (cells A lost this step that B gained —
+      grouping evidence, not a goal), `shape_diff` (0 if equal else None),
+      `containment` (cells of B outside A's bbox), `distance` /
+      `distance_drift` (None until 2 frames), `count_diff` (over colour
+      classes). Plus the actuation bridge the council found missing:
+      `action -> delta residual` tallies per (relation, pair), the same
+      structure Belief keeps per entity. No ranking by "looks like a goal".
+- [x] **4. `probe_relations.py`** — replay recordings through the engine.
+      **Run 2026-09-14 (4 sweeps, 11 advances): (i) 25/25, (ii) 18/25,
+      (iii) literal 36%, (iii') 55% — passes.** Literal (iii) is
+      unmeasurable by construction (the solved frame is never shown), so
+      the gate is (iii'): falling AND action-selectively driven. Every hit
+      is `distance`/`containment`; `palette_diff` and `shape_diff` never
+      moved on any game — over flat entities they cannot. sp80 0/3.
+      See `history.md`, same date.
+      Per game: (i) pairs whose residual ever changes, (ii) changes
+      attributable to an action, (iii) residuals monotone-decreasing over
+      the 8 frames into a level advance, plus the pairs stuck at None (the
+      first intervention queue). **Exit, all three:** >=15/25 games with a
+      moving residual; >=3 games with >=1 action-attributable change per
+      episode; **>=50% of level advances preceded by a monotone-decreasing
+      residual.** (iii) is the gate. If it fails, the relation layer is
+      decoration and the fallback is novelty certification over first-visit
+      frame hashes — a different build.
+- [ ] **4b. grouping as a view** — `relations.groups()`: union-find over
+      pairs whose `cell_exchange` or `containment == 0` has persisted k
+      frames, recomputed each step, never stored; `palette_diff` /
+      `count_diff` / `shape_diff` computed over the view as well as over
+      flat entities. Forced by the probe: `palette_diff` cannot move over
+      single-colour entities, so the matching family is invisible to the
+      layer until this exists. Exit: `palette_diff(block-view, template-view)`
+      on cd82 reads 2 and falls under paint actions.
+- [ ] **5. event log** — one line per step of every residual that moved,
+      with the action. Exit: cd82 shows `palette_diff(block, template):
+      2 -> 1` attributed to a paint action.
+- [ ] **6. level-boundary diff as supervisor** — snapshot the residual
+      vector at t-1 and t of every level advance; only residuals that
+      collapsed at >=2 independent boundaries are admissible hypothesis
+      targets. A hypothesis is admissible only if its residual is finite
+      and strictly decreased at least once in the last 5 steps under our own
+      action. Goals may change per level; nothing may assume otherwise.
+- [ ] **7. enumerator, serialisation-first, then LLM** — design the text
+      the proposer reads before writing the proposer. Proposal space is
+      pairs x relations x (targets, for ACTION6), gated by reachability;
+      every hypothesis test costs actions from the depth-weighted budget and
+      must be priced.
+- [ ] **rename `stamina` -> `sawtooth_region`** and strip the
+      refill-on-reset semantics from its description: the council's one
+      finding against existing code — a slot whose test was written first
+      and called evidence.
 - [ ] **re-run the belief-routing A/B on a frozen tree.** The 2026-09-14
-      run (4 arms x 30) was contaminated by edits to `agent/` while it ran
-      (11-20 of 30 sweeps per arm on an edited tree). Its one robust
-      reading is mechanistic: the per-level gate is exactly inert, and the
-      target it routed to on cd82 was the bucket's own ghost.
-- [ ] **parity/A/B for the identity work itself.** It changes the default
-      action stream (tracker feeds stamina, residual, interest) and has not
-      earned a default by measurement yet.
+      run was contaminated by edits to `agent/` while it ran. Its one robust
+      reading: the per-level gate is exactly inert, and the target it routed
+      to on cd82 was the controlled object's own ghost.
+- [ ] **parity/A/B for the identity work.** It changes the default action
+      stream and has not earned a default by measurement. The council's
+      caution applies: a representation change is not expected to move the
+      score until something consumes it, so the instrument here is parity
+      (no regression), not improvement.
 
 ### Superseded: connect beliefs to action (2026-09-13 framing)
 

@@ -91,13 +91,25 @@ def _wrap_with_step_logging(choose_action: Callable, log_path: Path) -> Callable
                 if prev_val != latest_val
             )
 
+        # The settled frame, one hex string per row (64 x 64 chars), so a
+        # probe can replay the whole perception stack offline without the
+        # game engine. Added 2026-09-14: the council's probe assumed frames
+        # were recorded and they were not. ~4 KB per step, gitignored.
+        grid = latest_frame.frame[-1] if latest_frame.frame else None
         entry = {
             "step": len(frames),
             "state": str(latest_frame.state),
             "levels_completed": latest_frame.levels_completed,
             "prev_action_diff_cells": diff_cells,
             "action": action.name,
+            # The coordinate argument, when the action carries one: the
+            # proposal space for a hypothesis is pairs x relations x
+            # targets, and without this the target half is unrecoverable.
+            "data": (action.action_data.model_dump()
+                     if getattr(action, "action_data", None) is not None else None),
+            "available_actions": list(latest_frame.available_actions or []),
             "reasoning": getattr(action, "reasoning", None),
+            "frame": ["".join(f"{v:x}" for v in row) for row in grid] if grid else None,
         }
         log_file.write(json.dumps(entry) + "\n")
         log_file.flush()

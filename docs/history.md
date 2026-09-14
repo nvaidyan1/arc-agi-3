@@ -1756,3 +1756,84 @@ residual and interest), so the identity work needs its own parity/A/B on a
 frozen tree before it can be said to have earned anything at the score.
 Nothing above is wired to a decision beyond the existing flagged consumer.
 
+## 2026-09-14 — Council on the next step; two agreed builds overruled
+
+**Motivation.** Before building step 3 of the representation roadmap
+(composites with parts), pressure-test the whole direction: five independent
+advisors, anonymised peer review, chairman synthesis. Full record in
+`council_2026-09-14_belief.md`.
+
+**Observation.** Unanimous: relations before composites; relations return a
+residual `int | None` (0 holds, None undecidable — never False for unknown);
+the residual *is* the progress measure; cut the semantic names; probe before
+build. Overruled from our plan: **composites are never built** (a partition
+has no falsifier — the Outsider's line), and `distinguished` is salience with
+no test. Upheld against us: the relation set was cd82 read backwards; fix by
+deriving it from a second game and shipping the intersection. Rejected from
+the Contrarian: "no score moved after steps 1-2, so stop" — an agent that
+cannot represent the goal cannot move the score, so a flat score is the
+predicted observation. What every advisor missed and the reviewers named:
+actuation (`action -> delta residual`), the level-boundary diff as free
+per-episode supervision, that every probe was passive, and that nobody
+designed the serialisation the LLM would read.
+
+**Inference.** Order is now: `relations.py` (six residuals, offline, no
+policy change) -> `probe_relations.py` with three exit criteria, the binding
+one being *>=50% of level advances preceded by a monotone-decreasing
+residual* -> event log + `action -> delta residual` -> boundary diff as
+supervisor -> enumerator, serialisation-first, then LLM. Frames added to the
+per-step recordings so the probe can replay offline; they were not recorded
+before.
+
+## 2026-09-14 — Relations as residuals; the probe gate, run
+
+**Built.** `agent/relations.py`: seven relations over every pair of known
+entities, each a residual `int | None` (0 holds, None undecidable — ghost,
+first sighting, history too short). `palette_diff`, `shape_diff` (0 or
+None, no threshold), `containment`, `distance`, `distance_drift`,
+`count_diff`, and `cell_exchange` as grouping evidence. Per (relation, pair)
+a tally of how each action moved the residual — the actuation bridge the
+council found missing. No grids aligned, nothing ranked by goal-likeness,
+no composites stored. Frames now recorded in the per-step JSONL (64 hex rows,
+~4.6 KB/step, gitignored) so `scripts/probe_relations.py` replays the whole
+perception stack offline. 152 tests.
+
+**Observation — the probe, 4 sweeps x 25 games, 11 level advances.**
+
+| criterion | result | need |
+|---|---|---|
+| (i) games with a moving residual | 25/25 | >= 15 |
+| (ii) games with an action-selective lever | 18/25 | >= 3 |
+| (iii) literal: a residual collapsing to 0 into the advance | 4/11 = 36% | >= 50% |
+| (iii') a falling residual some action selectively drives | **6/11 = 55%** | >= 50% |
+
+Two corrections to the literal (iii), both forced by the data rather than
+chosen: **the solved frame is never observed** — the winning action yields
+the *next level's* first frame, so the last frame in the window is one move
+before the goal and a residual whose final step is that move cannot read 0;
+and **drains pass "monotone"** — cd82's stamina containment fell into every
+advance because time passes. Three of the four literal hits were artefacts
+(`distance_drift` reading 0 because things stopped; a 64 -> 0 identity
+discontinuity). (iii') requires the residual to be falling *and* to have an
+action that moves it more than the others do — the same contrast that keeps
+the stamina bar out of every belief.
+
+**Inference.** The gate passes, narrowly, on 11 advances, and says exactly
+what the flat-entity vocabulary can and cannot express:
+
+  * Every lever into an advance is `distance` or `containment` — the
+    navigational family. ar25 (2/2), cn04 (1/1), ls20 (1/1), cd82 (2/4) hit;
+    **sp80 (0/3) has no falling coordinate at all**.
+  * **`palette_diff` and `shape_diff` never moved on any game.** Over
+    single-colour flat entities a palette is one colour and `palette_diff`
+    is 0 or 2 forever; the block-matches-template coordinate on cd82 is not
+    expressible until a *view* groups the block's parts. The council said
+    composites fall out for free from persisting `cell_exchange` /
+    `containment`; this is the measurement that says the free view is now
+    the binding constraint, and it stays a view, never a node.
+  * The None queue is dominated by ghosts (re86: 4930 of 5405 pairs).
+
+Next per the verdict: step 5 (event log + `action -> delta residual` in the
+agent), then the level-boundary diff, with the grouping *view* added to the
+relation layer so `palette_diff` can move. More advances are needed to make
+(iii') a measurement rather than a reading: 11 is the whole sample.
