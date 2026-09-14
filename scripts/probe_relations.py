@@ -111,7 +111,17 @@ def replay(entries: list[dict], game_id: str) -> dict:
         regions = [(c, cells) for c, cells in regions if len(cells) >= STAMINA_MIN_SIZE]
         expected = moves.learned_moves.get(acted) if acted is not None else None
         tracker.update(regions, expected_offset=expected)
-        engine.update(tracker._tracked, tracker.live, acted.name if acted else None)
+        # Skip the canvas exactly as the agent does. Without this the
+        # 2026-09-14 run credited cd82 with levers that were all
+        # distance(*, canvas) — the bucket moving relative to the board's
+        # centroid — and read 82% where the honest figure is lower.
+        canvas, size = None, 0
+        for rid in tracker.live:
+            colour, cells = tracker._tracked[rid]
+            if colour == background and len(cells) > size:
+                canvas, size = rid, len(cells)
+        engine.update(tracker._tracked, tracker.live, acted.name if acted else None,
+                      skip={canvas} if canvas is not None else ())
 
         snapshots.append(engine.snapshot())
         actions.append(acted.name if acted else None)

@@ -57,9 +57,16 @@ class Briefer:
 
     # ── per step ────────────────────────────────────────────────────────
 
-    def record(self, agent, action_name: str) -> None:
-        """Call once per step after every layer has updated."""
+    def record(self, agent, action_name: str, action_data=None) -> None:
+        """Call once per step after every layer has updated.
+
+        `action_data` is the coordinate payload when the action carried
+        one: eight lines of bare "ACTION6" are unreadable (the vc33 cold
+        read asked for exactly this).
+        """
         self._step += 1
+        if action_data is not None and getattr(action_data, "x", None) is not None:
+            action_name = f"{action_name}@({action_data.x},{action_data.y})"
         live = set(agent.regions.live)
         moved = agent.relations.moved()
         parts = []
@@ -90,7 +97,7 @@ class Briefer:
 
     # ── the text ────────────────────────────────────────────────────────
 
-    def compose(self, agent, level: int | None = None) -> str:
+    def compose(self, agent, level: int | None = None, available=None) -> str:
         out: list[str] = []
         stamina = agent.stamina.stamina_fraction
         head = f"step {self._step} of this level"
@@ -99,6 +106,12 @@ class Briefer:
         if stamina is not None:
             head += f"  stamina {stamina:.0%}"
         out.append(head)
+        # What can be pressed. The vc33 cold reader planned three moves on
+        # a click-only game; the frame knew and the brief did not say.
+        if available:
+            names = [f"ACTION{a}" if isinstance(a, int) else str(a) for a in available]
+            out.append("ACTIONS available: " + ", ".join(names)
+                       + ("  (ACTION6 takes an x,y)" if any(n == "ACTION6" for n in names) else ""))
 
         out.extend(self._things(agent))
         out.extend(self._groups(agent))
@@ -118,7 +131,12 @@ class Briefer:
                 continue
             cells = agent.regions._tracked[b.region_id][1]
             where = b.centroid
-            desc = f"#{b.region_id} colour {b.colour} {len(cells)} cells at {where}"
+            xs = [c[0] for c in cells]; ys = [c[1] for c in cells]
+            # Extent as w x h: descriptive, not alignment. With shape_diff
+            # equality-only, every shape row read "not decidable" and a
+            # reader could not tell an L-piece from a bar.
+            desc = (f"#{b.region_id} colour {b.colour} {len(cells)} cells "
+                    f"{max(xs)-min(xs)+1}x{max(ys)-min(ys)+1} at {where}")
             role = b.role
             if b.region_id in agent._canvas_ids():
                 rows.insert(0, f"  {desc}  — the canvas")
@@ -149,9 +167,15 @@ class Briefer:
             out.append(f"  {{{', '.join(f'#{r}' for r in sorted(g))}}} colours {cols}")
         # Group-level residuals that have moved recently, or hold.
         # Group-to-group rows first (two composite things compared), then
-        # group-to-singleton; within each, lowest residual first.
+        # group-to-singleton; within each, lowest residual first. Only rows
+        # whose members are all on screen: group records outlive the
+        # groups they describe, and the cn04 cold read found rows citing
+        # entities that were no longer there.
+        live = agent.regions.live
+        rows = [(k, r) for k, r in agent.relations.group_records.items()
+                if all(m in live for m in k[1]) and all(m in live for m in k[2])]
         shown = 0
-        for (rel, ka, kb), rec in sorted(agent.relations.group_records.items(),
+        for (rel, ka, kb), rec in sorted(rows,
                                          key=lambda kv: (kv[1].residual is None,
                                                          not (len(kv[0][1]) > 1 and len(kv[0][2]) > 1),
                                                          kv[1].residual or 0)):
@@ -192,6 +216,26 @@ class Briefer:
                 by_action.setdefault(a, []).append(f"{b.kind_for(a) or 'changes'} #{b.region_id}")
         for a in sorted(by_action):
             lines.append(f"  {a} {', '.join(by_action[a][:4])}")
+        # Where a learned move failed to happen. Walls are invisible in the
+        # relations (nothing changes), and tu93's cold reader asked for
+        # exactly "which presses were blocked". Positions are in the move
+        # model's frame, so they are said relative to here.
+        obstacles = getattr(agent, "obstacles", None)
+        if obstacles is not None and getattr(obstacles, "_blocked", None):
+            here = agent.moves.displacement
+            here_blocked = sorted(a.name for (pos, a) in obstacles._blocked if pos == here)
+            elsewhere: dict[str, int] = {}
+            for (pos, a) in obstacles._blocked:
+                if pos != here:
+                    elsewhere[a.name] = elsewhere.get(a.name, 0) + 1
+            parts = []
+            if here_blocked:
+                parts.append("blocked from here: " + ", ".join(here_blocked))
+            if elsewhere:
+                parts.append("blocked elsewhere: " + ", ".join(
+                    f"{a} at {n} position{'s' if n > 1 else ''}" for a, n in sorted(elsewhere.items())))
+            if parts:
+                lines.append("  " + "; ".join(parts))
         return ["CONTROL"] + (lines or ["  nothing learned yet"])
 
     def _relations(self, agent) -> list[str]:

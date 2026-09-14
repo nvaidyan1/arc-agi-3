@@ -1931,3 +1931,118 @@ its two misses are the advances where the winning move was a paint action
 and the relation set has no coordinate for arrangement. Same sample of 11;
 the number is a reading, not a measurement, but the direction is the one
 the fix predicted.
+
+## 2026-09-14 — Deciding when the brief is rich enough
+
+**Motivation.** The user's question: with primitives, beliefs, relations
+and a brief built and nothing wired to the controller, what is the cut-off
+for moving to hypothesis generation? "How do you know there is enough
+info?"
+
+**Inference.** Sufficiency is not judgeable from inside the vocabulary;
+it is a test. (a) Recall at the boundary: does the brief 3-8 steps before
+a level advance contain the coordinate that turned out to matter? The
+answer separates a selection gap (in the engine, not in the text) from a
+vocabulary gap (not in the engine) from no gap. (b) An oracle read of five
+cold briefs. Bars set low and explicit — majority recall, 2 of 5 — because
+the point is to start the loop, not to perfect the layer: from then on new
+primitives come from hypotheses that failed because they were
+*inexpressible*, each surviving a second game. Score expectation stated by
+the user and agreed: none until something consumes the brief. Added to
+`plan.md` as 5b.
+
+## 2026-09-14 — Parity: today's perception changes moved no default action
+
+**Motivation.** Three default-path changes shipped without measurement
+(identity, control by determinism, `merge_enclosed` not folding into the
+canvas). The user asked for the current score; the honest answer was that
+the current commit had never been scored.
+
+**Observation.** 30 sweeps x 25 games at `54173e7`, seeds 1-30, frozen
+tree, against the seed-paired A/B base arm at `5855c9d`:
+
+| | reference | current |
+|---|---|---|
+| median | 0.0145 | 0.0145 |
+| mean | 0.0384 | 0.0384 |
+| zero sweeps | 2 | 2 |
+| games reaching L1 / sweep | 2.00 | 2.00 |
+| level-2 clears | 0 | 0 |
+
+Permutation p = 1.000, and every seed-paired sweep that could be compared
+(10 of 10) has **byte-identical** per-game outcomes: levels, action counts,
+completion indices. The identity, control and merge changes altered the
+entities, beliefs and relations the agent *holds* and not one action it
+*took* — the policy still reads none of them. Expected (stated by the user
+beforehand), and it retires the parity debt for all three at once. The
+reference arm's own contamination is moot for the same reason.
+
+**Inference.** The score is 0.0145 median at the current commit, unchanged
+since `5855c9d`; it will stay there until something consumes the brief.
+
+## 2026-09-14 — Cut-off test (a): recall of the goal coordinate in the brief
+
+**Built.** `scripts/probe_brief_recall.py`: replays the full perception
+stack from recordings, composes the brief as it stood 3-8 steps before
+each level advance, and asks whether the coordinate that fell into the
+advance under a lever was in the text — FALLING, RELATIONS, engine-only, or
+absent.
+
+**Observation — 11 advances x 6 leads.**
+
+| where the coordinate was | rows | advances (best lead) |
+|---|---|---|
+| FALLING (named as a candidate) | 2 (3%) | — |
+| RELATIONS (present, findable) | 36 (56%) | 7 |
+| engine only (crowded out of the text) | 4 (6%) | 0 |
+| absent (no such coordinate) | 22 (34%) | 4 |
+
+**7/11 advances had it in the text — the bar (a majority) is cleared.**
+Zero selection gaps: whenever the engine had the coordinate, the brief
+carried it. All four vocabulary gaps are cd82's paint advances, the
+arrangement goal already known to be inexpressible without alignment.
+FALLING almost never named it (2 rows): its 5-step window and "down twice"
+bar are too tight; RELATIONS is where a proposer would find it.
+
+**Correction to the relation probe.** This probe skips the canvas as the
+agent does; the earlier one did not. cd82's "levers" in that run were all
+`distance(*, #7)` with #7 the canvas — the bucket moving relative to the
+board's centroid, not toward anything. With the canvas excluded cd82 has
+no lever coordinate at any of its four advances; the 82% is re-measured
+below.
+
+**Inference.** The brief is rich enough to hand over, by the test we set:
+the goal was findable in the text for every advance whose goal the
+vocabulary can express at all. Next: (b) the oracle read, then (c) the
+proposer. FALLING to be loosened or dropped in favour of a proposer that
+reads RELATIONS itself.
+
+## 2026-09-14 — Cut-off test (b): five cold reads of the brief
+
+**Method.** Five briefs from games not yet examined (ar25, cn04, tu93,
+vc33, ka59), each at ~step 240, handed to a fresh model that saw nothing
+else — "state the goal as a checkable condition, the coordinate to watch,
+the first three moves, and what is missing" — then scored against the
+games' first frames, which the readers never saw.
+
+**Observation.** cn04: `distance(cyan tile, cyan tile) -> 0` — the
+docking condition, **hit**. tu93: "reach the far corner tile", walls at
+half-offsets — **hit**, low confidence. ka59: "put #5 where its twin #6
+sits in the mirrored room", as `shape_diff` of the two assemblies — a
+checkable, plausible **hit**. ar25: "shrink #17" — **miss**; its fallback,
+colour/shape matching, was the right family. vc33: **miss**, and it
+planned ACTION1-3 on a click-only game. **3 of 5; the bar was 2.**
+
+Every reader asked for the same five things, none of them vocabulary:
+available actions; click coordinates in RECENT; blocked moves; an extent
+per thing (with `shape_diff` equality-only, every shape row read "not
+decidable"); and no stale ids in GROUPS rows. All except blocked moves
+fixed the same hour. Every reader also asked for a score or level signal
+— the level-boundary diff, step 6.
+
+**Inference.** The brief carries enough for a cold reader to state a
+checkable goal on a majority of games. The failures are the informative
+ones: ar25's reader chose the one entity with a "shrinks under ACTION5"
+belief over the shape relation because shape said nothing — the
+equality-only rule is right for *goals* and wrong for *description*, and
+extents fix that without aligning anything. Proceed to (c).

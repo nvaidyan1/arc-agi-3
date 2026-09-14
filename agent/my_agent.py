@@ -480,7 +480,7 @@ class MyAgent(Agent):
         self.belief.update(self._tracked_live, action.name, changed)
         self.relations.update(self.regions._tracked, self.regions.live, action.name,
                               skip=self._canvas_ids())
-        self.brief.record(self, action.name)
+        self.brief.record(self, action.name, getattr(action, "action_data", None))
 
         # Two consumers, two different gates. As a *reward* the residual
         # is only meaningful once we know our own effect — with no move

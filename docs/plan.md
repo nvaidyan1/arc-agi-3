@@ -540,6 +540,34 @@ verdict, in force for everything below:
       the panels had hidden (canvas as relatum, drains as levers, canvas as
       CONTROL). The original exit — `palette_diff 2 -> 1` on cd82 — was
       impossible, see 4b.
+- [ ] **5b. the cut-off: is the brief rich enough to hand over?** Decided
+      2026-09-14: "rich enough" is not a property of the vocabulary (every
+      vocabulary looks incomplete from inside) but a test the brief passes
+      or fails. Two tests, both runnable before any LLM exists:
+      - [x] **(a) recall at the boundary — 7/11 advances in the text, 0 selection gaps, 4 vocabulary gaps (all cd82 paint advances). Bar cleared.** `scripts/probe_brief_recall.py`:
+            for each recorded level advance, take the brief 3-8 steps
+            *before* it and ask whether the coordinate that fell into the
+            advance under a lever (the probe's (iii') key) is in the text —
+            in FALLING, in RELATIONS, in the engine only, or nowhere. The
+            three outcomes name three different gaps: selection, nothing,
+            vocabulary. Bar: a majority in the text.
+      - [x] **(b) the oracle read — 3 of 5 (cn04, tu93, ka59 hit; ar25, vc33 miss). Bar cleared.** Five briefs from games not yet looked
+            at, read cold with "state the goal and the first three moves",
+            against what the game wants. Bar: >= 2 of 5.
+      - [ ] **brief revision from the cold reads** — [x] available actions,
+            [x] click coordinates in RECENT, [x] extent w x h per thing,
+            [x] no stale ids in GROUPS rows, [ ] blocked moves from the
+            obstacle map (tu93's reader: "which presses were blocked").
+      - [ ] **(c) both cleared — wire the proposer** — brief in; a goal
+            predicate over relation keys, a progress coordinate and a few
+            actions out; verified by residual movement within k frames;
+            every test priced in actions; per-episode, nothing cached.
+            The vocabulary then grows from *falsified* hypotheses — a
+            primitive is added only when a real failure was inexpressible,
+            and survives a second game — rather than from anticipation.
+      Reasoning: build the layers in parallel with the consumer rather than
+      mastering one spot at a time; the consumer's failures are the only
+      principled source of new primitives.
 - [ ] **6. level-boundary diff as supervisor** — snapshot the residual
       vector at t-1 and t of every level advance; only residuals that
       collapsed at >=2 independent boundaries are admissible hypothesis
@@ -559,7 +587,7 @@ verdict, in force for everything below:
       run was contaminated by edits to `agent/` while it ran. Its one robust
       reading: the per-level gate is exactly inert, and the target it routed
       to on cd82 was the controlled object's own ghost.
-- [ ] **parity/A/B for the identity work.** It changes the default action
+- [x] **parity for the identity, control and merge work** — 30 seed-paired sweeps at `54173e7`: byte-identical outcomes, p = 1.000. No default action changed. Original note: It changes the default action
       stream and has not earned a default by measurement. The council's
       caution applies: a representation change is not expected to move the
       score until something consumes it, so the instrument here is parity
