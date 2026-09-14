@@ -579,7 +579,25 @@ verdict, in force for everything below:
             proposer behind the same `Hypothesis` type — development-time
             only, since the competition notebook has no internet and no
             `anthropic` SDK is installed here.
-      - [ ] **(c') the LLM proposer** — brief in, `Hypothesis` out — brief in; a goal
+      - [ ] **(c') the LLM proposer** — brief in, `Hypothesis` out.
+            **Offline path on Kaggle, verified 2026-09-14 from the official
+            template and entrants' notebooks:** no internet at evaluation;
+            weights come from **Kaggle Models attached to the notebook**
+            (`kernel-metadata.json` `model_sources`, mounted at
+            `/kaggle/input/models/<owner>/<model>/transformers/<variant>/1`),
+            served by **vLLM installed from offline wheels** (a wheels
+            dataset, or the competition's `arc_agi_3_wheels`) as a local
+            OpenAI-compatible server on `127.0.0.1:8000/v1`, called with the
+            `openai` client. Models in use: official template
+            `danielhanchen/gpt-oss-120b` (RTX Pro 6000; "runs slowly");
+            entrants `google/gemma-4` `gemma-4-31b-it` and Qwen 3.x 27B FP8;
+            smaller attachable options `qwen-lm/qwen-3-5` (4B), `qwen2.5-coder`
+            (0.5-32B), `metaresearch/llama-3.2` (1B/3B), `google/gemma-3`.
+            Time is the binding limit (`GAME_TIME_LIMIT_S`, "scorecard not
+            produced in time"), so the proposer must be called rarely —
+            at level start, on a falsified streak — not per step. Local
+            mimic: run vLLM (or Ollama) with the same model and point the
+            proposer at the same base URL; the agent code is identical. — brief in; a goal
             predicate over relation keys, a progress coordinate and a few
             actions out; verified by residual movement within k frames;
             every test priced in actions; per-episode, nothing cached.
