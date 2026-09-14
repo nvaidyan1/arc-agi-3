@@ -1915,3 +1915,19 @@ parity measurement (identity, control, this); the debt is real and listed.
 The council's "derive from a second game" rule paid for itself on the first
 try, and not in the way expected: the vocabulary held, the perception
 under it did not.
+
+**The probe, re-run with the merge fix (same 4 sweeps, 11 advances).**
+
+| criterion | before fix | after fix |
+|---|---|---|
+| (i) games with a moving residual | 25/25 | 25/25 |
+| (ii) games with an action-selective lever | 18/25 | 18/25 |
+| (iii) literal collapse to 0 | 4/11 = 36% | 6/11 = 55% |
+| (iii') falling residual some action drives | 6/11 = 55% | **9/11 = 82%** |
+
+sp80 went from 0/3 advances with any falling coordinate to **3/3** — the
+whole gain — once its controller existed as an entity. cd82 still 2/4:
+its two misses are the advances where the winning move was a paint action
+and the relation set has no coordinate for arrangement. Same sample of 11;
+the number is a reading, not a measurement, but the direction is the one
+the fix predicted.

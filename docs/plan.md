@@ -497,7 +497,8 @@ verdict, in force for everything below:
       structure Belief keeps per entity. No ranking by "looks like a goal".
 - [x] **4. `probe_relations.py`** — replay recordings through the engine.
       **Run 2026-09-14 (4 sweeps, 11 advances): (i) 25/25, (ii) 18/25,
-      (iii) literal 36%, (iii') 55% — passes.** Literal (iii) is
+      (iii) literal 36%, (iii') 55% — passes; after the merge_enclosed fix
+      (iii') 82%, sp80 0/3 -> 3/3.** Literal (iii) is
       unmeasurable by construction (the solved frame is never shown), so
       the gate is (iii'): falling AND action-selectively driven. Every hit
       is `distance`/`containment`; `palette_diff` and `shape_diff` never
