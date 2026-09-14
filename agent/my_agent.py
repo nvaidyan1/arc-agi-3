@@ -69,6 +69,7 @@ import belief
 import brief
 import entities
 import hypothesis
+import kinds
 import navigation
 import perception
 import relations
@@ -159,6 +160,11 @@ class MyAgent(Agent):
         # colour (agent/supervisor.py). A property of the game: survives
         # levels and resets, dies with the game.
         self.supervisor = supervisor.BoundarySupervisor()
+        # Things that look alike, and what one of them did (agent/kinds.py).
+        # The memory is palette-typed and survives levels; the view is
+        # recomputed every step.
+        self.kinds = kinds.KindMemory()
+        self._kinds_now: list = []
         self.interest = InterestMap()
         self.clicks = ClickTargeting()
         self.route = navigation.Route()
@@ -270,9 +276,12 @@ class MyAgent(Agent):
         # Tell the tracker, so the next frame is matched against the
         # attempt's starting layout and identities survive the teleport.
         self.regions.expect_home()
-        # The frames before a death were not the run-up to an advance.
+        # The frames before a death were not the run-up to an advance, and
+        # the step across a reset is neither a vanishing nor a stamina change.
         if hasattr(self, "supervisor"):
             self.supervisor.clear_window()
+        if hasattr(self, "kinds"):
+            self.kinds.new_attempt()
 
     def _reset_level(self) -> None:
         """A new level is a new layout, so position-keyed knowledge dies.
@@ -300,6 +309,8 @@ class MyAgent(Agent):
         self.proposer.clear()
         self.hypothesis = None
         self._level_step = 0
+        self.kinds.new_level()
+        self._kinds_now = []
         # `_observe_frame` has already run this step and holds the new
         # layout's regions under ids the tracker has just forgotten; left
         # in place they would seed beliefs for ids that never recur
@@ -506,6 +517,10 @@ class MyAgent(Agent):
         self.relations.update(self.regions._tracked, self.regions.live, action.name,
                               skip=self._canvas_ids())
         self.supervisor.observe(self.relations.snapshot())
+        self._kinds_now = kinds.compute_kinds(self.relations, self.belief, self.regions.live,
+                                              background=self._background)
+        self.kinds.record(self._kinds_now, self.regions.live, action.name,
+                          self.stamina.stamina_fraction)
         self.brief.record(self, action.name, getattr(action, "action_data", None))
         self._level_step += 1
         # Verify the live hypothesis against what its action just did to
@@ -628,6 +643,22 @@ class MyAgent(Agent):
             # to offer, so it had to smear the credit.
             self.interest.bump(sorted(lost_cells), INTEREST_VANISH_WEIGHT)
 
+    def _kind_bonus(self, key: tuple) -> int:
+        """1 when a distance hypothesis aims the CONTROL thing at a member
+        of a kind whose members have vanished with stamina rising — the
+        snake reading, as a weight the proposer adds to its ranking."""
+        rel, a, b = key
+        if rel != "distance" or not isinstance(a, int):
+            return 0
+        control = {x.region_id for x in self.belief.by_role(belief.CONTROL)}
+        target = b if a in control and b not in control else a if b in control and a not in control else None
+        if target is None:
+            return 0
+        for k in self._kinds_now:
+            if any(target in m.key for m in k.members):
+                return self.kinds.gain_prior(k.palette)
+        return 0
+
     def _colour_of(self, rid: int) -> int | None:
         entry = self.regions._tracked.get(rid)
         return entry[0] if entry is not None else None
@@ -737,7 +768,7 @@ class MyAgent(Agent):
                 self.relations, self.regions.live, legal, self._level_step,
                 exclude=context, prior=self.supervisor.prior,
                 typer=lambda key: supervisor.type_of(key, self._colour_of),
-                won=self.supervisor.won)
+                won=self.supervisor.won, bonus=self._kind_bonus)
             self.hypothesis = h
         if h is None:
             return None

@@ -114,7 +114,7 @@ class Proposer:
 
     def propose(self, engine, live, legal: set[str], step: int,
                 exclude: set[int] = frozenset(), prior=None, typer=None,
-                won: dict[str, int] | None = None) -> Hypothesis | None:
+                won: dict[str, int] | None = None, bonus=None) -> Hypothesis | None:
         """`exclude` is for entities belief has judged CONTEXT — things
         that change whatever is pressed. Their relations can carry a
         lever by chance (cd82's stamina bar earned a +30% lever on four
@@ -150,7 +150,8 @@ class Proposer:
                 continue
             action, lift = lever
             mattered = prior(typer(key)) if (prior and typer) else 0
-            cand = (mattered, won.get(action, 0), lift, -rec.residual, key)
+            extra = bonus(key) if bonus else 0
+            cand = (mattered, extra, won.get(action, 0), lift, -rec.residual, key)
             if best is None or cand > best[0]:
                 best = (cand, Hypothesis(key=key, action=action, lift=lift, start=rec.residual))
         return best[1] if best else None

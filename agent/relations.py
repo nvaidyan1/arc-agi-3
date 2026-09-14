@@ -210,6 +210,7 @@ class RelationEngine:
         # its records live under.
         self._alias: dict[tuple, tuple] = {}
         self._unit_colours: dict[tuple, frozenset[int]] = {}
+        self._background: int | None = None
 
     # ── update ──────────────────────────────────────────────────────────
 
@@ -238,6 +239,9 @@ class RelationEngine:
         self._step += 1
         self.live = set(live)
         skip = set(skip)
+        for rid in skip:                      # the canvas colour, for content units
+            if rid in tracked:
+                self._background = tracked[rid][0]
         self._prev = self._now
         self._now = {rid: Descriptor.of(colour, cells)
                      for rid, (colour, cells) in tracked.items() if rid not in skip}
@@ -362,15 +366,26 @@ class RelationEngine:
             return {}
         grouped = set().union(*groups)
         units: list[tuple[tuple, frozenset[int], frozenset, dict[int, int]]] = []
-        for g in groups:
-            cells = frozenset().union(*(self._now[r].cells for r in g))
-            cols = frozenset().union(*(self._now[r].colours for r in g))
-            self._unit_colours[tuple(sorted(g))] = cols
+        def unit(ids):
+            key = tuple(sorted(ids))
+            cells = frozenset().union(*(self._now[r].cells for r in ids))
+            cols = frozenset().union(*(self._now[r].colours for r in ids))
+            self._unit_colours[key] = cols
             per_colour: dict[int, int] = {}
-            for r in g:
+            for r in ids:
                 for c in self._now[r].colours:
                     per_colour[c] = per_colour.get(c, 0) + len(self._now[r].cells)
-            units.append((tuple(sorted(g)), cols, cells, per_colour))
+            return (key, cols, cells, per_colour)
+
+        for g in groups:
+            units.append(unit(g))
+            # What a framed group encloses is a unit of its own (see
+            # `content`): cd82's template content {black, pink} against the
+            # block {black, pink} is the pair the matching family is about,
+            # and the frame's own colours hid it.
+            inner = content(self._now, g, self._background)
+            if inner and len(inner) < len(g):
+                units.append(unit(inner))
         for rid in sorted(self.live):
             if rid in self._now and rid not in grouped:
                 d = self._now[rid]
@@ -381,6 +396,8 @@ class RelationEngine:
             for kb, cb, ceb, nb in units[i + 1:]:
                 if len(ka) == 1 and len(kb) == 1:
                     continue        # singleton pairs are the ordinary records
+                if set(ka) <= set(kb) or set(kb) <= set(ka):
+                    continue        # a thing against its own inside says nothing
                 out[("palette_diff", ka, kb)] = len(ca ^ cb)
                 out[("shape_diff", ka, kb)] = 0 if _shape(cea) == _shape(ceb) else None
                 out[("palette_missing", ka, kb)] = len(ca - cb)
@@ -462,6 +479,22 @@ class RelationEngine:
     def clear(self) -> None:
         """New level: entity ids are gone, so every pair is too."""
         self.__init__()
+
+
+def content(now: dict, g, background: int | None) -> tuple | None:
+    """What a framed group encloses: if one member's bounding box holds
+    every other member, the others minus canvas-coloured filler are the
+    frame's content. Enclosure is the geometry the grouping view already
+    uses; this only names the inside. None when no member frames the rest."""
+    for frame in g:
+        x0, y0, x1, y1 = now[frame].bbox
+        others = [r for r in g if r != frame]
+        if others and all(x0 <= x <= x1 and y0 <= y <= y1
+                          for r in others for (x, y) in now[r].cells):
+            inner = tuple(sorted(r for r in others
+                                 if background is None or now[r].colours != {background}))
+            return inner or None
+    return None
 
 
 def _chebyshev(p: tuple[float, float], q: tuple[float, float]) -> int:
