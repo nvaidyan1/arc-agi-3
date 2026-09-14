@@ -37,6 +37,7 @@ from __future__ import annotations
 from constants import (  # noqa: F401  (SHAPE_REVIVE_WINDOW re-exported for tests)
     REGION_MATCH_DISTANCE,
     REGION_MATCH_SIZE_TOLERANCE,
+    REGION_MOTION_TOLERANCE,
     SHAPE_REVIVE_WINDOW,
 )
 
@@ -84,9 +85,34 @@ class RegionTracker:
         # would never be recognised. Bounded in practice — only regions
         # above the caller's `min_size` are ever passed in.
         self._tracked: dict[int, tuple[int, frozenset[tuple[int, int]]]] = {}
+        # The ids actually on screen in the most recent frame. `_tracked`
+        # deliberately remembers what has gone; this is what is here now,
+        # and it is the set every consumer that reasons about *things I
+        # can see* should read. Measured before it existed: on cd82 the
+        # belief layer was scoring ghosts — remembered positions of an
+        # object that had since moved on — and the router was routing the
+        # object toward its own ghost.
+        self.live: set[int] = set()
+        # The layout as it stood at the start of the current attempt —
+        # what the level restores on RESET. Kept so that a reset can be
+        # *told* rather than deduced: the shape-revive pass below can only
+        # recognise a teleported object whose form is identical, and an
+        # object that faces a different way at home than it did when it
+        # died (cd82's bucket) is not. Measured before this: a post-reset
+        # frame minted ids at ~20x the ordinary rate, and every belief on
+        # the old ids was orphaned.
+        self._home: dict[int, tuple[int, frozenset[tuple[int, int]]]] | None = None
+        self._expect_home = False
+
+    def expect_home(self) -> None:
+        """The caller has just sent RESET: the next frame is the layout as
+        it was at the start of the attempt, so match against that first."""
+        self._expect_home = True
 
     def update(
-        self, regions: list[tuple[int, frozenset[tuple[int, int]]]]
+        self,
+        regions: list[tuple[int, frozenset[tuple[int, int]]]],
+        expected_offset: tuple[int, int] | None = None,
     ) -> dict[int, tuple[int, frozenset[tuple[int, int]]]]:
         """Match this frame's regions to the previous frame's.
 
@@ -100,11 +126,49 @@ class RegionTracker:
         colour entirely is a different thing for our purposes, and letting
         colours merge would quietly recreate the aggregate this layer
         exists to escape.
+
+        `expected_offset` is what the caller's own move map says the action
+        just taken does — the displacement it has learned to expect. When
+        given, a region that was on screen last frame and now sits that far
+        away is matched however large the hop, which is the only evidence
+        that can follow an object whose stride exceeds the proximity bound.
         """
         self._step += 1
+        was_live = set(self.live)
+        assigned: dict[int, tuple[int, frozenset]] = {}
+        used_old: set[int] = set()
+        used_new: set[frozenset] = set()
+
+        # Zeroth pass, only on the frame after a RESET: the level has put
+        # everything back where the attempt began, so a region that
+        # overlaps a remembered home region of its colour IS that region.
+        # This is the caller telling us what happened rather than us
+        # guessing from shapes, and it is what carries an object's beliefs
+        # across a death.
+        if self._expect_home and self._home:
+            candidates = []
+            for colour, cells in regions:
+                for home_id, (home_colour, home_cells) in self._home.items():
+                    if home_colour != colour:
+                        continue
+                    overlap = len(cells & home_cells)
+                    if overlap:
+                        candidates.append((overlap, home_id, colour, cells))
+            candidates.sort(key=lambda c: -c[0])
+            for _overlap, home_id, colour, cells in candidates:
+                if home_id in used_old or cells in used_new:
+                    continue
+                assigned[home_id] = (colour, cells)
+                used_old.add(home_id)
+                used_new.add(cells)
+
         candidates = []
         for colour, cells in regions:
+            if cells in used_new:
+                continue
             for old_id, (old_colour, old_cells) in self._tracked.items():
+                if old_id in used_old:
+                    continue
                 if old_colour != colour:
                     continue
                 overlap = len(cells & old_cells)
@@ -114,9 +178,6 @@ class RegionTracker:
         # Largest overlaps win, so a big region keeps its identity when a
         # small one happens to straddle the same pixels.
         candidates.sort(key=lambda c: -c[0])
-        assigned: dict[int, tuple[int, frozenset]] = {}
-        used_old: set[int] = set()
-        used_new: set[frozenset] = set()
         for _overlap, old_id, colour, cells in candidates:
             if old_id in used_old or cells in used_new:
                 continue
@@ -124,7 +185,41 @@ class RegionTracker:
             used_old.add(old_id)
             used_new.add(cells)
 
-        # Second pass: proximity. Overlap is the stronger evidence and is
+        # Second pass: explained motion. If we just did the thing that
+        # moves something by `expected_offset`, then a region that was on
+        # screen last frame and has reappeared exactly that far away is
+        # that region. Stronger evidence than proximity — it is a
+        # prediction confirmed rather than a nearest-neighbour guess — and
+        # the only pass that scales with the game's own stride instead of
+        # a constant of ours. Size is still required to be similar, within
+        # the tolerance a deforming mover has already earned.
+        leftovers = [(c, cells) for c, cells in regions if cells not in used_new]
+        if leftovers and expected_offset is not None:
+            dx, dy = expected_offset
+            candidates = []
+            for colour, cells in leftovers:
+                cx, cy = _centroid(cells)
+                for old_id, (old_colour, old_cells) in self._tracked.items():
+                    if (old_id in used_old or old_colour != colour
+                            or old_id not in was_live):
+                        continue
+                    if abs(len(cells) - len(old_cells)) > (
+                            REGION_MATCH_SIZE_TOLERANCE
+                            * max(len(cells), len(old_cells))):
+                        continue
+                    ox, oy = _centroid(old_cells)
+                    miss = max(abs(cx - (ox + dx)), abs(cy - (oy + dy)))
+                    if miss <= REGION_MOTION_TOLERANCE:
+                        candidates.append((miss, old_id, colour, cells))
+            candidates.sort(key=lambda c: c[0])
+            for _miss, old_id, colour, cells in candidates:
+                if old_id in used_old or cells in used_new:
+                    continue
+                assigned[old_id] = (colour, cells)
+                used_old.add(old_id)
+                used_new.add(cells)
+
+        # Third pass: proximity. Overlap is the stronger evidence and is
         # always tried first, but it cannot follow a thing that moves
         # further than its own width — and that is most moving objects,
         # since a stride tends to exceed a sprite. Without this, ls20's
@@ -155,7 +250,7 @@ class RegionTracker:
                 used_old.add(old_id)
                 used_new.add(cells)
 
-        # Third pass: same shape, same colour, somewhere else entirely.
+        # Fourth pass: same shape, same colour, somewhere else entirely.
         # A RESET teleports every object back to its start, so neither
         # overlap nor proximity can follow it and the tracker mints a
         # fresh id -- discarding every belief attached to the old one,
@@ -204,9 +299,19 @@ class RegionTracker:
         self._tracked.update(assigned)
         for rid in assigned:
             self._last_seen[rid] = self._step
+        self.live = set(assigned)
+        # The first frame after a clear is the level's start; the first
+        # after a reset is the same layout restored. Either way, this is
+        # what the next reset will return us to.
+        if self._home is None or self._expect_home:
+            self._home = dict(assigned)
+            self._expect_home = False
         return assigned
 
     def clear(self) -> None:
         """New level: the layout is gone, so no id survives it."""
         self._tracked.clear()
         self._last_seen.clear()
+        self.live.clear()
+        self._home = None
+        self._expect_home = False

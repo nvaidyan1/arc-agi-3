@@ -49,6 +49,8 @@ import math
 
 from constants import (
     BELIEF_CONTEXT_BASELINE,
+    BELIEF_DETERMINISM,
+    BELIEF_DETERMINISM_MIN_CHANGES,
     BELIEF_HYSTERESIS,
     BELIEF_MIN_ACTIONS,
     BELIEF_MIN_CERTAINTY,
@@ -93,7 +95,7 @@ class Belief:
     """One entity's accumulated evidence, and the role it currently earns."""
 
     __slots__ = ("region_id", "colour", "acted", "changed", "kinds",
-                 "last_size", "last_cells", "_held")
+                 "effects", "last_size", "last_cells", "_held", "live")
 
     def __init__(self, region_id: int, colour: int) -> None:
         self.region_id = region_id
@@ -109,6 +111,12 @@ class Belief:
         # different amounts of understanding, and the second is available
         # from the same observations.
         self.kinds: dict[str, dict[str, int]] = {}
+        # Per action, a tally of the EFFECT: the kind plus, for motion, the
+        # direction it went. `kinds` answers "how does this action change
+        # it"; this answers "does this action always do the same thing to
+        # it", which is what control looks like when several buttons all
+        # move one thing.
+        self.effects: dict[str, dict[tuple, int]] = {}
         self.last_size = 0
         # The cells this entity occupied on the PREVIOUS frame. Needed
         # because a change at its edge removes that cell from the region:
@@ -125,14 +133,48 @@ class Belief:
         # gained a role, lost it and regained it, one of them seven times,
         # and the Controls readout changed on 19% of steps.
         self._held: str = UNASSIGNED
+        # Whether the tracker saw this entity in the most recent frame. A
+        # belief outlives its entity on purpose — a stamina bar that
+        # empties comes back — but an entity that is not on screen cannot
+        # be observed, targeted or acted on, and until this flag existed
+        # every one of those was happening to ghosts.
+        self.live = True
 
-    def observe(self, action: str, kind: str | None) -> None:
+    def observe(self, action: str, kind: str | None,
+                effect: tuple | None = None) -> None:
         self.acted[action] = self.acted.get(action, 0) + 1
         if kind is None:
             return
         self.changed[action] = self.changed.get(action, 0) + 1
         per = self.kinds.setdefault(action, {})
         per[kind] = per.get(kind, 0) + 1
+        eff = self.effects.setdefault(action, {})
+        key = effect if effect is not None else (kind,)
+        eff[key] = eff.get(key, 0) + 1
+
+    def determinism(self, action: str) -> tuple[tuple | None, float]:
+        """The effect this action most often has on this entity, and how
+        reliably — the fraction of the changes it caused that were that
+        effect. (None, 0.0) below the evidence floor."""
+        eff = self.effects.get(action, {})
+        total = sum(eff.values())
+        if total < BELIEF_DETERMINISM_MIN_CHANGES:
+            return None, 0.0
+        best = max(eff, key=eff.get)
+        return best, eff[best] / total
+
+    @property
+    def controllers(self) -> list[tuple[str, tuple, float]]:
+        """Actions that each do one fixed thing to this entity, with
+        DISTINCT effects — the d-pad signature. Sorted by reliability."""
+        out = []
+        for action in self.acted:
+            effect, rel = self.determinism(action)
+            if effect is not None and rel >= BELIEF_DETERMINISM:
+                out.append((action, effect, rel))
+        if len({e for _a, e, _r in out}) < 2:
+            return []
+        return sorted(out, key=lambda t: -t[2])
 
     def kind_for(self, action: str | None) -> str | None:
         """The way this action most often changes this entity."""
@@ -151,6 +193,23 @@ class Belief:
     @property
     def observations(self) -> int:
         return sum(self.acted.values())
+
+    @property
+    def centroid(self) -> tuple[int, int] | None:
+        """Where this entity is, as one board pixel — None if it has none.
+
+        Descriptive, not interpretive: the mean of the cells it occupied
+        on the last frame, rounded to the nearest cell. It says where the
+        thing is, never what being there means. Reads `last_cells` rather
+        than live cells for the same reason `observe` does — a vanished
+        entity still has a last known position, and a target that
+        evaporates the moment it is reached is not a target.
+        """
+        cells = self.last_cells
+        if not cells:
+            return None
+        return (round(sum(c[0] for c in cells) / len(cells)),
+                round(sum(c[1] for c in cells) / len(cells)))
 
     @property
     def rates(self) -> dict[str, float]:
@@ -207,6 +266,13 @@ class Belief:
         if (self.observations < BELIEF_MIN_OBSERVATIONS
                 or len(self.acted) < BELIEF_MIN_ACTIONS):
             return UNASSIGNED
+        # Several actions each doing one fixed, different thing to this
+        # entity is control regardless of rate: the rate contrast below
+        # cannot see it, because a thing every button moves has no button
+        # that stands out.
+        if self.controllers:
+            self._held = CONTROL
+            return CONTROL
         _action, lift = self.selectivity
         # Hysteresis: keeping a role needs less than winning it did.
         bar = (BELIEF_SELECTIVITY - BELIEF_HYSTERESIS
@@ -279,8 +345,7 @@ class Belief:
             if not n:
                 return 0.0
             return _one_sided(sum(self.changed.values()) / n,
-                              BELIEF_CONTEXT_BASELINE,
-    BELIEF_HYSTERESIS, n)
+                              BELIEF_CONTEXT_BASELINE, n)
         return self._selective_certainty
 
     @property
@@ -308,13 +373,28 @@ class Belief:
             return 0.0
         if role == CONTEXT:
             return self.responsiveness
+        if role == CONTROL and self.controllers:
+            return self.controllers[0][2]
         action, _lift = self.selectivity
         return self.rates.get(action, 0.0) if action else 0.0
 
     def describe(self) -> str:
         role = self.role
+        if role == CONTROL and self.controllers:
+            named = ", ".join(
+                f"{a} {e[0]}{' ' + _dir_name(e) if len(e) == 3 else ''} it "
+                f"({rel:.0%})"
+                for a, e, rel in self.controllers[:4])
+            return named
         if role in (CONTROL, AFFECT):
             drivers = self.drivers
+            if not drivers:
+                # Held under hysteresis: the role stands on less than the
+                # winning bar, so `drivers` (which uses the full bar) is
+                # empty. Name the winner anyway — a blank row was seen
+                # live on cd82 and reads as a bug rather than as caution.
+                action, lift = self.selectivity
+                drivers = [(action, lift)] if action else []
             named = ", ".join(
                 f"{a} {self.kind_for(a) or 'changes'} it +{lift:.0%}"
                 for a, lift in drivers[:3])
@@ -334,27 +414,60 @@ def _centroid(cells) -> tuple[float, float]:
     return (sum(c[0] for c in cells) / n, sum(c[1] for c in cells) / n)
 
 
-def _kind(belief, cells, hit: bool, first_seen: bool) -> str | None:
-    """How this entity changed, from its cells alone.
+def _dir_name(effect: tuple) -> str:
+    """(kind, sx, sy) -> a compass-free direction word pair."""
+    _k, sx, sy = effect
+    x = {-1: "-x", 0: "", 1: "+x"}[sx]
+    y = {-1: "-y", 0: "", 1: "+y"}[sy]
+    return (x + y) or "in place"
+
+
+def _kind(belief, cells, hit: bool, first_seen: bool) -> tuple[str | None, tuple | None]:
+    """How this entity changed, from its cells alone: (kind, effect).
 
     Nothing here knows anything about a game: the whole vocabulary is what
     happened to a set of cells. Never classifies on the first sighting —
     `last_cells` is initialised to the current cells, so without that guard
     an entity that appears reads as having moved, and a recolour would be
     described as motion, which is a claim about the world and the wrong one.
+
+    `effect` is the kind plus, for motion, the direction — the unit of
+    determinism.
+
+    Motion is read from the EXTENT, not the size: a thing has moved along
+    an axis when both edges of its bounding box shift the same way. Growth
+    extends one edge and leaves the other; motion carries both. That
+    separates the two without any tolerance constant, and it is what lets
+    a thing that turns as it moves — re-rasterising to a different cell
+    count at each angle — still be read as moving. Measured on cd82: the
+    bucket's frame read GREW/SHRANK on every hop (30 cells above the block,
+    43 beside it) and so could never be control, because control was
+    defined as motion.
     """
     if first_seen:
-        return APPEARED if hit else None
+        return (APPEARED, (APPEARED,)) if hit else (None, None)
     if not hit or cells == belief.last_cells:
-        return None
+        return None, None
+    moved_x = _extent_shift(belief.last_cells, cells, 0)
+    moved_y = _extent_shift(belief.last_cells, cells, 1)
+    if moved_x or moved_y:
+        return MOVED, (MOVED, moved_x, moved_y)
     if len(cells) != belief.last_size:
-        return GREW if len(cells) > belief.last_size else SHRANK
-    # Same size, different cells: either it went somewhere, or it turned
-    # on the spot. A rotation about a point holds the centroid; a
-    # translation does not.
-    before, after = _centroid(belief.last_cells), _centroid(cells)
-    shifted = abs(after[0] - before[0]) + abs(after[1] - before[1])
-    return MOVED if shifted > 0.5 else TURNED
+        kind = GREW if len(cells) > belief.last_size else SHRANK
+        return kind, (kind,)
+    # Same size, same extent, different cells: it turned on the spot.
+    return TURNED, (TURNED,)
+
+
+def _extent_shift(before, after, axis: int) -> int:
+    """-1, 0 or +1: did the whole extent move along this axis?"""
+    lo = min(c[axis] for c in after) - min(c[axis] for c in before)
+    hi = max(c[axis] for c in after) - max(c[axis] for c in before)
+    if lo > 0 and hi > 0:
+        return 1
+    if lo < 0 and hi < 0:
+        return -1
+    return 0
 
 
 class WorldBelief:
@@ -364,17 +477,28 @@ class WorldBelief:
         self._beliefs: dict[int, Belief] = {}
 
     def update(self, tracked: dict, action: str, changed_cells) -> None:
-        """Fold one step into every currently-tracked entity.
+        """Fold one step into every entity on screen this frame.
 
-        `tracked` is `RegionTracker`'s output for this frame. An entity is
+        `tracked` is `RegionTracker.update`'s return value — what is
+        present NOW, not its memory of what has been. An entity is
         "changed" this step if any cell that differed lies inside it, and
         "displaced" if its cells moved while its size held — a cheap proxy
         that deliberately does not re-run the motion lenses, since the point
         here is to relate evidence rather than to produce more of it.
+
+        An entity that was on screen last step and is not now is observed
+        exactly once more, as VANISHED, and then left alone: it cannot be
+        observed while it is not there, and letting it accumulate "did not
+        change" observations every step was quietly diluting the rates of
+        everything that had merely moved out of the tracker's reach.
         """
         if not action or action == "RESET":
             return
         touched = set(changed_cells or ())
+        for rid, belief in self._beliefs.items():
+            if belief.live and rid not in tracked:
+                belief.observe(action, VANISHED)
+                belief.live = False
         for rid, (colour, cells) in tracked.items():
             belief = self._beliefs.get(rid)
             first_seen = belief is None
@@ -385,13 +509,20 @@ class WorldBelief:
             # Union of where it is and where it just was, so a change at
             # the boundary counts for the entity that boundary belongs to.
             hit = bool(touched & (cells | belief.last_cells))
-            belief.observe(action, _kind(belief, cells, hit, first_seen))
+            kind, effect = _kind(belief, cells, hit, first_seen)
+            belief.observe(action, kind, effect)
             belief.last_size = len(cells)
             belief.last_cells = cells
+            belief.live = True
 
-    def by_role(self, role: str) -> list[Belief]:
-        """Every entity currently holding `role`, best evidence first."""
-        out = [b for b in self._beliefs.values() if b.role == role]
+    def by_role(self, role: str, live_only: bool = True) -> list[Belief]:
+        """Every entity currently holding `role`, best evidence first.
+
+        On-screen entities only by default: a role is a fact about a thing,
+        but acting on it needs the thing to be there.
+        """
+        out = [b for b in self._beliefs.values()
+               if b.role == role and (b.live or not live_only)]
         return sorted(out, key=lambda b: -b.selectivity[1])
 
     def summary(self) -> list[tuple[int, str, str, str]]:

@@ -233,7 +233,22 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
             # completely tractable description — which is the argument for
             # this layer: a number that small can be reasoned about, while
             # 4096 pixels cannot.
-            "entity_count": len(agent.regions._tracked),
+            # On screen now. The tracker also remembers what has gone (so
+            # a bar that empties is recognised when it refills), and that
+            # memory used to be shown here as if it were the scene: on cd82
+            # the panel listed the bucket twice, once where it was and once
+            # where it had been, and the mask painted both.
+            "entity_count": len(agent.regions.live),
+            # The canvas as the tracked entity it is: the largest live
+            # region of the background colour. Shown in the Belief panel
+            # rather than as a standalone "background" perception.
+            "canvas": next(
+                ({"id": rid, "colour": colour}
+                 for rid, (colour, cells) in sorted(
+                     agent.regions._tracked.items(), key=lambda kv: -len(kv[1][1]))
+                 if colour == agent._background and rid in agent.regions.live),
+                None),
+            "ghost_count": len(agent.regions._tracked) - len(agent.regions.live),
             "stamina_entity": agent.stamina.stamina_region,
             # Per action, the rotations it has been seen to cause. Sits
             # beside the move map because it answers the same question —
@@ -279,6 +294,7 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
                 "entities": [[x, y, rid]
                              for rid, (colour, cells) in agent.regions._tracked.items()
                              if colour != agent._background
+                             and rid in agent.regions.live
                              for x, y in cells][:1500],
                 "click_effect": _weighted_cells(
                     getattr(agent.clicks, "_effect", {}) or {})[:120],
@@ -307,20 +323,25 @@ def snapshot(agent, frame, action, step: int, transitions=None) -> dict:
             # ENVIRONMENT is excluded: "never changes" is true of most of
             # the board and tells you nothing, and a dozen such rows were
             # crowding out the entities an action actually drives.
+            # `live` says whether the entity is on screen this frame. A
+            # belief outlives its entity on purpose; the panel shows the
+            # off-screen ones dimmed and last, so a role earned by a thing
+            # that is not there is never mistaken for the scene.
             "beliefs": sorted(
                 ({"id": rid, "colour": colour, "role": role, "why": why,
-                  "strength": round(strength, 3)}
+                  "strength": round(strength, 3), "live": bel.live}
                  for (rid, colour, role, why, strength), bel in
                  zip(agent.belief.summary(), agent.belief.ordered())
                  if role not in ("unassigned", "environment")),
-                key=lambda b: ({"control": 0, "affect": 1, "context": 2}[b["role"]],
+                key=lambda b: (not b["live"],
+                               {"control": 0, "affect": 1, "context": 2}[b["role"]],
                                -b["strength"]),
             )[:12],
             "belief_roles": {
-                r: sum(1 for _i, _c, role, _w, _q in agent.belief.summary()
-                       if role == r)
+                r: sum(1 for b in agent.belief.ordered() if b.live and b.role == r)
                 for r in ("control", "affect", "context", "environment", "unassigned")
             },
+            "belief_ghosts": sum(1 for b in agent.belief.ordered() if not b.live),
         },
         # ── the decision itself ──────────────────────────────────────────
         "decision": {

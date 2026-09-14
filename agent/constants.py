@@ -103,6 +103,16 @@ REGION_MATCH_SIZE_TOLERANCE = 0.3
 # a region gone for a long time and matched on shape alone is more likely
 # a look-alike than a survivor.
 SHAPE_REVIVE_WINDOW = 3
+# A region that was on screen last frame and now sits where the move we
+# just made would have put it is the same region, however far that is.
+# The offset comes from the caller's own move map, so nothing here fixes a
+# stride; this is only how far the centroid may deviate from the expected
+# landing. Non-zero because a shape that turns as it moves re-rasterises
+# (cd82's bucket: 73 cells above the block, 84 beside it) and its centroid
+# drifts a cell or two. Measured on cd82 seed 8: proximity at 8 lost the
+# bucket on every 11-15 cell hop and minted a fresh id each time, leaving
+# the old one behind as a remembered ghost that kept its beliefs.
+REGION_MOTION_TOLERANCE = 2
 
 # ── Belief (what each entity is to me) ──────────────────────────────────
 # Roles are read from CONTRAST between actions, not from how busy an entity
@@ -137,6 +147,55 @@ BELIEF_MIN_CERTAINTY = 0.95
 # and the readout changed on 19% of steps. Small enough that a role which
 # genuinely stops holding still drops.
 BELIEF_HYSTERESIS = 0.05
+# CONTROL by determinism. The rate contrast above finds "one button drives
+# this"; it cannot find a thing driven by *several* buttons at equal rates,
+# which is every d-pad. Measured on cd82: the bucket responds to ACTION1-4
+# about equally, so no action stands out, and the controller read as
+# AFFECT with thin evidence and CONTEXT ("shrank whatever I press") with
+# more. What distinguishes control is not how often a thing changes under
+# an action but that WHAT happens is fixed by WHICH action: ACTION3 always
+# takes it left, ACTION4 always right. An action is deterministic for an
+# entity when this fraction of the changes it causes carry the same
+# effect, and an entity is CONTROL when at least two actions are
+# deterministic for it with different effects. Two, not one: a single
+# deterministic action is already covered by the rate contrast, and one
+# button that always does one thing to a thing is AFFECT unless that thing
+# is motion.
+BELIEF_DETERMINISM = 0.8
+BELIEF_DETERMINISM_MIN_CHANGES = 4
+
+# ── Connecting belief to action ─────────────────────────────────────────
+# Two flags, both default OFF so the tree's default behaviour stays
+# byte-identical to the ~43 sweeps already on record at this commit.
+# They are separate because they are separable: the target changes where
+# the router aims (level 1 included), the gate changes *when* it is
+# allowed to aim at all (level 2 onward only). Shipping them as one knob
+# would repeat the router's original mistake of adding a signal and
+# changing decision logic in a single pass, which made its regression
+# unattributable.
+#
+# TARGET. The router's destination is currently the hottest *interest*
+# cell — where change has recently happened. Measured, that is not where
+# the goal is, and routing to it cost score (mean 0.0511 -> 0.0164).
+# Belief offers a different kind of destination: an entity some action has
+# been *shown* to act on. "Bring the thing I move to the thing ACTION5
+# does something to" is a claim about an action's demonstrated effect, not
+# about a location's recency.
+USE_BELIEF_TARGET = os.environ.get("ARC_BELIEF_TARGET", "0") == "1"
+
+# GATE. `proven` — has any action ever produced a level-up or a vanish —
+# currently latches for the whole run, so clearing level 1 permanently
+# disables the router. Measured on cd82 seed 8: the router takes 22% of
+# level-1 actions and 0% of level-2's 292, which are 74% bandit instead.
+# The gate's stated intent was "route only while nothing has proven itself
+# *yet*", and a level-up is an achievement about a layout the game has
+# just replaced. Scoping it per level restores that intent: the per-level
+# counter holds this level's vanishes only (a level-up is what ended the
+# previous layout, so it is evidence about nothing we can still act on),
+# and `_weighted_choice` is untouched, keeping its full cross-level
+# level-up credit — that is the channel the original regression ran
+# through, and it is deliberately left alone.
+USE_PER_LEVEL_ROUTE_GATE = os.environ.get("ARC_ROUTE_PER_LEVEL", "0") == "1"
 
 # ── Environment (what resists me) ───────────────────────────────────────
 # One failed attempt is enough to call a move blocked: these games are

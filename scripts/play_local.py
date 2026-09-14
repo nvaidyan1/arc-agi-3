@@ -271,8 +271,15 @@ def main() -> None:
                 # Experiment arm. Without this in the record, two arms of
                 # an A/B land in the same bucket and the comparison is
                 # silently meaningless.
+                # Defaults mirror agent/constants.py exactly: an unset
+                # variable must be recorded as what the agent actually
+                # did, not as False.
                 flags={"shift_fallback":
-                       os.environ.get("ARC_SHIFT_FALLBACK", "0") == "1"},
+                       os.environ.get("ARC_SHIFT_FALLBACK", "1") == "1",
+                       "belief_target":
+                       os.environ.get("ARC_BELIEF_TARGET", "0") == "1",
+                       "route_per_level":
+                       os.environ.get("ARC_ROUTE_PER_LEVEL", "0") == "1"},
                 observed=observed,
                 scorecard=scorecard,
                 aggregate_score=score_val,

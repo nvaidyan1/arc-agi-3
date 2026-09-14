@@ -21,15 +21,39 @@
   .pill{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:99px;
         background:var(--bg);border:1px solid var(--edge);color:var(--dim)}
   .pill b{color:var(--ink);font-weight:600}
-  main{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:14px;padding:14px}
-  @media (max-width:860px){main{grid-template-columns:1fr}}
+  /* One screen, no page scroll. The page is a column (header, scrub,
+     main, keys); `main` takes the remaining height and every card inside
+     it scrolls internally instead of pushing the page. Panel heights are
+     fixed fractions, so a card whose content grows (Controls learns a
+     fifth action; Belief gains rows) does not shove its neighbours around
+     as you scrub through steps. */
+  html,body{height:100%}
+  body{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(260px,380px) 1fr;
+       gap:14px;padding:14px}
+  main>*{min-height:0}
+  .stack{display:flex;flex-direction:column;gap:14px;min-height:0}
+  .stack>.card{min-height:0;overflow:auto}
+  .stack>.card.fixed{flex:0 0 auto}
+  .stack>.card.fill{flex:1 1 0}
+  .stack>.card.half{flex:0 0 46%}
+  /* Frames are square; cap them by height so the column never overflows,
+     and let width follow. */
+  canvas#grid,canvas#mask{width:min(100%,36vh);height:auto;margin:0 auto}
+  @media (max-width:860px){
+    body{height:auto;overflow:auto}
+    main{grid-template-columns:1fr}
+    .stack>.card{overflow:visible}
+    .stack>.card.half{flex:0 0 auto}
+  }
   .card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
         padding:12px 14px}
   .card h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;
            color:var(--dim);margin:0 0 10px;font-weight:600}
   canvas{width:100%;height:auto;image-rendering:pixelated;border-radius:6px;
          background:#000;display:block}
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:0}
+  .cols>*{min-height:0}
   @media (max-width:1100px){.cols{grid-template-columns:1fr}}
   table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
   td{padding:3px 0;vertical-align:top}
@@ -133,8 +157,8 @@
 <div style="padding:0 14px"><input type="range" id="scrub" min="0" value="0"></div>
 
 <main>
-  <div>
-    <div class="card">
+  <div class="stack">
+    <div class="card fixed">
       <h2>Frame — ground truth</h2>
       <!-- No overlays here, deliberately: this is the raw grid the game
            sent, nothing the agent believes drawn on top of it. Every
@@ -142,7 +166,7 @@
            it's never ambiguous which one you're looking at. -->
       <canvas id="grid"></canvas>
     </div>
-    <div class="card" style="margin-top:14px"><h2>Decision</h2>
+    <div class="card fill"><h2>Decision</h2>
       <div id="tier" class="tier t-none">—</div>
       <div id="weights"></div>
       <div id="pad"></div>
@@ -153,7 +177,7 @@
     </div>
   </div>
   <div class="cols">
-    <div class="card">
+    <div class="card" style="overflow:auto">
       <h2>Perceptions</h2>
       <!-- Every mask below is a real signal the agent already computes —
            see the LAYERS list in the script for what each one answers
@@ -164,8 +188,11 @@
       <div id="masklegend" class="legend"></div>
       <table id="ptable"></table>
     </div>
-    <div>
-      <div class="card">
+    <div class="stack">
+      <!-- Fixed height on purpose: this card's content changes length as
+           actions are learned, and when it did the Belief card below
+           jumped up and down with every step. -->
+      <div class="card half">
         <h2>Controls — what each button does</h2>
         <div id="controls"></div>
         <!-- Collapsed by default: these are raw tallies, useful when
@@ -183,7 +210,7 @@
            different KIND of statement. Evidence counts what happened;
            belief says what a thing is to the agent, and is the only panel
            here that composes the others. -->
-      <div class="card" style="margin-top:14px">
+      <div class="card fill">
         <h2>Belief — what each entity is to me</h2>
         <div id="beliefs"></div>
       </div>
@@ -490,6 +517,24 @@ function describeDisplacement([dx, dy], anchorKnown){
     : ' <span class="hint">(no confirmed movement yet — relative only)</span>');
 }
 
+// The move model's frame of reference, in one line, shown only once a
+// move map exists: without one there is no "self" whose position, visited
+// count or obstacles mean anything, and printing them anyway presented a
+// single avatar the agent has not found (and may not exist on this game).
+function displacementFrameLine(p){
+  if(!p.moves || !Object.keys(p.moves).length) return "";
+  const bits = [describeDisplacement(p.displacement, !!p.anchor),
+                `${p.visited} visited`,
+                `${p.obstacles || 0} blocked`];
+  const warn = p.obstacles && p.obstacles_offboard > 0.2
+    ? ` <span style="color:var(--warn)">(${(p.obstacles_offboard*100).toFixed(0)}% `
+      + `of them convert off-board — the move map is not trustworthy here)</span>` : "";
+  return `<div class="hint" style="margin-top:8px" title="Where the agent believes `
+    + `it is relative to where this attempt started, how many such positions it `
+    + `has reached, and how many learned moves failed there.">`
+    + `frame: ${bits.join(" · ")}${warn}</div>`;
+}
+
 // The move map in words: which object each action moves, and which way.
 // Restored as a row after being cut as "redundant with the D-pad" — the
 // pad prints a raw offset like "-5,0" in 9px type under one of four
@@ -647,32 +692,18 @@ function render(){
   // moves from a coordinate list to the heatmap painted on the frame
   // above, plus the summary line in the legend.
   const p = s.perception;
+  // Position, explored and obstacles were rows here; they are three
+  // reports from one structure (the move model's displacement frame) and
+  // said "at the start point / 1 visited / 0 obstacles" on every game,
+  // including click games where no such frame exists. They now appear as
+  // one line under the move map they depend on, only once it exists. The
+  // background colour moved to the Belief panel, where the canvas is an
+  // entity like any other.
   $("ptable").innerHTML = rowsHtml([
-    ["background", backgroundSwatch(p.background),
-      "The canvas colour, fixed once from this level's first frame. What " +
-      "tells a change that creates or destroys something apart from one " +
-      "that just relabels it."],
-    ["position", describeDisplacement(p.displacement, !!p.anchor),
-      "Where the agent believes it is, relative to wherever this attempt " +
-      "started. Shown as a cyan marker in the Perceptions panel once a " +
-      "real movement has confirmed the board position."],
-    ["explored", `${p.visited} position${p.visited === 1 ? "" : "s"} visited`,
-      "Distinct positions reached this attempt — steers exploration " +
-      "toward ground not covered yet."],
     ["stamina", staminaBar(p.stamina_fraction, p.stamina_colour),
       "An on-screen quantity that drains during an attempt and refills " +
       "when it restarts — a lives counter, a step budget, whatever this " +
       "particular game renders."],
-    ["obstacles", p.obstacles
-        ? `${p.obstacles}` + (p.obstacles_offboard > 0.2
-            ? ` <span class="hint" style="color:var(--warn)">`
-              + `(${(p.obstacles_offboard*100).toFixed(0)}% convert off-board — `
-              + `the move map is not trustworthy here)</span>` : "")
-        : null,
-      "Positions where a learned move was tried and did not happen. Stored " +
-      "relative to the agent, so if the move map is wrong they convert to " +
-      "coordinates that are not on the board — which is itself the signal " +
-      "that something upstream is broken."],
     ["clicking", actsLocallyBadge(p.acts_locally),
       "Does the coordinate action (ACTION6) change the cell it targets, " +
       "or something elsewhere on the board?"],
@@ -702,7 +733,8 @@ function render(){
   // mid-table in Perceptions — it answers "what does this button do",
   // which is an Evidence question.
   $("controls").innerHTML = controlsRow(
-    p.controlled_by_action, p.moves, p.rotations_by_action, s.evidence.beliefs);
+    p.controlled_by_action, p.moves, p.rotations_by_action, s.evidence.beliefs)
+    + displacementFrameLine(p);
 
   renderPad(s);
   // renderDecisionTable(d);   // ← uncomment for the raw fields
@@ -782,11 +814,15 @@ function render(){
       + Object.entries(counts).filter(([k, v]) => v && k !== "environment")
           .map(([k, v]) => `${k} ${v}`).join(" · ")
       + (counts.environment ? ` · <i>${counts.environment} static, hidden</i>` : "")
+      + (s.evidence.belief_ghosts ? ` · <i>${s.evidence.belief_ghosts} off-screen</i>` : "")
+      + (p.canvas ? ` · canvas #${p.canvas.id} <span class="swatch" style="background:`
+                    + `${PALETTE[p.canvas.colour]||'#000'}"></span>` : "")
       + `</div>`
       + bel.map(b =>
-        `<div class="belrow" title="${b.why}">`
+        `<div class="belrow" title="${b.why}${b.live === false ? ' — not on screen now' : ''}"`
+        + `${b.live === false ? ' style="opacity:.45"' : ''}>`
         + `<span class="swatch" style="background:${PALETTE[b.colour]||'#000'}"></span>`
-        + `<span class="belid">#${b.id}</span>`
+        + `<span class="belid">#${b.id}${b.live === false ? '<span class="hint"> ghost</span>' : ''}</span>`
         + `<span class="badge ${ROLE_CLASS[b.role]||'badge-unknown'}">`
         + `${b.role.toUpperCase()}</span>`
         + `<span class="belpct">${(b.strength*100).toFixed(0)}%</span></div>`).join("")

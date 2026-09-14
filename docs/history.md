@@ -1548,3 +1548,211 @@ whether a role is claimed at all (below 95%, UNASSIGNED), while what is
 *shown* is how dependable the relation is: `wa30 #0 100%` (ACTION2 moves it
 every time) against `cd82 #36 27%` (ACTION5 affects it sometimes). Correct
 and useless is still useless.
+
+## 2026-09-13 — What a level-2 failure looks like; connecting belief to the router
+
+**Motivation.** The plan named level 2 as the open problem and cd82 as the
+testbed (ample budget, human clears it in 8, reproducible zero), and said to
+decide what a depth-shaped belief consumer looks like *before* building one.
+Nobody had looked at what the agent actually does on a level 2.
+
+**Observation — cd82 level 2, 8 seeds.** 5 of 8 clear level 1 (at actions
+109-211) and then spend the remaining ~290 actions on level 2 without
+clearing it. Per-tier breakdown of one such run (seed 8):
+
+| level | bandit | frontier | router | interest |
+|---|---|---|---|---|
+| 1 (109 steps) | 65% | 6% | **22%** | 5% |
+| 2 (292 steps) | **74%** | 16% | **0%** | 10% |
+
+Two `GAME_OVER`s in 292 level-2 actions. It is not dying; it is alive and
+taking near-uniform bandit actions with a median 200-cell diff each. Not a
+budget problem and not a death problem: no goal and no planner running.
+
+**Inference — the router is structurally dead from level 2 on.** The gate
+`proven = bool(_action_level_ups or _action_vanishes)` latches for the whole
+run, and those counters deliberately persist. Clearing level 1 therefore
+switches off the only planning machinery in the agent, permanently. The gate
+was added for a measured reason (an ungated router scored 0.0 on two full
+sweeps), but "once anything ever worked, never plan again" is a blunter rule
+than the harm it guards against required.
+
+**Built — two flags, both default OFF, separately measurable.**
+  * `ARC_BELIEF_TARGET`: the router's destination becomes the strongest
+    AFFECT entity (the thing some action has been *shown* to act on),
+    falling back to the hottest interest cell when no role has been earned.
+    Refuses the canvas, CONTROL entities, CONTEXT (the stamina bar), the
+    cell we already occupy, and anything with no position. Target selection
+    is policy and lives in `my_agent.py`; `belief` gained only a descriptive
+    `centroid`; `navigation` is untouched.
+  * `ARC_ROUTE_PER_LEVEL`: the gate reads a per-level vanish counter instead
+    of the run-wide one. `_weighted_choice` still reads the cross-level
+    counters — that is the channel the original regression ran through and
+    it is deliberately unchanged.
+  Default path verified byte-identical on cd82 seed 8 (401 actions).
+
+**Bug found by probing, not reasoning: the per-level gate latched on the
+first step of every level 2.** `_reset_level` runs before `_learn_from` in
+`choose_action`, so the level-up that *ended* level 1 was credited to level
+2's counter, and the router was shut before level 2 had been played at all
+(probe: `gate latches at 231`, level 2 starts at 231). A level-up is
+evidence about a layout that no longer exists; it now does not touch the
+per-level counter at all. After the fix the gate never latched on cd82 seed
+8's level 2 and the router took **88 of 171** level-2 actions (was 0).
+
+**A second latent bug, found by reading.** `Belief.certainty` passed four
+arguments to a three-argument function and raised `TypeError` for every
+CONTEXT entity. Nothing had ever called it on one. Fixed and pinned.
+
+**Observation — what belief routing does on cd82 (seed 42, level 1).**
+207 of 401 actions are router steps, in **100 separate routes of median
+length 2**, to the same entity at ~(32,38). It arrives, has nothing to do
+on arrival (the route is exhausted, `plan` returns None for start==target,
+a bandit/frontier action moves it away), and re-routes back. Half the
+level's actions are spent shuttling. Belief says "ACTION5 acts on this",
+unconditionally on position — it does not say that *being there* matters,
+and the consumer as built has no arrival behaviour because no evidence
+justifies one. This is the honest shape of the gap: the layer knows which
+action acts on which thing, and nothing yet measures whether *where* matters.
+
+**Reachability, checked before reading any per-game number.** At seed 42
+the belief target changes the action stream on **11 of 25** games (ar25,
+cd82, cn04, g50t, ka59, ls20, m0r0, sc25, sk48, tr87, wa30) — the games
+where a move map forms and an AFFECT role is earned. The gate changes **0 of
+25** at that seed: it can only bite after a level-1 clear, and the only game
+that cleared (sp80) has no move map. Both flags together ≡ belief alone
+there.
+
+**Measurement (n=30 per arm, seed-paired, 25 games, medians, permutation
+test).** 4 arms x 30 sweeps x 25 games, seed-paired:
+
+| arm | median | mean | zeros | L1/sweep | L2 total |
+|---|---|---|---|---|---|
+| base | 0.0145 | 0.0384 | 2 | 2.00 | 0 |
+| per-level gate | 0.0145 | 0.0384 | 2 | 2.00 | 0 |
+| belief target | 0.0196 | 0.0375 | 3 | 1.93 | 2 |
+| both | 0.0123 | 0.0332 | 4 | 1.73 | 0 |
+
+The gate alone is **exactly inert** — identical to base on all 30 seeds:
+even ungated, the router finds no plan on level 2. Belief vs base: median
++0.005, p = 0.60; the two level-2s (both ar25) are the only ones in 120
+sweeps, p = 0.49, noted not claimed. Both: p = 0.63.
+
+**This A/B is contaminated and must be re-run on a frozen tree.** The
+agent was edited while it ran (the identity and control work below), and
+every sweep is a fresh process importing from disk: 15/30 base, 20/30
+gate, 14/30 belief and 11/30 both sweeps ran on an edited tree. Seed
+pairing and interleaving spread the contamination across arms rather than
+confounding one, but the number measures a moving target. Recorded here as
+a procedural failure — `constants.py` already says an arm must never be
+re-run against an edited tree, and this is the same mistake one level up.
+
+What survives the contamination is mechanistic and was confirmed directly:
+with the target the consumer had (see below, it was the bucket's own
+ghost on cd82) belief-routing could not help, and the gate had nothing to
+route toward.
+
+## 2026-09-14 — The gap between the belief we have and one that could carry a hypothesis
+
+**Motivation.** The user's framing, on cd82: a bucket orbits a central
+block, painting it to match a template top-left; the belief layer should be
+rich enough that a hypothesis generator (an LLM, or a search) could
+*propose* "match the template" from a few probing moves and then test it.
+Explicitly not a cd82 feature request — the requirement is an emergent
+state/belief space that says None where it has no evidence.
+
+**Observation — the full belief state on cd82 seed 8, step 150.** Every
+row individually defensible, the whole nearly useless:
+
+  * **Identity fragments at the game's stride.** The bucket occupies 8
+    ring positions at r = 12-16 around (32,38) (100 steps at "above", 76
+    at "upper-right", ...). Each hop is 11-15 cells; the proximity bound is
+    8 (measured on games with stride 3-5). Fresh id per hop; the old id
+    lingered as a remembered ghost that **kept accumulating observations
+    and holding a role**, because `belief.update` was fed the tracker's
+    memory (`_tracked`) rather than its current frame. The router's
+    "belief target" was the bucket's own ghost.
+  * **The controller reads AFFECT, then CONTEXT.** All four movement
+    actions move the bucket at equal rates, so no action stands out by
+    rate; and it re-rasterises at each angle so its kind was GREW/SHRANK,
+    never MOVED. By level 2: "shrank whatever I press (56%)" — the
+    controller classified as weather.
+  * **No composites.** Bucket = frame + fill (open on one side, so
+    `merge_enclosed` rightly declines); block = pink + black; template =
+    black + pink in a frame. Seven entities, no part-of structure.
+  * **Vocabulary gaps.** #11 grows exactly where #12 shrinks under
+    ACTION5 — one RECOLOURED event described as two unrelated size
+    changes. The bucket's constant distance to the block is computed by
+    nothing.
+  * **No binary relations.** Block and template share a palette and a
+    two-part structure; swatch count equals template colour count; one
+    swatch is marked. Invisible: no predicate takes two entities.
+
+**Inference — what a sufficient representation contains** (all
+relational, none game-specific): objects with parts, identity by explained
+motion; per-object invariant descriptors (palette, part count, outline
+signature); binary relations over all live pairs (`same_palette`,
+`similar_shape`, `contains`, `adjacent`, `constant_distance`,
+`count_match`, `distinguished`); control as action->effect determinism;
+an event log in that vocabulary; hypotheses as *checkable predicates* with
+a progress measure, verified against the next frames, per episode only.
+Build order agreed with the user: identity -> control -> composites (by
+co-motion, enclosure, or cell exchange — never adjacency alone) ->
+relations + events -> hypothesis interface. Each step measured for which
+games it touches and for its refusals before any score is read.
+
+### Built — step 1: identity
+
+  * **Explained motion** (`RegionTracker.update(..., expected_offset)`):
+    a region on screen last frame that now sits where the caller's own
+    move map says the action just taken would put it is that region,
+    however far. Second pass, ahead of proximity. Centroid may miss by
+    `REGION_MOTION_TOLERANCE = 2` (re-rasterisation). Size within the
+    existing deformation tolerance. Only follows what was live last frame.
+  * **Live vs remembered** (`RegionTracker.live`, `Belief.live`): belief
+    observes only the current frame; an entity that leaves is observed
+    once as VANISHED and then not at all; `by_role` is live-only by
+    default. Recap panel dims ghosts and paints only live entities.
+  * **Reset is told, not deduced** (`expect_home`, `_home`): the first
+    frame after `clear()` is the level's home layout; `_reset_attempt`
+    tells the tracker a RESET was sent, and the next frame is matched
+    against home by overlap before any other pass. Post-reset minting
+    **cd82 1.7/frame -> 0.00**, ls20 0.00, wa30 0.00 (ordinary 0.01-0.06).
+    The shape-revive pass stays for what it was built for.
+  * Fixed on the way: `_tracked_live` seeded 13 phantom beliefs at cd82's
+    level-2 boundary (`_observe_frame` runs before `_reset_level`);
+    `Belief.certainty` raised TypeError on every CONTEXT entity (4 args
+    to a 3-arg function, never called); `describe()` returned blank for a
+    role held under hysteresis.
+
+Measured: cd82's bucket holds **one id for all 147 steps** of the dump
+(was 3). Total ids minted across 25 games 582 -> 584 — minting is
+dominated by resets and level changes, not hops, so the aggregate did not
+move even though the bucket's identity did. Like-for-like CONTROL counts
+(ghosts included) after >= before on the four games where the live-only
+count fell (re86 16 vs 5, cn04 11 vs 2, sc25 4 vs 3, ar25 12 vs 2).
+
+### Built — step 2: control by determinism
+
+`Belief.effects` tallies (kind, direction) per action; `determinism(a)`
+is the fraction of a's changes carrying its modal effect;
+`controllers` is every action deterministic at >= 0.8 with >= 4 changes,
+*provided their effects differ* — two buttons doing the same thing carry
+no information about which was pressed. CONTROL when `controllers` is
+non-empty, ahead of the rate contrast, which is kept for the one-button
+case. Motion is read from **bounding-box extent**: both edges shift =
+MOVED (whatever the size did), one edge = GREW/SHRANK, neither = TURNED.
+No tolerance constant.
+
+Live: cd82 bucket frame and fill `control 100% — ACTION4 +x, ACTION1 -y,
+ACTION3 -x, ACTION2 +y`; belief target is now **the block (32,39)**, the
+thing ACTION5 acts on, for the first time. ls20 sprite (two parts)
+`control 100%` with the same map. Refusals pinned: equal rates with random
+directions, two same-effect buttons, one deterministic button (left to the
+rate path), below-floor evidence. 140 tests.
+
+**Status.** Default action stream has changed (tracker feeds stamina,
+residual and interest), so the identity work needs its own parity/A/B on a
+frozen tree before it can be said to have earned anything at the score.
+Nothing above is wired to a decision beyond the existing flagged consumer.
+

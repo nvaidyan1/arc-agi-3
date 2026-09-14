@@ -450,8 +450,54 @@ falsifiable and UNASSIGNED is a real answer.
       evidence genuinely wobbles near the threshold; the panel reports it
       faithfully rather than smoothing it.
 - [ ] `sp80` assigns no CONTROL despite having two controllable objects.
+- [x] **CONTROL by determinism** (2026-09-14). The rate contrast could not
+      see a thing driven by several buttons at equal rates — every d-pad.
+      CONTROL now also fires when >= 2 actions each do one fixed, *different*
+      thing to an entity (`Belief.controllers`); motion is read from
+      bounding-box extent, not size. cd82's bucket and ls20's sprite both
+      read `control 100%` with a four-way map. See `history.md` 2026-09-14.
 
-## NEXT: connect beliefs to action
+## NEXT: a representation rich enough to carry a hypothesis
+
+Reframed 2026-09-14 after dumping the full belief state on cd82 and finding
+a list of individually-defensible monads that could not have supported any
+goal hypothesis (`history.md`, same date, "The gap between..."). Agreed
+build order, each step measured for which games it touches and for its
+refusals before any score is read, none of it cd82-specific:
+
+- [x] **1. identity** — explained motion (follow what lands where my own
+      move map said), live vs remembered, reset told to the tracker rather
+      than deduced. Post-reset minting cd82 1.7/frame -> 0.
+- [x] **2. control by determinism** — see the item above.
+- [ ] **3. composites with parts** — group regions into one object on
+      evidence only: co-motion (identical displacement history), enclosure
+      (already built), or **cell exchange** (one region shrinks exactly
+      where another grows in the same step — which is also the RECOLOURED
+      event the vocabulary lacks). Never adjacency alone: two things
+      touching are not one thing. Groupings recomputed from evidence like
+      roles, never stamped.
+- [ ] **4. relations + event log** — binary predicates over all live
+      pairs (`same_palette`, `similar_shape`, `contains`, `adjacent`,
+      `constant_distance`, `count_match`, `distinguished`), per-object
+      invariant descriptors, and a one-line-per-step event log in the same
+      vocabulary. This is the state that could be handed to a hypothesis
+      generator; today nothing takes two entities as arguments.
+- [ ] **5. hypothesis interface** — goal as a *checkable predicate* over
+      the state plus a progress measure, verified against the next frames;
+      first driven by an enumerator over "make relation R hold between A
+      and B" for every R and pair, then by an LLM once the representation
+      is shown to carry the signal. Per-episode only, never cached across
+      games.
+- [ ] **re-run the belief-routing A/B on a frozen tree.** The 2026-09-14
+      run (4 arms x 30) was contaminated by edits to `agent/` while it ran
+      (11-20 of 30 sweeps per arm on an edited tree). Its one robust
+      reading is mechanistic: the per-level gate is exactly inert, and the
+      target it routed to on cd82 was the bucket's own ghost.
+- [ ] **parity/A/B for the identity work itself.** It changes the default
+      action stream (tracker feeds stamina, residual, interest) and has not
+      earned a default by measurement yet.
+
+### Superseded: connect beliefs to action (2026-09-13 framing)
 
 Everything below the belief layer is built, tested and inert. `belief`
 reads nothing into any decision, and that is the single reason the score
@@ -483,7 +529,15 @@ games**: the shift fallback altered behaviour on 4 of 25, and the 25-game
 aggregate diluted it ~6x into near-insignificance (p = 0.044) while the
 affected-games test read p < 0.0001.
 
-## Open: the agent has no model of RESET
+## Resolved: the agent is told about RESET (2026-09-14)
+
+`_reset_attempt` now calls `RegionTracker.expect_home()`; the tracker keeps
+the layout as it stood on the first frame after each `clear()` or reset and
+matches the post-reset frame against it by overlap before any other pass.
+Post-reset id minting: cd82 1.7/frame -> 0.00, ls20 0.00, wa30 0.00. The
+shape-revive pass is kept for what it was built for. Original note follows.
+
+## Was open: the agent has no model of RESET
 
 The agent does not know that a reset restores the layout. It sees every
 object vanish and new ones appear.

@@ -79,6 +79,8 @@ from constants import (
     LEVEL_UP_WEIGHT,
     MIN_VANISH_CELLS,
     STAMINA_MIN_SIZE,
+    USE_BELIEF_TARGET,
+    USE_PER_LEVEL_ROUTE_GATE,
     USE_SHIFT_FALLBACK,
     VANISH_WEIGHT,
 )
@@ -128,6 +130,7 @@ class MyAgent(Agent):
         self.obstacles = ObstacleMap()
         self.stamina = StaminaDetector()
         self.regions = entities.RegionTracker()
+        self._tracked_live: dict = {}
         # Recording only for now: composes the layers below into a
         # role per entity. Nothing reads it to decide yet — naming
         # the consumer before wiring one is the point (three
@@ -136,6 +139,10 @@ class MyAgent(Agent):
         self.interest = InterestMap()
         self.clicks = ClickTargeting()
         self.route = navigation.Route()
+        # Why the current route exists. Read only while a route is live
+        # (`_maintain_route` returns False before consulting it otherwise),
+        # so a value left behind by a cleared plan is never acted on.
+        self._route_from_belief = False
 
         # ── Reward evidence, per action ─────────────────────────────────
         # All persist across RESET: which action makes progress is a
@@ -145,6 +152,14 @@ class MyAgent(Agent):
         self._action_interactions: dict[GameAction, int] = {}
         self._action_vanishes: dict[GameAction, int] = {}
         self._interaction_sites: dict[tuple[int, int], int] = {}
+        # Vanishes on the CURRENT level only. Deliberately a separate
+        # counter rather than a reinterpretation of the two above: those
+        # feed `_weighted_choice`, where cross-level persistence is
+        # load-bearing and must not change. This one feeds only the router
+        # gate, where "has anything proven itself on the layout I am
+        # standing in" is the question actually being asked — and a
+        # level-up never can have, since it is what ended the last one.
+        self._level_proven = 0
 
         # Recording only, and here rather than in `_reset_attempt` for the
         # same reason as everything above: these say what an ACTION does,
@@ -229,6 +244,9 @@ class MyAgent(Agent):
         self.moves.reset_position()
         self.clicks.reset_attempt()
         self.route.clear()
+        # Tell the tracker, so the next frame is matched against the
+        # attempt's starting layout and identities survive the teleport.
+        self.regions.expect_home()
 
     def _reset_level(self) -> None:
         """A new level is a new layout, so position-keyed knowledge dies.
@@ -251,11 +269,18 @@ class MyAgent(Agent):
         self.interest.clear()
         self.regions.clear()
         self.belief.clear()
+        # `_observe_frame` has already run this step and holds the new
+        # layout's regions under ids the tracker has just forgotten; left
+        # in place they would seed beliefs for ids that never recur
+        # (measured: 13 phantom beliefs on cd82 at the level-2 boundary).
+        self._tracked_live = {}
         self.moves.reset_position()
         self.route.clear()
         self.clicks.reset_attempt()
         self._interaction_sites.clear()
         self._background = None
+        # Nothing has proven itself on a layout nobody has played yet.
+        self._level_proven = 0
 
     @property
     def name(self) -> str:
@@ -326,7 +351,16 @@ class MyAgent(Agent):
         )
         regions = [(c, cells) for c, cells in regions
                    if len(cells) >= STAMINA_MIN_SIZE]
-        tracked = self.regions.update(regions)
+        # Tell the tracker what we just did, so it can recognise the thing
+        # that went where our own move map says it would. This is the only
+        # matching evidence that scales with a game's stride rather than
+        # with a constant of ours (cd82 hops 11-15 cells; proximity is 8).
+        expected = (
+            self.moves.learned_moves.get(self._last_action)
+            if self._last_action is not None else None
+        )
+        tracked = self.regions.update(regions, expected_offset=expected)
+        self._tracked_live = tracked
         self.stamina.update(
             {rid: len(cells) for rid, (_c, cells) in tracked.items()},
             self.game_id,
@@ -427,7 +461,10 @@ class MyAgent(Agent):
         # Relate this step to every entity: which ones changed under which
         # action. The roles fall out of the contrast between actions, so
         # this needs the action name and nothing else.
-        self.belief.update(self.regions._tracked, action.name, changed)
+        # What is on screen NOW — never the tracker's memory. Passing the
+        # memory here had beliefs forming about ghosts, and the router
+        # aiming at them (docs/history.md, 2026-09-14).
+        self.belief.update(self._tracked_live, action.name, changed)
 
         # Two consumers, two different gates. As a *reward* the residual
         # is only meaningful once we know our own effect — with no move
@@ -448,6 +485,7 @@ class MyAgent(Agent):
 
         if self._pending_vanish:
             self._action_vanishes[action] = self._action_vanishes.get(action, 0) + 1
+            self._level_proven += 1
 
         # Environment layer: an action with a known effect that failed to
         # produce it.
@@ -462,6 +500,12 @@ class MyAgent(Agent):
         # The signal that actually matches what's scored.
         if latest_frame.levels_completed > prev_frame.levels_completed:
             self._action_level_ups[action] = self._action_level_ups.get(action, 0) + 1
+            # Deliberately NOT counted in `_level_proven`. A level-up ends
+            # the layout it happened on, and by the time we get here
+            # `_reset_level` has already run for the new one, so the credit
+            # would land on a level nobody has played yet and latch its
+            # router shut on step one. Measured on cd82 seed 8 before this
+            # guard: gate latched at the first step of level 2, every time.
             logger.info(
                 "LEVEL UP on %s via %s -> levels_completed=%d",
                 self.game_id, action.name, latest_frame.levels_completed,
@@ -634,13 +678,23 @@ class MyAgent(Agent):
         # removing them raised routing and *lowered* the score, because
         # scoring is quadratic in speed and routing aims at where things
         # happened, not where the goal is (docs/history.md, 2026-09-13).
-        proven = bool(self._action_level_ups or self._action_vanishes)
+        #
+        # Scoped per level under USE_PER_LEVEL_ROUTE_GATE: see
+        # `constants.USE_PER_LEVEL_ROUTE_GATE` for why, and note that
+        # `_weighted_choice` still reads the cross-level counters
+        # untouched, so the channel the original regression ran through
+        # is unchanged either way.
+        proven = (
+            self._level_proven > 0
+            if USE_PER_LEVEL_ROUTE_GATE
+            else bool(self._action_level_ups or self._action_vanishes)
+        )
         if proven:
             self.route.clear()
             return False
 
         if not self.route:
-            target_pixel = next(iter(self.interest.top_cells(1)), None)
+            target_pixel, well_evidenced = self._route_target()
             target = (
                 self.moves.to_relative(target_pixel)
                 if target_pixel is not None
@@ -652,18 +706,89 @@ class MyAgent(Agent):
                 )
                 if path:
                     self.route.set(path, target_pixel)
+                    self._route_from_belief = well_evidenced
 
-        return bool(self.route) and self.interest.peak >= INTEREST_VANISH_WEIGHT
+        if not self.route:
+            return False
+        # A belief target carries its own warrant — an action has been
+        # *shown* to act on that entity — so it does not also have to
+        # clear the interest map's salience bar, which is a statement
+        # about a different and weaker kind of evidence entirely.
+        return self._route_from_belief or self.interest.peak >= INTEREST_VANISH_WEIGHT
+
+    def _route_target(self) -> tuple[tuple[int, int] | None, bool]:
+        """Where to route, and whether the reason is belief or salience.
+
+        Target *selection* is policy, so it lives here rather than in
+        `navigation` (which must never pick its own destination) or in
+        `belief` (which reports evidence and draws no conclusions). This
+        method is the whole of the policy: it reads `by_role`, applies
+        three exclusions, and returns a pixel.
+
+        Belief first when enabled, interest as the fallback, so a game
+        where no role has been earned behaves exactly as before.
+        """
+        if USE_BELIEF_TARGET:
+            pixel = self._belief_target()
+            if pixel is not None:
+                return pixel, True
+        return next(iter(self.interest.top_cells(1)), None), False
+
+    def _belief_target(self) -> tuple[int, int] | None:
+        """The strongest thing some action has been shown to act upon.
+
+        The destination is an AFFECT entity: one whose changes track a
+        specific action against its own baseline. Not CONTEXT (that is a
+        meter or an animation — cd82's stamina bar is CONTEXT precisely so
+        that it stops contaminating everything, and travelling to a HUD
+        element is the clearest possible category error), not ENVIRONMENT
+        (it never changes, so there is nothing to go and do), and not
+        UNASSIGNED (no evidence is not a target).
+
+        Three exclusions, each for a reason that would otherwise produce a
+        meaningless route:
+
+          * **The canvas.** The background is a tracked region like any
+            other and is usually the largest thing on the board; its
+            centroid is the middle of the screen and means nothing.
+          * **Whatever we are.** Routing the controlled object to itself
+            is a no-op at best. CONTROL entities are excluded, and so is
+            anything sitting where we already are.
+          * **Entities with no position.** A belief whose last known cells
+            are empty has nowhere to be gone to.
+
+        Returns None — a real answer — whenever no entity survives, which
+        is the common case early and on the 9 of 25 games where no move
+        map forms at all.
+        """
+        origin = self.moves.origin_anchor()
+        if origin is None:
+            return None  # no controlled thing, so no displacement space to plan in
+
+        here = self.moves.anchor
+        best, best_lift = None, 0.0
+        for candidate in self.belief.by_role(belief.AFFECT):
+            if candidate.colour == self._background:
+                continue
+            pixel = candidate.centroid
+            if pixel is None or pixel == here:
+                continue
+            _action, lift = candidate.selectivity
+            if lift > best_lift:
+                best, best_lift = pixel, lift
+        return best
 
     def _take_route(self, position, moves, well_evidenced: bool) -> GameAction:
         action = self.route.next_action(position, moves)
-        qualifier = (
-            f"well-evidenced (weight {self.interest.peak:.1f})"
-            if well_evidenced
-            else "best available"
-        )
+        if self._route_from_belief:
+            noun, qualifier = "entity", "acted on by some action"
+        elif well_evidenced:
+            noun = "interest cell"
+            qualifier = f"well-evidenced (weight {self.interest.peak:.1f})"
+        else:
+            noun, qualifier = "interest cell", "best available"
         action.reasoning = (
-            f"router: {action.name} to {qualifier} interest cell "
+            f"router: {action.name} to {qualifier} {noun} "
             f"{self.route.target}, {len(self.route)} steps left"
         )
         self._last_click = None
