@@ -119,6 +119,9 @@ class Briefer:
             out.extend(sup.describe())
         out.extend(self._things(agent))
         out.extend(self._groups(agent))
+        km = getattr(agent, "kinds", None)
+        if km is not None:
+            out.extend(km.describe(getattr(agent, "_kinds_now", []), agent.relations))
         out.extend(self._control(agent))
         out.extend(self._relations(agent))
         out.extend(self._falling(agent))

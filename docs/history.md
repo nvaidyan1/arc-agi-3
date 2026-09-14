@@ -2180,3 +2180,40 @@ lever has won, then by lever strength — weights, never rules, because
 goals may change per level. The brief gained MATTERED, including the count
 of advances with *no* expressible coordinate, so the vocabulary's blind
 spots are counted rather than hidden. Per episode only. 183 tests.
+
+## 2026-09-14 — 4e: kinds — same stuff, different roles, drift, transfer
+
+**Motivation.** The user's question: two objects share a colour
+combination, one changes under our actions and the other stays constant —
+can the belief say "similar but evolved", "similar but one is controllable"?
+Both halves existed as monads (roles per entity; palette/shape residuals
+between groups) and nothing joined them.
+
+**Built.** `agent/kinds.py`, a view over the grouping view. A kind is two or
+more units with the same palette and part count; *exact* when their
+outlines match. Units are groups, lone things, and — new in the relation
+engine — the **content of a framed group**: the members a frame's bounding
+box encloses, minus canvas-coloured filler. Each member carries the roles
+belief gave its parts; a member that changes is described by its residuals
+to the static member (drift) with the lever that moves them. `KindMemory`
+records, per palette, members that vanished and how stamina moved when they
+did, and the proposer adds a weight for distance hypotheses toward the
+remaining members of a kind whose members vanished with stamina rising —
+the snake reading. Units nested in one another are never compared; a reset
+is neither a vanishing nor a stamina change (measured first: tu93 read "4
+of this kind have vanished, stamina +98%" — four deaths).
+
+**Observation.** cd82 at step 100:
+`kind {0,15}x2 x2 (exact): {#5,#6} static · {#10,#12} changes under my
+actions — drifted from the static one: part_size_diff 30, shape_diff 0`.
+That is the sentence asked for, from evidence, with nothing called a
+template. ka59: `kind {1,4,14}x3 x2: {#1,#5,#8} holds the CONTROL thing —
+drifted part_size_diff 27 (ACTION3 drives it down) · {#3,#4,#6} static`.
+tu93: the maze tiles read as two exact kinds of 32 and 18. cn04: no kinds
+— its cyan squares are absorbed into one big group by containment, which
+is the grouping view being too eager on that board and is noted.
+
+**Not yet exercised live:** the transfer half. No game in the recorded set
+has a kind whose members vanish with a stamina change; it holds on the
+unit test and waits for a game that has it. 193 tests. Built on the
+`next-step` worktree branch while the proposer A/B ran on a frozen main.
