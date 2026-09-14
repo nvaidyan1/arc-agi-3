@@ -89,6 +89,22 @@ class InterestMap:
         ranked = sorted(self._weights.items(), key=lambda kv: kv[1], reverse=True)
         return [cell for cell, _ in ranked[:k]]
 
+    def top_cells_with_weight(
+        self, k: int = 120
+    ) -> list[tuple[tuple[int, int], float]]:
+        """Like `top_cells`, but keeps the weight — for rendering a heatmap.
+
+        `k` defaults far above `INTEREST_TOP_K` (which is sized for
+        `_pick_coordinate`'s decision, not for a picture): a debugging view
+        wants enough of the map to show its shape, not just the winning
+        cell. Capped rather than unbounded so a dense map still produces a
+        small, comparable-across-steps payload.
+        """
+        if not self._weights:
+            return []
+        ranked = sorted(self._weights.items(), key=lambda kv: kv[1], reverse=True)
+        return ranked[:k]
+
     def clear(self) -> None:
         self._weights.clear()
 

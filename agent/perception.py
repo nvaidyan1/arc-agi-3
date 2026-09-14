@@ -25,6 +25,8 @@ from __future__ import annotations
 
 from arcengine import FrameData
 
+from constants import MIN_ROTATION_CELLS, MIN_SHIFT_CELLS, SHIFT_AXIS_RATIO
+
 
 def diff_cells(
     prev_frame: FrameData, latest_frame: FrameData
@@ -78,6 +80,152 @@ def lost_and_gained(
     return lost, gained
 
 
+def connected_regions(
+    frame: FrameData, min_size: int = 1
+) -> list[tuple[int, frozenset[tuple[int, int]]]]:
+    """Contiguous same-coloured regions, as `(colour, cells)` pairs.
+
+    A *grouping*, not an interpretation — it proposes that some pixels may
+    be one thing and says nothing whatever about what that thing is. That
+    is the side of the governing principle this belongs on: structure may
+    constrain how a hypothesis is represented, only not which entities or
+    roles exist.
+
+    Built because the aggregate it replaces destroys real signal. cd82's
+    stamina bar drains 64 cells to 0 — perfectly — but 100 static cells
+    elsewhere share its colour, so the whole-board total only falls
+    164 -> 100 and the sawtooth test rejects it at 61%. The same bar
+    measured as a region reads 0% and passes. A signal that is flawless at
+    the region level was unrecoverable at the colour level.
+
+    Four-connectivity, iterative flood fill: a 64x64 grid is 4096 cells, so
+    this is cheap, and recursion would risk a stack overflow on a large
+    region for no benefit. Pure Python on purpose — `scipy` is not
+    installed and is not worth a dependency for twenty lines.
+
+    Where a game uses non-contiguous motifs this degrades by returning
+    *more, smaller* regions — it detects less rather than asserting
+    something false, which is the failure mode we can live with.
+    """
+    if not frame.frame:
+        return []
+    grid = frame.frame[-1]
+    height = len(grid)
+    width = len(grid[0]) if height else 0
+    seen = [[False] * width for _ in range(height)]
+    out: list[tuple[int, frozenset[tuple[int, int]]]] = []
+
+    for y0 in range(height):
+        for x0 in range(width):
+            if seen[y0][x0]:
+                continue
+            colour = grid[y0][x0]
+            stack = [(x0, y0)]
+            seen[y0][x0] = True
+            cells = []
+            while stack:
+                x, y = stack.pop()
+                cells.append((x, y))
+                for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+                    if (0 <= nx < width and 0 <= ny < height
+                            and not seen[ny][nx] and grid[ny][nx] == colour):
+                        seen[ny][nx] = True
+                        stack.append((nx, ny))
+            if len(cells) >= min_size:
+                out.append((colour, frozenset(cells)))
+    return out
+
+
+def detect_shift(
+    prev_frame: FrameData,
+    latest_frame: FrameData,
+    background: int | None = None,
+    tolerance: float = 0.25,
+) -> tuple[int, int, tuple[int, int], tuple[int, int]] | None:
+    """Did one coloured thing *go somewhere*, allowing it to change shape?
+
+    Same return shape as `detect_translation` — `(colour, cells, (dx, dy),
+    anchor)` — so a caller can use either without knowing which answered.
+
+    `detect_translation` and `detect_rotation` both demand the shape be
+    **identical** before and after, and that is too strict for anything
+    that animates. cd82's controllable object deforms by up to 14 cells as
+    it moves — a walk cycle, a tilt — so both refuse it and the game has
+    no move map at all. Masking its stamina bar does not help: 0
+    detections before and after. The deformation is real.
+
+    This asks the weaker question. Take the cells a colour lost and the
+    cells it gained; if the two are comparable in size, report the shift
+    between their centroids, rounded to whole cells. Measured on cd82 that
+    recovers a complete directional map — ACTION1 up, ACTION2 down,
+    ACTION3 left, ACTION4 right, stride 11 — **100% consistent across 179
+    observations**, on a game where nothing was detected before.
+
+    It is weaker evidence and it is treated as such: try `detect_translation`
+    first, because an exact offset is a stronger claim than an average one,
+    and only fall back to this. The size guard is what keeps it honest —
+    without it, a colour being consumed on one side of the board and
+    created on the other would read as motion. It stays silent where it
+    should: sb26 and tn36 produce nothing, lp85 is noisy at 29% and so
+    never reaches `MoveModel`'s majority bar.
+
+    **`background` must be supplied**, and a unit test exists because
+    leaving it out is silently catastrophic. When an object moves right
+    the canvas *also* "moves": it loses cells where the object arrived and
+    gains them where it left, so its centroid shifts **left** — the exact
+    opposite direction — and being the complement of every mover at once,
+    it is usually the largest candidate. Picking it would teach the move
+    map a reversed offset for every action. The exact lenses never had
+    this problem because a hole is not shaped like the thing that left it,
+    so set equality rejected it; tolerating deformation removes that
+    accidental protection.
+
+    `tolerance` is the fraction by which the two sides may differ in size.
+    """
+    if not prev_frame.frame or not latest_frame.frame:
+        return None
+
+    lost, gained = lost_and_gained(prev_frame, latest_frame)
+    best = None
+    for colour, source in lost.items():
+        if background is not None and colour == background:
+            continue
+        target = gained.get(colour)
+        if not target:
+            continue
+        n, k = len(source), len(target)
+        if n < MIN_SHIFT_CELLS:
+            continue
+        if abs(n - k) > max(2, tolerance * n):
+            continue
+        sx = sum(p[0] for p in source) / n
+        sy = sum(p[1] for p in source) / n
+        tx = sum(p[0] for p in target) / k
+        ty = sum(p[1] for p in target) / k
+        dx, dy = round(tx - sx), round(ty - sy)
+        if dx == 0 and dy == 0:
+            continue
+        # Square up a clearly axis-aligned move. A deforming shape drags
+        # its centroid a little sideways as it travels, so cd82 reports
+        # (-1,-11) on one step and (1,-11) on the next — different offsets
+        # to `MoveModel`, which then splits the majority 20/16 = 56%,
+        # falls under its 60% bar and learns nothing. The minor component
+        # is the deformation, not the motion: measured on the dominant
+        # axis alone those same steps agree 100% across 179 observations.
+        # Only applied when one axis genuinely dominates, so a real
+        # diagonal move is still reported as diagonal.
+        if abs(dx) >= SHIFT_AXIS_RATIO * abs(dy):
+            dy = 0
+        elif abs(dy) >= SHIFT_AXIS_RATIO * abs(dx):
+            dx = 0
+        # The largest coherent thing that moved is the best candidate for
+        # "an object", and picking deterministically matters: dict order
+        # would otherwise decide which of two movers the caller learns.
+        if best is None or n > best[1]:
+            best = (colour, n, (dx, dy), min(source))
+    return best
+
+
 def detect_translation(
     prev_frame: FrameData, latest_frame: FrameData
 ) -> tuple[int, int, tuple[int, int], tuple[int, int]] | None:
@@ -112,6 +260,85 @@ def detect_translation(
         offset = (tx - sx, ty - sy)
         if {(x + offset[0], y + offset[1]) for x, y in source} == target:
             return colour, len(source), offset, (sx, sy)
+    return None
+
+
+# Each entry solves its transform's two constants in closed form from the
+# coordinate sums, so there is no search and no fitting — only a candidate,
+# which is then verified by exact set equality. Same discipline as
+# `detect_translation`, which derives its single offset the same way.
+#
+#   rot90cw   (x, y) -> (a - y, b + x)
+#   rot90ccw  (x, y) -> (a + y, b - x)
+#   rot180    (x, y) -> (a - x, b - y)
+#
+# Reflections were implemented and measured alongside these and fired
+# **zero** times across 25 games, so they are deliberately absent rather
+# than carried as untested code. Add them when something needs them.
+_ROTATIONS = (
+    ("rot90cw", lambda sx, sy, tx, ty: (tx + sy, ty - sx),
+     lambda x, y, a, b: (a - y, b + x)),
+    ("rot90ccw", lambda sx, sy, tx, ty: (tx - sy, ty + sx),
+     lambda x, y, a, b: (a + y, b - x)),
+    ("rot180", lambda sx, sy, tx, ty: (tx + sx, ty + sy),
+     lambda x, y, a, b: (a - x, b - y)),
+)
+
+
+def detect_rotation(
+    prev_frame: FrameData, latest_frame: FrameData
+) -> tuple[int, int, str, tuple[int, int]] | None:
+    """Is this frame-to-frame change one coloured shape *turning*?
+
+    Returns `(colour, cell_count, kind, pivot_doubled)` when the cells a
+    colour lost are exactly the cells it gained, rotated a quarter or half
+    turn about a point — otherwise `None`, like every other lens here.
+
+    Why this exists. `detect_translation` gets as far as "this colour lost
+    exactly as many cells as it gained" — a rigid-motion signature — and
+    then discards the event if no single *offset* explains it. A rotation
+    dies precisely there, which is why an object visibly turning under the
+    agent's own actions produced no evidence at all. Measured across 25
+    games: 285 such balanced-but-not-translated events, of which 77 are
+    exact rotations — and on wa30 **57 of 57** are, a quarter of all its
+    change steps.
+
+    `pivot_doubled` is the centre of rotation multiplied by two, because a
+    shape can legitimately turn about a cell *corner* — a half-integer
+    point — and returning that as a float would invite rounding at the one
+    place exactness is the whole guarantee.
+
+    This asserts nothing about games containing rotating things, and it
+    must be tried only *after* translation: a centrally-symmetric shape
+    sliding sideways satisfies both descriptions, and the translation is
+    the one that composes into a position.
+    """
+    if not prev_frame.frame or not latest_frame.frame:
+        return None
+
+    lost, gained = lost_and_gained(prev_frame, latest_frame)
+    for colour, source in lost.items():
+        target = gained.get(colour)
+        if not target or len(target) != len(source):
+            continue
+        n = len(source)
+        if n < MIN_ROTATION_CELLS:
+            continue
+        sx, sy = sum(p[0] for p in source), sum(p[1] for p in source)
+        tx, ty = sum(p[0] for p in target), sum(p[1] for p in target)
+        for kind, solve, apply in _ROTATIONS:
+            big_a, big_b = solve(sx, sy, tx, ty)
+            # A non-integer constant means no rotation of this kind can map
+            # these sets, so there is nothing to verify.
+            if big_a % n or big_b % n:
+                continue
+            a, b = big_a // n, big_b // n
+            if {apply(x, y, a, b) for x, y in source} != target:
+                continue
+            pivot = ((a - b, a + b) if kind == "rot90cw"
+                     else (a + b, b - a) if kind == "rot90ccw"
+                     else (a, b))
+            return colour, n, kind, pivot
     return None
 
 
@@ -245,6 +472,7 @@ def residual_cells(
     changed: list[tuple[int, int]],
     offset: tuple[int, int] | None,
     stamina_colour: int | None,
+    stamina_cells: frozenset[tuple[int, int]] | None = None,
 ) -> list[tuple[int, int]]:
     """Changed cells NOT explained by our own shape moving.
 
@@ -282,7 +510,14 @@ def residual_cells(
     for cell in changed:
         if cell in explained:
             continue
-        if stamina_colour is not None and prev_frame.frame and latest_frame.frame:
+        # Prefer the meter's own CELLS when they are known: filtering by
+        # colour removes every cell sharing that colour anywhere, which on
+        # a board where 100 unrelated cells match is the difference
+        # between subtracting the meter and subtracting play area.
+        if stamina_cells is not None:
+            if cell in stamina_cells:
+                continue
+        elif stamina_colour is not None and prev_frame.frame and latest_frame.frame:
             x, y = cell
             # Depletion recolours meter cells *away* from the meter
             # colour, so check both sides of the change, not just the new

@@ -397,6 +397,94 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       25 still complete nothing. Levels are now reliably *reachable*; the
       open problem moved from hit-rate to **speed**.
 
+## Built: the entity and belief layers
+
+| module | question |
+|---|---|
+| `perception.connected_regions` | what things are on the board? |
+| `entities.RegionTracker` | which of them is the same thing as last frame? |
+| `belief.WorldBelief` | what is each of them *to me*? |
+
+Roles are **relational, not semantic** — CONTROL / AFFECT / CONTEXT /
+ENVIRONMENT / UNASSIGNED each describe how an entity's behaviour correlates
+with our own actions, never what it is in a game. Grouping and following are
+representation, which the governing principle permits; the roles stay
+falsifiable and UNASSIGNED is a real answer.
+
+- [x] **entity-scoped stamina** — meter detection 16/25 -> **25/25**, zero
+      losses; cd82's bar contamination of "thing I affect" 100% -> 22%.
+      Score effect measured at n=30 per arm: **p = 0.82, none**. Expected:
+      nothing acts on stamina yet.
+- [x] **belief layer** — composes the lenses into a role per entity by
+      contrasting actions against a baseline. Recording-only.
+- [ ] **a consumer for beliefs.** Nothing reads `belief` to decide. The
+      obvious candidate is `_pick_coordinate`, which clicks the hottest
+      interest cell and could instead click the entity an action has been
+      *shown* to act through. **Aim it at depth, not breadth** — every
+      mechanism added so far (router, interest map, shift fallback) bought
+      more level-1 completions and never a level 2.
+- [ ] `sp80` assigns no CONTROL despite having two controllable objects.
+- [ ] `displaced` is a size-and-cells proxy, good enough to separate
+      "moves" from "recolours" and not good enough to trust further.
+
+## In flight: the A/B
+
+Two steps, in this order, because the second cannot be measured honestly
+until the first is done.
+
+### 1. Entity-scoped stamina (the acceptance test has a known answer)
+
+`StaminaDetector` reads **whole-board colour totals**, and that aggregate
+destroys a perfect signal. cd82's bar drains 64 cells to 0 — but 100
+static cells elsewhere share its colour, so the total only falls 164 → 100
+(61%), failing `STAMINA_MUST_EMPTY_TO` (25%) and the bar is never
+detected. Measured at the region level it reads 64 → 0 = 0% and passes
+cleanly.
+
+The cost of missing it is not hypothetical: cd82's bar changes on 77% of
+steps and **192 of 192 of those land in "thing I affect"**, because
+`residual_cells` only filters a *detected* stamina colour. Attention is
+polluted on three steps in four, on the game we had chosen as the clean
+testbed for goal identification.
+
+So: group pixels into contiguous regions, track them across frames by
+overlap, and run the existing sawtooth logic per region rather than per
+colour. **Acceptance test: cd82's stamina is detected, and the other 9
+games that already detect one still do.** This is the smallest change that
+demonstrates entities earning their place, and it has an unambiguous right
+answer to check against.
+
+On the governing principle: grouping is *representation*, not ontology —
+it proposes "these pixels may be one thing" and asserts nothing about what
+that thing is, which the principle explicitly permits. The risk it carries
+is **coverage** failure (a game with non-contiguous motifs gets grouped too
+finely, so we detect less — graceful) rather than **ontology corruption**
+(asserting something false and building on it). Role assignment — "the one
+I control", "the one that is the goal" — is where the real risk lives and
+stays evidence-gated.
+
+### 2. A/B: deformation-tolerant object tracking
+
+Every motion lens requires the shape to be **identical** before and after.
+cd82's controllable object deforms by ±1 to ±14 cells as it moves, so all
+of them refuse it — masking the bar does not help (0 detections before and
+after). A centroid test that tolerates deformation recovers a complete map:
+ACTION1 up / ACTION2 down / ACTION3 left / ACTION4 right, stride 11,
+**100% consistent across 179 observations**, on a game where we currently
+see nothing. It stays silent where it should: sb26 and tn36 find nothing,
+lp85 is noisy at 29%.
+
+This is a **real behaviour change**, not another recording-only layer: it
+would give a move map to some of the 11 games that have none, switching on
+the frontier branch, the router, obstacle detection and the `affect` gate
+on games that currently run as pure bandits. Given the router's history of
+costing score, it ships behind a flag and is measured before it is trusted.
+
+**Protocol, now that the variance floor is known:** n>=30 per arm, compare
+**medians** with a permutation test, not means — the metric is heavy-tailed
+enough that a single lucky sweep moves the mean 56% while the median holds
+(measured, p=0.50). ~15 minutes per arm.
+
 ## Naming: three things were all called "budget"
 
 Renamed 2026-09-13 after the word turned out to be carrying three

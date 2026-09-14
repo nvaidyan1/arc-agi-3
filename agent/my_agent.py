@@ -65,6 +65,8 @@ from arcengine import FrameData, GameAction, GameState
 # the `agents` package is on sys.path, so this import resolves.
 from agents.agent import Agent
 
+import belief
+import entities
 import navigation
 import perception
 from attention import ClickTargeting, InterestMap
@@ -76,6 +78,8 @@ from constants import (
     INTEREST_VANISH_WEIGHT,
     LEVEL_UP_WEIGHT,
     MIN_VANISH_CELLS,
+    STAMINA_MIN_SIZE,
+    USE_SHIFT_FALLBACK,
     VANISH_WEIGHT,
 )
 from constraints import StaminaDetector, ObstacleMap
@@ -123,6 +127,12 @@ class MyAgent(Agent):
         self.moves = MoveModel()
         self.obstacles = ObstacleMap()
         self.stamina = StaminaDetector()
+        self.regions = entities.RegionTracker()
+        # Recording only for now: composes the layers below into a
+        # role per entity. Nothing reads it to decide yet — naming
+        # the consumer before wiring one is the point (three
+        # recording-only layers this session moved the score zero).
+        self.belief = belief.WorldBelief()
         self.interest = InterestMap()
         self.clicks = ClickTargeting()
         self.route = navigation.Route()
@@ -135,6 +145,36 @@ class MyAgent(Agent):
         self._action_interactions: dict[GameAction, int] = {}
         self._action_vanishes: dict[GameAction, int] = {}
         self._interaction_sites: dict[tuple[int, int], int] = {}
+
+        # Recording only, and here rather than in `_reset_attempt` for the
+        # same reason as everything above: these say what an ACTION does,
+        # which is a property of the game and not of one attempt. Both
+        # were briefly reset per attempt by mistake, and the cost was
+        # exact and measurable — wa30's rotation count read 7 instead of
+        # 57, because every death threw the evidence away.
+        #
+        # `_controlled_by_action`: which colour each action moves.
+        # `detect_translation` identifies it and `MoveModel` then discards
+        # it, so the agent cannot tell "I moved" from "a second
+        # controllable thing moved". Measured: on sp80 ACTION1/3 move
+        # colour 12 while ACTION2/4 move colour 9, two independent objects
+        # collapsed into one move map.
+        #
+        # `_action_rotations`: translation was the only rigid motion ever
+        # tested for, so an object *turning* under our own actions
+        # produced no evidence at all — 57 of 57 such events on wa30.
+        # Nothing reads either to decide yet: a rotation does not compose
+        # into a position the way an offset does, so the router would need
+        # a different representation before it could use one.
+        # Actions for which an EXACT lens has ever explained the change.
+        # The tolerant fallback is barred from these: mixing an averaged
+        # offset into a histogram that already holds exact ones corrupts
+        # it. Measured — on ar25 the fallback pushed ACTION1 from a clean
+        # (0,3) x20 to (0,-5) x17 / (0,-4) x12, the opposite direction,
+        # and the action fell out of the map entirely; g50t lost one too.
+        self._exact_actions: set[GameAction] = set()
+        self._controlled_by_action: dict[str, int] = {}
+        self._action_rotations: dict[GameAction, dict[str, int]] = {}
 
         # ── Change-type census (recording only) ─────────────────────────
         # Deliberately not wired into action selection. Adding a signal
@@ -164,6 +204,18 @@ class MyAgent(Agent):
         # here so anything reading it before the first decision (a test, a
         # viewer attaching mid-run) sees an empty dict rather than raising.
         self._decision: dict[str, Any] = {}
+        # Recording only, same reason: `_learn_from` computes "thing I
+        # affect" every step already, to update a scalar reward counter
+        # and bump the interest map, then discards the positions. Keeping
+        # them is what lets a debugging view show *where* that evidence
+        # is rather than just its count. Cleared here so a fresh attempt
+        # doesn't show the previous attempt's residual for one stale step.
+        self._last_residual_cells: list[tuple[int, int]] = []
+        # Positional, so it dies with the attempt: a footprint is where an
+        # object was on *this* attempt's board, and the level restarts the
+        # object at its origin. The action->colour mapping it is derived
+        # from is a game property and lives in __init__ instead.
+        self._controlled_cells: dict[int, list[tuple[int, int]]] = {}
         self._action_tries: dict[GameAction, int] = {}
         self._action_changes: dict[GameAction, int] = {}
         self._last_action: GameAction | None = None
@@ -191,6 +243,8 @@ class MyAgent(Agent):
         """
         self.obstacles.clear()
         self.interest.clear()
+        self.regions.clear()
+        self.belief.clear()
         self.moves.reset_position()
         self.route.clear()
         self.clicks.reset_attempt()
@@ -250,7 +304,24 @@ class MyAgent(Agent):
         counts = perception.colour_counts(latest_frame)
         if self._background is None and counts:
             self._background = max(counts, key=counts.get)
-        self.stamina.update(counts, self.game_id)
+
+        # Stamina is measured per tracked REGION, not per colour. The
+        # aggregate was hiding a perfect signal: cd82's bar drains 64
+        # cells to zero, but 100 static cells elsewhere share its colour,
+        # so the whole-board total only falls 164 -> 100 = 61% and the
+        # "must actually empty" test rejected it. Per region it reads 0%.
+        # Only regions that could BE a meter are tracked, which also keeps
+        # the per-step cost bounded.
+        regions = perception.connected_regions(
+            latest_frame, min_size=STAMINA_MIN_SIZE
+        )
+        tracked = self.regions.update(regions)
+        self.stamina.update(
+            {rid: len(cells) for rid, (_c, cells) in tracked.items()},
+            self.game_id,
+            colours={rid: colour for rid, (colour, _s) in tracked.items()},
+            cells={rid: cells for rid, (_c, cells) in tracked.items()},
+        )
 
     def _learn_from(
         self, prev_frame: FrameData, latest_frame: FrameData
@@ -279,6 +350,53 @@ class MyAgent(Agent):
                 self.moves.observe_translation(
                     action, offset, size, pre_anchor, self.game_id
                 )
+                # Recording only (see __init__). One extra `lost_and_gained`
+                # pass, and only on steps where a translation was already
+                # confirmed, rather than widening `detect_translation`'s
+                # tested return contract. `gained` is where the shape moved
+                # *to*; cells it already occupied don't appear in either
+                # set, so this is the newly-occupied region, not the full
+                # silhouette.
+                self._exact_actions.add(action)
+                _lost, _gained = perception.lost_and_gained(prev_frame, latest_frame)
+                if _colour in _gained:
+                    self._controlled_cells[_colour] = sorted(_gained[_colour])
+                    self._controlled_by_action[action.name] = _colour
+            if (moved is None and USE_SHIFT_FALLBACK
+                    and action not in self._exact_actions):
+                # EXPERIMENT (docs/plan.md, "In flight"). Nothing exact
+                # explained this change; ask the weaker question — did a
+                # comparable mass of one colour simply go somewhere? This
+                # is what gives cd82 a move map, and it feeds the SAME
+                # `observe_translation`, so everything downstream treats
+                # it as an ordinary offset and the majority bar still has
+                # to be cleared before it is believed.
+                shifted = perception.detect_shift(
+                    prev_frame, latest_frame, self._background
+                )
+                if shifted is not None:
+                    moved = shifted
+                    _colour, size, offset, pre_anchor = shifted
+                    self.moves.observe_translation(
+                        action, offset, size, pre_anchor, self.game_id
+                    )
+                    self._controlled_by_action[action.name] = _colour
+
+            if moved is None:
+                # Only asked once translation has already declined, because
+                # a centrally-symmetric shape sliding sideways satisfies
+                # both descriptions and the offset is the one that composes
+                # into a position. Recording only (see __init__).
+                turned = perception.detect_rotation(prev_frame, latest_frame)
+                if turned is not None:
+                    _colour, _n, kind, _pivot = turned
+                    per = self._action_rotations.setdefault(action, {})
+                    per[kind] = per.get(kind, 0) + 1
+                    self._controlled_cells[_colour] = sorted(
+                        perception.lost_and_gained(prev_frame, latest_frame)[1]
+                        .get(_colour, set())
+                    )
+                    self._controlled_by_action[action.name] = _colour
 
         # "Thing I affect": what our own movement and the meter don't
         # explain. Falls back to what this action is *known* to do when
@@ -288,8 +406,14 @@ class MyAgent(Agent):
             moved[2] if moved else self.moves.learned_moves.get(action)
         )
         residual = perception.residual_cells(
-            prev_frame, latest_frame, changed, observed_offset, self.stamina.stamina_colour
+            prev_frame, latest_frame, changed, observed_offset,
+            self.stamina.stamina_colour, self.stamina.stamina_cells,
         )
+        self._last_residual_cells = list(residual)  # recording only, see __init__
+        # Relate this step to every entity: which ones changed under which
+        # action. The roles fall out of the contrast between actions, so
+        # this needs the action name and nothing else.
+        self.belief.update(self.regions._tracked, action.name, changed)
 
         # Two consumers, two different gates. As a *reward* the residual
         # is only meaningful once we know our own effect — with no move

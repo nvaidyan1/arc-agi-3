@@ -195,6 +195,56 @@ visible in `agent.frames` history.
 
 ---
 
+## Inspecting a run: `make recap`
+
+Every sweep reports an outcome and hides the reasoning. When a run does
+something strange, `recap` runs the agent in-process, captures the complete
+internal state at every decision, and writes a page you step through one
+keypress at a time.
+
+```bash
+# Watch a fresh run of one game
+make recap GAME=cd82
+
+# Replay an exact earlier run (every sweep summary records its seed)
+make recap GAME=cd82 SEED=4242 STEPS=400
+```
+
+It opens in your browser. Each step shows:
+
+- **the frame**, with the click target marked;
+- **a gamepad** — the button it actually pressed is filled in, the D-pad is
+  laid out by the movement offsets the agent has *learned* for this game, and
+  a coordinate action shows its `x, y`;
+- **which branch decided** — epsilon (a coin flip), weighted, frontier, or
+  routing — and the per-action weights behind it;
+- **every perception**: move map, obstacles, stamina, `acts_locally`,
+  background, interest map;
+- **the entities** it groups the scene into, as a list and a mask — cd82 is
+  15 regions, not 4096 pixels;
+- **what it believes each entity is to it**: `CONTROL` (I move this),
+  `AFFECT` (this action acts on it), `CONTEXT` (changes whatever I press —
+  a meter, a timer), `ENVIRONMENT` (never changes), or nothing at all when
+  the evidence is thin;
+- **evidence per action**: tries, changes, interactions, vanishes, level-ups.
+
+| key | jumps to |
+|---|---|
+| `space` / `→` / `←` | next / previous step |
+| `j` | a step number |
+| `l` | the next level-up |
+| `d` | the next death |
+| `v` | the next vanish |
+| `b` | the next blocked move |
+| `t` | the next decision that *wasn't* a coin flip |
+| `home` / `end` | first / last step |
+
+Runs are seeded and reproducible, so the same `SEED` always gives the same
+run. Pages land in `results/recaps/` and are gitignored — they regenerate from
+`(commit, game, seed)`, so the seed is the record and the page is just a view.
+
+---
+
 ## What happens when you run `make submit`
 
 The competition is a *code* competition: you submit a notebook, Kaggle runs it
@@ -275,6 +325,13 @@ already the default in this kit.
 | `make play-local GAME=ls20 RENDER=human` | Same, but pop a live matplotlib window per step (needs a real display) |
 | `make verify-local` | 30-second smoke test on two games |
 | `make list-games` | Print every game id available |
+| `make test` | Unit tests for the perception/control/constraint layers (no game engine needed) |
+| `make recap GAME=cd82` | **Step through one run in the browser**, one keypress per action |
+| `make recap GAME=cd82 SEED=4242 STEPS=400` | Same, replaying an exact earlier run |
+| `make recap GAME=cd82 SHIFT=1` | Same, with the deformation-tolerant tracker enabled |
+| `make analyse` | Score spread, depth and completion timing across every recorded sweep |
+| `make analyse BY_GAME=1` | Same, broken down per game |
+| `make backfill-summaries` | Rebuild sweep summaries from any per-step logs left in `recordings/` |
 | `make pull-sample` | Download the official sample agent for reference |
 | `make notebook` | Build the Kaggle notebook from your agent (no push) |
 | `make submit` | Build the notebook **and** push it to Kaggle |

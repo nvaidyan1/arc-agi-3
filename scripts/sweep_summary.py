@@ -150,6 +150,7 @@ def build_summary(
     aggregate_score: Any = None,
     fingerprint: Mapping[str, Any] | None = None,
     seed: int | None = None,
+    flags: Mapping[str, Any] | None = None,
     notes: str | None = None,
 ) -> dict[str, Any]:
     """Assemble the summary document.
@@ -173,6 +174,9 @@ def build_summary(
             # file can be re-entered exactly — which is what makes a
             # suspicious result investigable rather than merely noted.
             "seed": seed,
+            # Experiment flags in force for this sweep. Part of the
+            # configuration identity, exactly like the git sha.
+            "flags": dict(flags) if flags else None,
             "git": dict(fingerprint) if fingerprint else None,
         },
         "aggregate_score": aggregate_score,

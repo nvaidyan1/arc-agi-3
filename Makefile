@@ -18,7 +18,8 @@ FRAMEWORK_REPO  := https://github.com/arcprize/ARC-AGI-3-Agents.git
 FRAMEWORK_DIR   := vendor/ARC-AGI-3-Agents
 COMP_SLUG       := arc-prize-2026-arc-agi-3
 GAME            ?=
-STEPS           ?= 200
+STEPS           ?= 400
+SHIFT           ?=
 RENDER          ?=
 
 .PHONY: help setup play-local pull-sample notebook submit status verify-local \
@@ -77,8 +78,9 @@ backfill-summaries: ## Rebuild sweep summaries from any per-step logs still in r
 analyse: ## Summarise every recorded sweep: score spread, depth, completion timing
 	$(VENV_PY) scripts/analyse_sweeps.py $(if $(BY_GAME),--by-game)
 
-recap: ## Step through one run in the browser (GAME=cd82 [SEED=123] [STEPS=400])
-	$(VENV_PY) scripts/recap.py --game $(GAME) --max-steps $(STEPS) \
+recap: ## Step through one run in the browser (GAME=cd82 [SEED=123] [STEPS=400] [SHIFT=1])
+	ARC_SHIFT_FALLBACK=$(if $(SHIFT),1,0) \
+	    $(VENV_PY) scripts/recap.py --game $(GAME) --max-steps $(STEPS) \
 	    $(if $(SEED),--seed $(SEED)) --open
 
 notebook: ## Splice every agent/*.py module into notebooks/submission.ipynb

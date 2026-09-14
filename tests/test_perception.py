@@ -226,3 +226,170 @@ def test_residual_without_a_move_map_is_the_whole_diff():
     b = Frame(grid(0, {(5, 5): 3, (6, 6): 4}))
     changed = perception.diff_cells(a, b)
     assert perception.residual_cells(a, b, changed, None, None) == changed
+
+
+# ── detect_rotation ─────────────────────────────────────────────────────
+# The lens that exists because `detect_translation` was the *only* rigid
+# motion we tested for. It gets as far as "this colour lost as many cells
+# as it gained" and then discards anything a single offset can't explain —
+# so an object turning under the agent's own actions produced no evidence
+# at all. Measured on wa30: 57 of 57 such events are exact rotations.
+
+# An L, and its image under (x, y) -> (10 - y, x). Chosen so the two do
+# not overlap: only *changed* cells reach the detector, so an overlapping
+# turn presents as a smaller set (see the partial-overlap test below).
+_L = {(2, 2), (2, 3), (2, 4), (3, 4)}
+_L_CW = {(8, 2), (7, 2), (6, 2), (6, 3)}
+_L_CCW = {(2, 8), (3, 8), (4, 8), (4, 7)}
+
+
+def _frames(before, after, colour=7):
+    return (Frame(grid(cells={c: colour for c in before})),
+            Frame(grid(cells={c: colour for c in after})))
+
+
+def test_detect_rotation_finds_a_quarter_turn_clockwise():
+    found = perception.detect_rotation(*_frames(_L, _L_CW))
+    assert found is not None
+    colour, cells, kind, pivot = found
+    assert (colour, cells, kind) == (7, 4, "rot90cw")
+    # Pivot is doubled so a turn about a cell corner stays exact; (10, 10)
+    # is the point (5, 5), which this rotation does indeed hold fixed.
+    assert pivot == (10, 10)
+
+
+def test_detect_rotation_distinguishes_the_two_directions():
+    # Naming the direction is the point — a detector that called every
+    # quarter turn "clockwise" would be worse than useless to a caller
+    # trying to learn which action turns which way.
+    assert perception.detect_rotation(*_frames(_L, _L_CW))[2] == "rot90cw"
+    assert perception.detect_rotation(*_frames(_L, _L_CCW))[2] == "rot90ccw"
+
+
+def test_detect_rotation_recovers_a_turn_from_partial_overlap():
+    # Only cells that CHANGED reach the detector, so a shape rotating onto
+    # part of itself presents a *smaller* set than the shape really is.
+    # The constants are solved from whatever subset changed, so the answer
+    # stays exact — this is the case that occurs in real play, and it is
+    # also why a small shape can rotate and still be refused by the size
+    # floor: the floor applies to the changed cells, not the object.
+    before = {(4, 2), (4, 3), (4, 4), (4, 5), (5, 5)}   # bar with a foot
+    after = {(8 - y, x) for x, y in before}             # quarter turn cw
+    assert after & before, "this test is pointless without overlap"
+    found = perception.detect_rotation(*_frames(before, after))
+    assert found is not None
+    colour, cells, kind, _pivot = found
+    assert kind == "rot90cw"
+    assert cells == 4, "one cell sat still, so only four are visible"
+
+
+def test_detect_rotation_returns_none_for_a_translation():
+    # A pure slide must be left to the translation lens: it composes into
+    # a position, which a rotation does not.
+    assert perception.detect_rotation(
+        *_frames(_L, {(x + 5, y) for x, y in _L})) is None
+
+
+def test_detect_rotation_returns_none_when_the_shape_deforms():
+    # Same cell count, not a rigid motion. The exact set-equality check is
+    # what refuses this, and it is the whole guarantee.
+    assert perception.detect_rotation(
+        *_frames(_L, {(8, 8), (9, 2), (1, 6), (0, 0)})) is None
+
+
+def test_detect_rotation_refuses_shapes_below_the_size_floor():
+    # Two cells can be rotated onto almost anything, so a fit there
+    # explains nothing. MIN_ROTATION_CELLS is 3, set from the measured
+    # size distribution rather than taste.
+    before = {(2, 2), (2, 3)}
+    after = {(10 - y, x) for x, y in before}
+    assert perception.detect_rotation(*_frames(before, after)) is None
+
+
+def test_detect_rotation_returns_none_on_an_unchanged_frame():
+    g = grid(cells={c: 7 for c in _L})
+    assert perception.detect_rotation(Frame(g), Frame(g)) is None
+
+
+def test_detect_rotation_survives_empty_frames():
+    empty = Frame([])
+    empty.frame = []
+    assert perception.detect_rotation(empty, empty) is None
+
+
+# ── detect_shift ────────────────────────────────────────────────────────
+# The deformation-tolerant lens. Every exact lens demands the shape be
+# identical before and after, which is too strict for anything that
+# animates: cd82's controllable object changes by up to 14 cells as it
+# moves, so translation and rotation both refuse it and the game ends up
+# with no move map at all.
+
+def _blob(x0, y0, w, h):
+    return {(x, y) for x in range(x0, x0 + w) for y in range(y0, y0 + h)}
+
+
+def test_detect_shift_reports_motion_despite_a_changed_shape():
+    before = _blob(2, 2, 4, 3)            # 12 cells
+    after = _blob(8, 2, 3, 4)             # 12 cells, different shape
+    found = perception.detect_shift(*_frames(before, after), background=0)
+    assert found is not None
+    colour, cells, (dx, dy), _anchor = found
+    assert colour == 7 and dx > 0 and dy == 0
+
+
+def test_detect_shift_refuses_when_the_masses_differ_too_much():
+    # Without this guard, a colour consumed on one side of the board and
+    # created on the other would read as an object travelling.
+    before = _blob(2, 2, 4, 3)            # 12 cells
+    after = _blob(9, 2, 1, 3)             # 3 cells — not the same thing
+    assert perception.detect_shift(*_frames(before, after), background=0) is None
+
+
+def test_detect_shift_refuses_tiny_changes():
+    # Centroid motion is weaker evidence than an exact offset, so a few
+    # cells drifting must not be promoted to "an object moved".
+    before = {(2, 2), (3, 2)}
+    after = {(9, 2), (10, 2)}
+    assert perception.detect_shift(*_frames(before, after), background=0) is None
+
+
+def test_detect_shift_is_silent_when_nothing_moved():
+    g = grid(cells={c: 7 for c in _blob(2, 2, 4, 3)})
+    assert perception.detect_shift(Frame(g), Frame(g), background=0) is None
+
+
+def test_detect_shift_picks_the_largest_mover_deterministically():
+    # Two colours move at once; dict ordering must not decide which one
+    # the caller learns about.
+    before = {c: 7 for c in _blob(2, 2, 4, 3)}
+    before.update({c: 5 for c in _blob(2, 40, 6, 4)})
+    after = {c: 7 for c in _blob(9, 2, 4, 3)}
+    after.update({c: 5 for c in _blob(9, 40, 6, 4)})
+    found = perception.detect_shift(Frame(grid(cells=before, size=50)),
+                                    Frame(grid(cells=after, size=50)),
+                                    background=0)
+    assert found is not None and found[0] == 5, "24 cells beats 12"
+
+
+def test_detect_shift_survives_empty_frames():
+    empty = Frame([])
+    empty.frame = []
+    assert perception.detect_shift(empty, empty, background=0) is None
+
+
+def test_detect_shift_ignores_the_background():
+    # The regression that made this parameter mandatory. One object moves
+    # right; the canvas loses cells where it arrived and gains them where
+    # it left, so the canvas "moves" LEFT and is the larger candidate.
+    # Without the guard the move map learns a reversed offset for every
+    # action on every game.
+    before = {c: 7 for c in _blob(2, 2, 4, 3)}
+    after = {c: 7 for c in _blob(9, 2, 4, 3)}
+    unguarded = perception.detect_shift(Frame(grid(cells=before, size=20)),
+                                        Frame(grid(cells=after, size=20)))
+    guarded = perception.detect_shift(Frame(grid(cells=before, size=20)),
+                                      Frame(grid(cells=after, size=20)),
+                                      background=0)
+    assert guarded is not None and guarded[0] == 7 and guarded[2][0] > 0
+    if unguarded is not None and unguarded[0] == 0:
+        assert unguarded[2][0] < 0, "the canvas really does read backwards"

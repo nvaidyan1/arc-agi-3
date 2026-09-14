@@ -61,6 +61,7 @@ def config_key(summary: dict) -> tuple:
         bool(git.get("dirty")),
         cfg.get("max_steps"),
         len(cfg.get("games_requested") or summary.get("observed") or {}),
+        tuple(sorted((cfg.get("flags") or {}).items())),
         bool(summary.get("backfilled")),
     )
 
@@ -106,10 +107,12 @@ def main() -> None:
 
     print(f"{len(summaries)} sweep(s) in {RESULTS_DIR.relative_to(ROOT)}/\n")
 
-    for (sha, dirty, cap, n_games, backfilled), runs in sorted(
+    for (sha, dirty, cap, n_games, flags, backfilled), runs in sorted(
         groups.items(), key=lambda kv: (kv[0][3], kv[0][2] or 0, kv[0][0])
     ):
         label = f"{sha}{'-dirty' if dirty else ''} @ cap {cap}, {n_games} game(s)"
+        if flags:
+            label += "  flags=" + ",".join(f"{k}={v}" for k, v in flags)
         if backfilled:
             label += "  [backfilled — no scorer half, cap inferred]"
         print(f"=== {label} ===")

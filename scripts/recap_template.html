@@ -60,6 +60,54 @@
   .f-block{background:#3a2b16;color:var(--warn)}
   input[type=range]{width:100%;accent-color:var(--accent)}
   .empty{color:var(--dim);font-style:italic}
+  .hint{color:var(--dim);font-size:11px}
+  /* A row's label carries a native tooltip (title attr) explaining the
+     term — hover it. Cursor says so without adding visible clutter. */
+  #ptable tr[title]{cursor:help}
+  .swatch{display:inline-block;width:12px;height:12px;border-radius:3px;
+          vertical-align:-2px;margin-right:6px;border:1px solid var(--edge)}
+  .badge{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;
+         padding:2px 7px;border-radius:5px;margin-right:6px;letter-spacing:.03em}
+  .badge-local{background:#16283a;color:var(--accent)}
+  .badge-remote{background:#3a2b16;color:var(--warn)}
+  .badge-unknown{background:var(--bg);color:var(--dim);border:1px solid var(--edge)}
+  .bar.stam>span{background:var(--good)}
+  /* Legend under the frame — same colours as the markers drawn on it, so
+     the picture and the key read as one thing. */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:11px;
+          color:var(--dim)}
+  .legend .dot{display:inline-block;width:9px;height:9px;border-radius:50%;
+               margin-right:5px;vertical-align:-1px}
+  .dot-pos{background:#3ad6ff}
+  .dot-target{background:#ff2fd0}
+  /* Mask layer picker. Only one mask is shown at a time — overlaying all
+     of them would be unreadable — so this is how you switch. */
+  .tr{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--dim);
+      padding:1px 5px;border-radius:4px;margin-right:4px;border:1px solid transparent}
+  /* An exclusive transition is the interesting one -- give it the only
+     border in the panel so it is findable by scanning, not by reading. */
+  .tr.uniq{border-color:var(--good);color:var(--good);font-weight:700}
+  .tr .swatch{width:9px;height:9px;margin:0 2px;vertical-align:-1px}
+  .masktabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+  .masktab{font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:99px;
+           background:var(--bg);border:1px solid var(--edge);color:var(--dim);
+           cursor:pointer}
+  .masktab.active{background:var(--accent);color:#0b1220;border-color:var(--accent);
+                   font-weight:700}
+  /* Gamepad. The chosen action is the one filled in; everything else is
+     an outline, so "what did it press" is answerable at a glance rather
+     than by reading a table. */
+  #pad svg{width:100%;height:auto;display:block;margin-top:4px}
+  .btn{fill:none;stroke:var(--edge);stroke-width:2}
+  .btn.live{stroke:var(--dim)}
+  .btn.pick{fill:var(--accent);stroke:#bcd6ff;stroke-width:3}
+  .btn-l{font-family:var(--mono);font-size:13px;fill:var(--dim);
+         text-anchor:middle;dominant-baseline:central}
+  .btn-l.live{fill:var(--ink)}
+  .btn-l.pick{fill:#0b1220;font-weight:700}
+  .sub{font-family:var(--mono);font-size:9px;fill:var(--dim);text-anchor:middle}
+  .sub.pick{fill:var(--accent)}
+  .padnote{font-family:var(--mono);font-size:10px;fill:var(--dim);text-anchor:middle}
 </style>
 </head>
 <body>
@@ -77,16 +125,42 @@
 
 <main>
   <div>
-    <div class="card"><h2>Frame</h2><canvas id="grid"></canvas></div>
+    <div class="card">
+      <h2>Frame — ground truth</h2>
+      <!-- No overlays here, deliberately: this is the raw grid the game
+           sent, nothing the agent believes drawn on top of it. Every
+           marker and mask lives in the Perceptions panel instead, so
+           it's never ambiguous which one you're looking at. -->
+      <canvas id="grid"></canvas>
+    </div>
     <div class="card" style="margin-top:14px"><h2>Decision</h2>
       <div id="tier" class="tier t-none">—</div>
       <div id="weights"></div>
-      <table id="dtable"></table>
+      <div id="pad"></div>
+      <!-- The action/payload/candidates/reasoning table lives in
+           renderDecisionTable(); the gamepad above says the same thing
+           faster. Uncomment the call in render() to bring it back. -->
+      <table id="dtable" hidden></table>
     </div>
   </div>
   <div class="cols">
-    <div class="card"><h2>Perceptions</h2><table id="ptable"></table></div>
-    <div class="card"><h2>Evidence per action</h2><div id="evidence"></div></div>
+    <div class="card">
+      <h2>Perceptions</h2>
+      <!-- Every mask below is a real signal the agent already computes —
+           see the LAYERS list in the script for what each one answers
+           and, for "environment"/"explored", why it can be empty (they
+           need a confirmed board position; see the Position row below). -->
+      <div class="masktabs" id="masktabs"></div>
+      <canvas id="mask"></canvas>
+      <div id="masklegend" class="legend"></div>
+      <table id="ptable"></table>
+    </div>
+    <div class="card"><h2>Evidence per action</h2><div id="evidence"></div>
+      <h2 style="margin-top:16px">Beliefs — what each entity is to me</h2>
+      <div id="beliefs"></div>
+      <h2 style="margin-top:16px">What each action does to colours</h2>
+      <div id="signature"></div>
+    </div>
   </div>
 </main>
 
@@ -110,6 +184,7 @@ let i = 0;
 
 const $ = id => document.getElementById(id);
 const canvas = $("grid"), ctx = canvas.getContext("2d");
+const maskCanvas = $("mask"), mctx = maskCanvas.getContext("2d");
 
 $("title").textContent = `${RUN.game_id} — ${RUN.final_state.replace("GameState.","")}, `
   + `${RUN.levels_completed} level(s) in ${RUN.actions} actions`;
@@ -126,7 +201,11 @@ const isVanish = s => (s.perception.pending_vanish || 0) > 0;
 const isBlock  = s => (s.decision.n_blocked || 0) > 0;
 const isThink  = s => s.decision.tier && s.decision.tier !== "epsilon";
 
-function drawGrid(s){
+// Ground truth. Exactly the grid the game sent — no markers, no masks, no
+// belief drawn on top of it. If you need to know whether the agent's
+// picture of the world matches reality, this is the thing to compare
+// the Perceptions panel against.
+function drawFrame(s){
   const {rows, cols, grid} = s;
   if(!rows || !cols){ canvas.width = canvas.height = 1; return; }
   canvas.width = cols; canvas.height = rows;
@@ -139,24 +218,325 @@ function drawGrid(s){
     img.data[p*4+3] = 255;
   }
   ctx.putImageData(img, 0, 0);
-  // Mark the click target so a coordinate action is visible on the board.
-  const pay = s.decision.payload;
-  if(pay && pay.x != null){
-    ctx.fillStyle = "rgba(255,255,255,.85)";
-    ctx.fillRect(pay.x, pay.y, 1, 1);
-  }
 }
 
-function rowsHtml(pairs){
-  return pairs.map(([k, v]) =>
-    `<tr><td>${k}</td><td>${v === "" || v == null
+// ── Perception masks ─────────────────────────────────────────────────
+// Every layer here already exists in the agent (see scripts/recap.py's
+// `snapshot`, which is the only place these are read from) — this panel
+// answers "what does the agent believe is spatially true, and where",
+// which is a different question from "what did the game actually send"
+// (the Frame panel, left alone on purpose). Only one mask shows at a
+// time; overlaying all of them at once would be unreadable noise.
+const LAYERS = [
+  {key:"entities", label:"Entities", rgb:[150,200,255],
+   help:"Every contiguous region the agent groups as one thing, tracked " +
+        "across frames by overlap. This is the scene as it sees it — cd82 " +
+        "is 15 regions, not 4096 pixels. Grouping only; nothing here says " +
+        "which region is the player, the goal, or a hazard."},
+  {key:"controlled", label:"Controlled", rgb:[90,235,170],
+   help:"Every object confirmed to move when an action was taken — the " +
+        "cells it moved INTO (the part that overlaps where it already was " +
+        "doesn't change, so it isn't in the diff). Empty on games where " +
+        "nothing translates. Check the Controls row below: two colours " +
+        "there means two separately controllable objects."},
+  {key:"interest", label:"Interest", rgb:[255,110,25],
+   help:"Where change has happened that the agent didn't cause itself — " +
+        "accumulated \"wanting\", not a claim about the goal (attention layer)."},
+  {key:"affect", label:"Affect", rgb:[255,210,40],
+   help:"\"Thing I affect\": this step's changes left over after " +
+        "subtracting the agent's own movement and the stamina meter."},
+  {key:"environment", label:"Environment", rgb:[255,80,80],
+   help:"Positions where a learned move was tried and did not happen — " +
+        "this game's walls. Empty until a board position is confirmed " +
+        "(see Position, below) — these are stored relative to the agent, " +
+        "not as absolute pixels."},
+  {key:"explored", label:"Explored", rgb:[110,168,254],
+   help:"Every distinct position visited this attempt. Same requirement " +
+        "as Environment: empty with no confirmed board position."},
+  {key:"clicked", label:"Clicked", rgb:[196,140,255],
+   help:"Cells ACTION6 has already targeted, brighter where targeted " +
+        "more often. The one mask that works on games with no move map " +
+        "— which is most games where the others stay empty."},
+];
+let activeLayer = "interest";
+
+function renderMaskTabs(){
+  $("masktabs").innerHTML = LAYERS.map(l =>
+    `<button type="button" class="masktab ${l.key === activeLayer ? "active" : ""}" ` +
+    `data-layer="${l.key}">${l.label}</button>`).join("");
+}
+$("masktabs").addEventListener("click", e => {
+  const btn = e.target.closest(".masktab");
+  if(!btn) return;
+  activeLayer = btn.dataset.layer;
+  render();
+});
+
+function drawMask(s){
+  const p0 = s.perception;
+  const {rows, cols, grid} = s;
+  if(!rows || !cols){ maskCanvas.width = maskCanvas.height = 1; return; }
+  maskCanvas.width = cols; maskCanvas.height = rows;
+
+  // Dim, desaturated backdrop of the real frame — enough to see where a
+  // hot cell actually sits on the board, without competing with the mask
+  // colour for attention the way the full-colour frame would.
+  const img = mctx.createImageData(cols, rows);
+  for(let p = 0; p < rows * cols; p++){
+    const c = PALETTE[parseInt(grid[p], 16)] || "#000";
+    const r = parseInt(c.slice(1,3),16), g = parseInt(c.slice(3,5),16), b = parseInt(c.slice(5,7),16);
+    const gray = Math.round((r*0.3 + g*0.59 + b*0.11) * 0.32);
+    img.data[p*4] = gray; img.data[p*4+1] = gray; img.data[p*4+2] = gray; img.data[p*4+3] = 255;
+  }
+  mctx.putImageData(img, 0, 0);
+
+  const layer = LAYERS.find(l => l.key === activeLayer);
+  const cells = (s.perception.masks || {})[activeLayer] || [];
+  const peak = Math.max(1, ...cells.map(c => c[2] || 1));
+  const [cr, cg, cb] = layer.rgb;
+  for(const [x, y, w] of cells){
+    const t = Math.min((w || 1) / peak, 1);
+    mctx.fillStyle = `rgba(${cr},${cg},${cb},${(0.28 + 0.6*t).toFixed(2)})`;
+    mctx.fillRect(x, y, 1, 1);
+  }
+
+  // Always-on context, regardless of which mask is selected: where the
+  // agent is, and what it just targeted. These are perceptual
+  // annotations too, which is exactly why they're here and not on the
+  // ground-truth Frame panel.
+  const anchor = s.perception.anchor;
+  if(anchor) markCell(mctx, anchor[0], anchor[1], "#3ad6ff");
+  const pay = s.decision.payload;
+  if(pay && pay.x != null) markCell(mctx, pay.x, pay.y, "#ff2fd0");
+
+  renderMaskTabs();
+  // An empty mask has two very different meanings and they must not look
+  // alike: "nothing there yet" versus "this can never have anything on
+  // this game". Controlled/Environment/Explored all need a self-motion
+  // estimate, which 11 of 25 games never produce; Clicked needs the game
+  // to offer a coordinate action at all. Measured on cd82: those three
+  // are empty on 100% of 400 steps, which reads as a broken panel unless
+  // it says why.
+  const selfKnown = Object.keys(p0.moves || {}).length > 0
+                 || Object.keys(p0.controlled_by_action || {}).length > 0;
+  const needsSelf = ["controlled", "environment", "explored"].includes(activeLayer);
+  const hasClick = (s.available || []).includes("ACTION6");
+  const unavailable =
+    (needsSelf && !selfKnown) ? "nothing on this game ever moves, so there is no " +
+                                "\"self\" to measure this against — not empty, inapplicable"
+  : (activeLayer === "clicked" && !hasClick) ? "this game offers no coordinate " +
+                                "action, so nothing can ever be clicked"
+  : null;
+
+  const empty = cells.length === 0;
+  $("masklegend").innerHTML =
+    `<span><i class="dot" style="background:rgb(${cr},${cg},${cb})"></i>`
+    + `${layer.label} — ${cells.length} cell${cells.length === 1 ? "" : "s"} this step</span>`
+    + `<span><i class="dot dot-pos"></i>agent position${anchor ? "" : " (not yet confirmed)"}</span>`
+    + (pay && pay.x != null ? `<span><i class="dot dot-target"></i>this step's click target</span>` : "")
+    + `<div class="hint" style="width:100%;margin-top:4px">${layer.help}</div>`
+    + (unavailable
+        ? `<div class="hint" style="width:100%;color:var(--warn)">n/a — ${unavailable}.</div>`
+        : (empty ? `<div class="hint" style="width:100%">Nothing recorded yet — this `
+                 + `layer applies to this game but has no evidence so far.</div>` : ""));
+}
+
+// A single board pixel disappears at real display scale (and can match
+// the cell's own colour exactly). A 5-pixel plus in a colour outside the
+// ARC palette stays visible over anything underneath it.
+function markCell(context, x, y, color){
+  context.fillStyle = color;
+  for(const [ox, oy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]])
+    context.fillRect(x + ox, y + oy, 1, 1);
+}
+
+// ── Gamepad ───────────────────────────────────────────────────────────
+// ACTION1-4 sit in a D-pad diamond, placed by the offset the agent has
+// actually *learned* for each one rather than by a fixed convention — so
+// the pad shows what this game's controls do, and shows nothing
+// misleading before the move map exists (then it falls back to a stable
+// order, marked as unlearned). ACTION5-7 are face buttons on the right.
+const DIR_SLOT = {up:[100,46], left:[56,90], right:[144,90], down:[100,134]};
+const FALLBACK = {ACTION1:"up", ACTION2:"down", ACTION3:"left", ACTION4:"right"};
+
+function slotFor(offset){
+  if(!offset) return null;
+  const [dx, dy] = offset;
+  if(dx === 0 && dy === 0) return null;
+  return Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? "left" : "right")
+                                      : (dy < 0 ? "up" : "down");
+}
+
+function renderPad(s){
+  const d = s.decision, p = s.perception;
+  const avail = new Set(s.available);
+  const cand  = new Set(d.candidates || []);
+  const w     = d.weights || null;
+  const wmax  = w ? Math.max(...Object.values(w), 1e-9) : 0;
+
+  // Assign the four directional actions to slots.
+  const placed = {}, taken = new Set();
+  let learned = false;
+  for(const a of ["ACTION1","ACTION2","ACTION3","ACTION4"]){
+    const slot = slotFor(p.moves[a]);
+    if(slot && !taken.has(slot)){ placed[a] = slot; taken.add(slot); learned = true; }
+  }
+  for(const a of ["ACTION1","ACTION2","ACTION3","ACTION4"]){
+    if(placed[a]) continue;
+    let slot = FALLBACK[a];
+    if(taken.has(slot)) slot = Object.keys(DIR_SLOT).find(k => !taken.has(k));
+    if(slot){ placed[a] = slot; taken.add(slot); }
+  }
+
+  const face = ["ACTION5","ACTION6","ACTION7"]
+    .filter(a => avail.has(a) || cand.has(a) || a === d.action);
+  const faceY = face.length === 1 ? [90]
+              : face.length === 2 ? [62,118] : [46,90,134];
+
+  const parts = [];
+  const draw = (a, cx, cy) => {
+    const isPick = a === d.action;
+    const isLive = cand.has(a) || avail.has(a);
+    const cls = isPick ? "pick" : (isLive ? "live" : "");
+    parts.push(`<circle class="btn ${cls}" cx="${cx}" cy="${cy}" r="21"/>`);
+    parts.push(`<text class="btn-l ${cls}" x="${cx}" y="${cy}">${a.slice(6)}</text>`);
+    const bits = [];
+    if(w && w[a] != null) bits.push(`${(w[a]/wmax*100).toFixed(0)}%`);
+    const off = p.moves[a];
+    if(off) bits.push(`${off[0]},${off[1]}`);
+    if(bits.length)
+      parts.push(`<text class="sub ${isPick?'pick':''}" x="${cx}" y="${cy+34}">`
+                 + `${bits.join("  ")}</text>`);
+    // The coordinate action's payload is the decision, so show it.
+    if(isPick && d.payload && d.payload.x != null)
+      parts.push(`<text class="sub pick" x="${cx}" y="${cy+46}">`
+                 + `x = ${d.payload.x}, y = ${d.payload.y}</text>`);
+  };
+
+  for(const [a, slot] of Object.entries(placed)) draw(a, ...DIR_SLOT[slot]);
+  face.forEach((a, k) => draw(a, 262, faceY[k]));
+
+  // Notes sit on their own baseline below every button label — the
+  // down-button's weight label already occupies y=168 at the same x.
+  if(d.action === "RESET")
+    parts.push('<text class="padnote" x="170" y="190">RESET — died, restarting the level</text>');
+  else if(!learned)
+    parts.push('<text class="padnote" x="170" y="190">no move map on this game '
+               + '— D-pad positions are a placeholder</text>');
+
+  $("pad").innerHTML =
+    `<svg viewBox="0 0 340 200" role="img" aria-label="controller state">`
+    + parts.join("") + `</svg>`;
+}
+
+// Each row is [label, valueHtml, hoverExplanation?]. The explanation goes
+// on a native `title` attribute — hover to read it, nothing extra to
+// close, no clutter for someone who already knows what the row means.
+function rowsHtml(rows){
+  return rows.map(([k, v, hint]) =>
+    `<tr${hint ? ` title="${hint.replace(/"/g,"&quot;")}"` : ""}>`
+    + `<td>${k}</td><td>${v === "" || v == null
       ? '<span class="empty">none</span>' : v}</td></tr>`).join("");
+}
+
+function backgroundSwatch(idx){
+  if(idx == null) return '<span class="empty">not yet identified</span>';
+  return `<span class="swatch" style="background:${PALETTE[idx]||'#000'}"></span>colour ${idx}`;
+}
+
+// (dx, dy) read naturally as board pixels; nobody reads "(-15, 20)" as
+// "left and down" on sight, so say it in words. Anchored only once a real
+// movement has fixed where "start" was on the actual board — until then
+// this is a relative count with no picture to match it to.
+function describeDisplacement([dx, dy], anchorKnown){
+  const bits = [];
+  if(dx) bits.push(`${Math.abs(dx)} ${dx > 0 ? "right" : "left"}`);
+  if(dy) bits.push(`${Math.abs(dy)} ${dy > 0 ? "down" : "up"}`);
+  const phrase = bits.length ? bits.join(", ") + " of the start point" : "at the start point";
+  return phrase + (anchorKnown ? ""
+    : ' <span class="hint">(no confirmed movement yet — relative only)</span>');
+}
+
+// The move map in words: which object each action moves, and which way.
+// Restored as a row after being cut as "redundant with the D-pad" — the
+// pad prints a raw offset like "-5,0" in 9px type under one of four
+// slots, which is not the same as being able to read "A1 -> left" in a
+// list. Directions are named with the same rule the pad uses, so the two
+// can never disagree.
+//
+// Also the clearest readout of the conflation problem: on sp80 this
+// shows ACTION1/3 driving one colour and ACTION2/4 another, while the
+// agent treats all four as moving a single "me".
+// The entity list. Largest first, because the canvas is usually the
+// biggest region and seeing it named is a useful sanity check.
+function entitiesRow(list, staminaId){
+  if(!list || !list.length) return '<span class="empty">no regions yet</span>';
+  const rows = list.slice(0, 8).map(([rid, colour, n, x, y, w, h]) =>
+    `<div><span class="swatch" style="background:${PALETTE[colour]||'#000'}"></span>`
+    + `#${rid} <span class="hint">${n} cells, ${w}x${h} at (${x},${y})`
+    + `${rid === staminaId ? " — <b>the stamina meter</b>" : ""}`
+    + `${n > 2000 ? " — the canvas" : ""}</span></div>`).join("");
+  const more = list.length > 8
+    ? `<div class="hint">+${list.length - 8} more</div>` : "";
+  return `<div class="hint">${list.length} tracked</div>` + rows + more;
+}
+
+function controlsRow(byAction, moves, turns){
+  byAction = byAction || {}; moves = moves || {}; turns = turns || {};
+  const acts = [...new Set([...Object.keys(moves), ...Object.keys(byAction),
+                            ...Object.keys(turns)])].sort();
+  if(!acts.length) return '<span class="empty">nothing has moved yet</span>';
+  const colours = new Set(Object.values(byAction));
+  const body = acts.map(a => {
+    const colour = byAction[a], off = moves[a];
+    const swatch = colour != null
+      ? `<span class="swatch" style="background:${PALETTE[colour]||'#000'}"></span>` : "";
+    // A rotation is a different kind of answer to "what does this button
+    // do" and cannot be phrased as an offset, so it is reported as itself
+    // rather than squeezed into a direction.
+    const spin = Object.entries(turns[a] || {})
+      .map(([k, n]) => `${k.replace("rot","").replace("90","90° ")} ×${n}`).join(", ");
+    const dir = off
+      ? `<b>${slotFor(off) || "no direction"}</b> <span class="hint">(${off[0]},${off[1]})</span>`
+      : (spin ? `<b>turns</b> <span class="hint">${spin}</span>`
+              : '<span class="hint">moved, but no stable direction yet</span>');
+    const both = off && spin ? ` <span class="hint">+ turns ${spin}</span>` : "";
+    return `<div>${swatch}${a.replace("ACTION","A")} → ${dir}${both}</div>`;
+  }).join("");
+  const warn = colours.size > 1
+    ? `<div class="hint" style="color:var(--warn)">${colours.size} separate `
+      + `objects — merged into one position by the move map</div>`
+    : "";
+  return body + warn;
+}
+
+function actsLocallyBadge(v){
+  if(v === true)
+    return '<span class="badge badge-local">LOCAL</span>'
+         + '<span class="hint">changes the cell it targets</span>';
+  if(v === false)
+    return '<span class="badge badge-remote">REMOTE</span>'
+         + '<span class="hint">changes cells elsewhere on the board</span>';
+  return '<span class="badge badge-unknown">UNKNOWN</span>'
+       + '<span class="hint">not enough evidence yet</span>';
+}
+
+// Coloured with the game's OWN detected stamina colour rather than a
+// generic green/red, so the bar and the pixels it is reading from stay
+// visibly the same thing.
+function staminaBar(fraction, colourIdx){
+  if(fraction == null) return '<span class="empty">not detected on this game</span>';
+  const pct = Math.max(0, Math.min(100, Math.round(fraction * 100)));
+  const color = PALETTE[colourIdx] ?? "#5ddba0";
+  return `<div class="bar stam"><span style="width:${pct}%;background:${color}"></span>
+           <label><i>${pct}% left</i><i>colour ${colourIdx}</i></label></div>`;
 }
 
 function render(){
   const s = steps[i];
   if(!s) return;
-  drawGrid(s);
+  drawFrame(s);
+  drawMask(s);
   $("stepno").textContent = s.step;
   $("level").textContent = s.levels_completed;
   $("statepill").textContent = (s.state || "").replace("GameState.","");
@@ -169,22 +549,48 @@ function render(){
   if(isBlock(s))  f.push(`<span class="flag f-block">${s.decision.n_blocked} BLOCKED</span>`);
   $("flags").innerHTML = f.join("") || '<span style="color:var(--dim)">—</span>';
 
+  // "available" and "move map" are cut here — the gamepad shows both
+  // already (dimmed buttons, and the offset printed under each D-pad
+  // button), so a text row repeating them was pure duplication. Interest
+  // moves from a coordinate list to the heatmap painted on the frame
+  // above, plus the summary line in the legend.
   const p = s.perception;
-  const mv = Object.entries(p.moves).map(([a,o]) => `${a}(${o[0]},${o[1]})`).join(" ");
   $("ptable").innerHTML = rowsHtml([
-    ["background", p.background],
-    ["displacement", `(${p.displacement[0]}, ${p.displacement[1]})`],
-    ["move map", mv],
-    ["visited", p.visited],
-    ["obstacles", p.obstacles],
-    ["stamina", p.stamina_fraction == null ? null
-        : `${(p.stamina_fraction*100).toFixed(0)}% (colour ${p.stamina_colour})`],
-    ["acts_locally", p.acts_locally === null ? null : String(p.acts_locally)],
-    ["interest", p.interest_cells
-        ? `${p.interest_cells} cells, peak ${p.interest_peak}` : null],
-    ["interest top", p.interest_top.slice(0,4).map(c=>`(${c[0]},${c[1]})`).join(" ")],
-    ["route", p.route_len || null],
-    ["available", s.available.join(" ")],
+    ["background", backgroundSwatch(p.background),
+      "The canvas colour, fixed once from this level's first frame. What " +
+      "tells a change that creates or destroys something apart from one " +
+      "that just relabels it."],
+    ["position", describeDisplacement(p.displacement, !!p.anchor),
+      "Where the agent believes it is, relative to wherever this attempt " +
+      "started. Shown as a cyan marker in the Perceptions panel once a " +
+      "real movement has confirmed the board position."],
+    ["explored", `${p.visited} position${p.visited === 1 ? "" : "s"} visited`,
+      "Distinct positions reached this attempt — steers exploration " +
+      "toward ground not covered yet."],
+    ["obstacles", p.obstacles || null,
+      "Positions where a learned move was tried and did not happen — " +
+      "this game's version of a wall."],
+    ["stamina", staminaBar(p.stamina_fraction, p.stamina_colour),
+      "An on-screen quantity that drains during an attempt and refills " +
+      "when it restarts — a lives counter, a step budget, whatever this " +
+      "particular game renders."],
+    ["entities", entitiesRow(p.entities, p.stamina_entity),
+      "The scene grouped into contiguous regions and followed across " +
+      "frames. A tractable count here is the whole argument for the layer: " +
+      "beliefs can be attached to fifteen things, not to four thousand " +
+      "pixels."],
+    ["controls", controlsRow(p.controlled_by_action, p.moves, p.rotations_by_action),
+      "The learned move map: which object each action moves, and which " +
+      "way. Learned per game from 3+ consistent sightings, and kept for " +
+      "the whole game — it survives both death and a level change. More " +
+      "than one colour means several independently controllable objects, " +
+      "which the move map currently merges into a single position."],
+    ["clicking", actsLocallyBadge(p.acts_locally),
+      "Does the coordinate action (ACTION6) change the cell it targets, " +
+      "or something elsewhere on the board?"],
+    ["route", p.route_len ? `${p.route_len} step(s) queued` : null,
+      "A planned path toward the most salient cell — used only once " +
+      "nothing else has already proven itself this game."],
   ]);
 
   const d = s.decision;
@@ -204,25 +610,105 @@ function render(){
     $("weights").innerHTML = "";
   }
 
-  $("dtable").innerHTML = rowsHtml([
+  renderPad(s);
+  // renderDecisionTable(d);   // ← uncomment for the raw fields
+
+  const e = s.evidence;
+  // Union of ALL five evidence dicts, not just tries/changes. Those two
+  // reset every death by design (contingency stats are per-attempt); the
+  // other three deliberately survive a RESET (my_agent.py's own comment:
+  // "which action makes progress is a property of the game, not of one
+  // attempt"). Building this list from tries/changes alone made that
+  // persisted evidence disappear from the panel the instant an attempt
+  // ended, until the action happened to be tried again — silently
+  // hiding real, often more important signal (verified: a vanish count
+  // of 16 sat invisible for two full steps after a death on cd82).
+  const acts = [...new Set([
+    ...Object.keys(e.tries), ...Object.keys(e.changes),
+    ...Object.keys(e.interactions), ...Object.keys(e.vanishes),
+    ...Object.keys(e.level_ups),
+  ])].sort();
+  // "affect" (was the unexplained label "inter") counts steps where this
+  // action changed something that was NOT the agent's own movement. It
+  // can only be counted when a self-motion estimate exists for that step
+  // — otherwise there is no "self" to subtract and it would collapse into
+  // "anything changed". On a game where nothing ever translates it is
+  // therefore permanently uncountable, which is a different statement
+  // from "measured, found none" and must not read as a plain 0.
+  const selfKnown = Object.keys(s.perception.moves || {}).length > 0
+                 || Object.keys(s.perception.controlled_by_action || {}).length > 0;
+  const affect = a => selfKnown
+    ? `affect ${e.interactions[a]||0}`
+    : `<span title="No self-motion estimate on this game, so a change ` +
+      `can't be split into 'me' vs 'not me'. Not zero — unmeasurable.">` +
+      `affect n/a</span>`;
+  $("evidence").innerHTML = acts.length
+    ? `<div class="hint" style="margin-bottom:6px">tried = chosen · changed = ` +
+      `something moved on screen · affect = changed something that wasn't me · ` +
+      `vanish = an object disappeared · level-up = scored</div>`
+      + acts.map(a =>
+        `<div class="ev"><b>${a}</b> &nbsp;tried ${e.tries[a]||0}
+          &nbsp;changed ${e.changes[a]||0}
+          &nbsp;${affect(a)}
+          &nbsp;vanish ${e.vanishes[a]||0}
+          &nbsp;<span style="color:var(--good)">level-up ${e.level_ups[a]||0}</span></div>`
+      ).join("")
+    : '<span class="empty">no evidence yet</span>';
+
+  // What each action actually DOES to colours, and which transitions only
+  // it causes. The agent tracks none of this — `changed` is a yes/no, and
+  // the colour census is global rather than per action — so an action
+  // with an exclusive, large effect looks identical to one that nudges a
+  // counter. On cd82 this is where ACTION5's 0->15 shows up.
+  // Beliefs: the composed view. A role here is a statement about how an
+  // entity's behaviour correlates with the agent's own actions — not about
+  // what the thing is in the game.
+  const bel = s.evidence.beliefs || [];
+  const counts = s.evidence.belief_roles || {};
+  const ROLE_CLASS = {control:"badge-local", affect:"badge-remote",
+                      context:"badge-unknown", environment:"badge-unknown"};
+  $("beliefs").innerHTML = bel.length
+    ? `<div class="hint" style="margin-bottom:6px">`
+      + Object.entries(counts).filter(([, v]) => v)
+          .map(([k, v]) => `${k} ${v}`).join(" · ") + `</div>`
+      + bel.map(b =>
+        `<div class="ev"><span class="swatch" style="background:`
+        + `${PALETTE[b.colour]||'#000'}"></span>#${b.id} `
+        + `<span class="badge ${ROLE_CLASS[b.role]||'badge-unknown'}">`
+        + `${b.role.toUpperCase()}</span>`
+        + `<span class="hint">${b.why}</span></div>`).join("")
+    : '<span class="empty">no entity has earned a role yet</span>';
+
+  const sig = s.evidence.signature || {};
+  const sigActs = Object.keys(sig).filter(a => a !== "RESET").sort();
+  $("signature").innerHTML = sigActs.length ? sigActs.map(a => {
+    const pairs = sig[a].map(p =>
+      `<span class="tr${p.unique ? " uniq" : ""}" title="${p.cells} cells`
+      + `${p.unique ? " — no other action ever causes this transition" : ""}">`
+      + `<span class="swatch" style="background:${PALETTE[p.from]||'#000'}"></span>`
+      + `→<span class="swatch" style="background:${PALETTE[p.to]||'#000'}"></span>`
+      + `${p.cells}</span>`).join(" ");
+    return `<div class="ev"><b>${a}</b> ${pairs}</div>`;
+  }).join("") + '<div class="hint" style="margin-top:6px">Outlined = a colour '
+    + 'transition <b>only this action</b> ever causes.</div>'
+    : '<span class="empty">nothing has changed colour yet</span>';
+}
+
+// Kept, not deleted: the gamepad is faster to read but these are the raw
+// fields behind it. Re-enable the call in render() when a decision needs
+// picking apart rather than glancing at.
+function renderDecisionTable(d){
+  const t = $("dtable");
+  t.hidden = false;
+  t.innerHTML = rowsHtml([
     ["action", `<b>${d.action}</b>`],
     ["payload", d.payload ? `(${d.payload.x}, ${d.payload.y})` : null],
-    ["candidates", d.candidates.join(" ")],
+    ["candidates", (d.candidates || []).join(" ")],
     ["novel", d.novel ? d.novel.join(" ") : null],
     ["blocked here", d.n_blocked || null],
     ["reasoning", typeof d.reasoning === "object" && d.reasoning
         ? JSON.stringify(d.reasoning) : d.reasoning],
   ]);
-
-  const e = s.evidence;
-  const acts = [...new Set([...Object.keys(e.tries), ...Object.keys(e.changes)])].sort();
-  $("evidence").innerHTML = acts.length ? acts.map(a =>
-    `<div class="ev"><b>${a}</b> &nbsp;tried ${e.tries[a]||0}
-      &nbsp;changed ${e.changes[a]||0}
-      &nbsp;inter ${e.interactions[a]||0}
-      &nbsp;vanish ${e.vanishes[a]||0}
-      &nbsp;<span style="color:var(--good)">up ${e.level_ups[a]||0}</span></div>`
-  ).join("") : '<span class="empty">no evidence yet</span>';
 }
 
 function go(n){ i = Math.max(0, Math.min(steps.length - 1, n)); render(); }

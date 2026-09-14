@@ -268,6 +268,11 @@ def main() -> None:
                 max_steps=args.max_steps,
                 games=game_ids,
                 seed=seed,
+                # Experiment arm. Without this in the record, two arms of
+                # an A/B land in the same bucket and the comparison is
+                # silently meaningless.
+                flags={"shift_fallback":
+                       os.environ.get("ARC_SHIFT_FALLBACK", "0") == "1"},
                 observed=observed,
                 scorecard=scorecard,
                 aggregate_score=score_val,

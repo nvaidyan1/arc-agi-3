@@ -1285,3 +1285,191 @@ counter, but in vc33 it is a step budget, so `lives` would assert discrete
 retries the evidence does not support — the governing principle forbids exactly
 that. `MAX_ACTIONS` keeps its name because the framework's `Agent.main()` reads
 that attribute. 61 tests pass; `make verify-packaging` still green.
+
+## 2026-09-13 — Rotation, multi-object conflation, per-action signatures; and an aggregate that hides a perfect signal
+
+**Motivation.** A session of questions about what the agent can and cannot
+see, each one checked rather than argued. Every finding below is recording-only:
+`_select` is byte-identical throughout, verified at the end.
+
+### Translation was the only rigid motion we ever tested for
+
+**Observation.** `detect_translation` gets as far as "this colour lost exactly
+as many cells as it gained" — a rigid-motion signature — then discards the
+event if no single *offset* explains it. A rotation dies exactly there.
+Measured across 25 games: **285 balanced-but-not-translated events, of which
+77 are exact rotations**. On wa30, **57 of 57** — a quarter of its change
+steps, seen as nothing at all.
+
+**Built.** `perception.detect_rotation`: solves each transform's two constants
+in closed form from the coordinate sums, then verifies by exact set equality.
+No search, no fitting, returns None freely. Three decisions made from
+measurement rather than taste:
+  * `MIN_ROTATION_CELLS = 3` — the measured size distribution is 3, 18, 43,
+    108 with nothing at 1 or 2; a threshold of 4 would discard all 57 of
+    wa30's rotations.
+  * **Reflections implemented, measured, and removed** — zero occurrences
+    across 25 games, so they are absent rather than carried untested.
+  * Tried only *after* translation: a centrally-symmetric shape sliding
+    sideways satisfies both, and the offset is the one that composes into a
+    position.
+
+Live: wa30 ACTION1/3/4 all turn clockwise (25/15/17), cn04 ACTION5 turns
+(31 cw, 1 ccw). 9 unit tests, asserting the refusals.
+
+### Two controllable objects, merged into one
+
+**Observation.** `detect_translation` identifies *which colour* moved and
+`MoveModel` then throws it away, keeping only the offset. So the agent cannot
+tell "I moved" from "a second controllable thing moved":
+
+| game | ACTION1 | ACTION2 | ACTION3 | ACTION4 |
+|---|---|---|---|---|
+| sp80 | colour **12** (0,4) | colour **9** (0,4) | colour **12** (20,0) | colour **9** (20,0) |
+| dc22 | colour **2** (0,2) | colour **14** (0,2) | colour **2** (2,0) | colour **14** (2,0) |
+| ls20 | colour 12 | colour 12 | colour 12 | colour 12 |
+
+sp80 and dc22 have **two independent objects**; ACTION1/3 drive one and
+ACTION2/4 the other. Their motions are summed into one `displacement`, which
+is then the key for `visited`, for `_blocked`, and for the router's BFS. ls20
+is single-avatar, which is why everything looked correct there. Recorded, not
+yet fixed — keying the move map by `(action, colour)` is a behaviour change.
+
+### An action's *kind* of effect is invisible
+
+**Observation.** `_action_changes` is a yes/no, and the colour census is
+global rather than per action. So on cd82, ACTION1-4 produce identical
+5↔15 / 2↔5 churn while **ACTION5 alone turns colour 0 into 15 across 400
+cells and nothing else ever does** — and that exclusivity scores the same as
+a one-pixel counter tick. ACTION5 was tried 27 times against ACTION3's 96.
+Surfaced in the recap (viewer-side, so the shipped path pays nothing).
+
+### The finding that matters most: an aggregate hiding a perfect signal
+
+**Hypothesis (user).** cd82's stamina bar is not being recognised, and its
+ticking is mis-filed as action-caused change.
+
+**Observation — half confirmed.** The bar changes on 77% of steps and **192 of
+192 of those land in "thing I affect"**, wholly unfiltered, because
+`residual_cells` only filters cells matching a *detected* stamina colour and
+cd82's is `None`. Attention is therefore polluted on three steps in four.
+**Half refuted:** masking the bar row and re-running both motion lenses gives
+**0 detections before and 0 after** — the real size mismatches are ±13/±14
+cells, genuine deformation, not a one-cell bar tick.
+
+**Inference — why the bar is invisible, exactly:**
+
+| colour 4 measured as | start | min | min/start | verdict |
+|---|---|---|---|---|
+| whole-board total (what we do) | 164 | 100 | **61%** | FAILS `STAMINA_MUST_EMPTY_TO` |
+| the bar region alone | 64 | 0 | **0%** | passes cleanly |
+
+**100 static colour-4 cells elsewhere on the board** act as a floor. A bar
+that empties *completely* is unrecoverable because unrelated pixels happen to
+share its colour. This is the concrete case for grouping pixels into
+entities, and it is not an analogy: the signal is perfect at the region level
+and absent at the aggregate level.
+
+Related, on cd82's control: colour 15 steps (16,23) → (26,25) → (38,23) under
+ACTION4 and back under ACTION3, deforming as it goes, so every rigid lens
+refuses it. A centroid test that tolerates deformation recovers **100%
+consistency across 179 observations** — ACTION1 up, ACTION2 down, ACTION3
+left, ACTION4 right, stride 11 — on a game where we currently detect nothing.
+It does not hallucinate elsewhere: sb26 and tn36 correctly return nothing,
+lp85 is noisy at 29%.
+
+### A bug of our own making, and what it cost
+
+Three recording dicts were put in `_reset_attempt` instead of `__init__`, so
+**every death threw the evidence away**. wa30's rotation count read 7 instead
+of 57. Action-keyed facts are game properties; the codebase already says so
+and the code did not follow it. Fixed.
+
+### Behaviour parity, properly measured for the first time
+
+30 sweeps before, 30 after, same cap and game count:
+
+| | before `88e0399b` | after `1409ea0e` |
+|---|---|---|
+| mean | 0.0307 | 0.0479 |
+| median | 0.0131 | 0.0085 |
+| sd | 0.0490 | 0.0701 |
+
+Permutation test on the median: **p = 0.50**. No detectable difference, which
+is the intended result. Note the means differ by 56% while the medians differ
+by 0.0045 at p=0.50 — a clean demonstration that the mean was always the
+wrong statistic here. Cost: 15 minutes.
+
+## 2026-09-13 — Entities, and a belief layer that composes the lenses
+
+**Motivation.** A session of adding lenses had moved the score zero, and the
+diagnosis was not "we need more lenses". Per-action evidence was a flat
+count — tries, changes, vanishes — with no baseline and no contrast, so
+cd82's stamina tick (52-66% of steps *whatever* is pressed) sat in every
+action's profile and drowned the one effect that is action-specific.
+
+**Observation — the case for entities, with a number.** cd82's stamina bar
+drains 64 cells to **0**, perfectly. It was never detected, because 100
+static cells elsewhere share its colour, so the whole-board colour total
+only falls 164 -> 100 = 61% and the "must actually empty" test rejects it.
+The same bar measured as a region reads **0%** and passes. A signal flawless
+at the region level was unrecoverable at the aggregate level.
+
+**Built — `perception.connected_regions` + `entities.RegionTracker`.**
+Grouping is representation, not ontology: it proposes that some pixels may
+be one thing and says nothing about what. Pure Python flood fill; `scipy` is
+not installed and is not worth a dependency for twenty lines. Meter
+detection went **16/25 -> 25/25 games with zero losses**, and cd82's bar
+contamination of "thing I affect" fell from **192/192 (100%) to 22%**.
+
+Three bugs found by checking rather than reasoning, each measured:
+  * The tracker must **remember vanished regions**, or a bar that empties
+    gets a new id on refill and the sawtooth never closes.
+  * The tiebreak had to move from *largest* to **drain persistence**. cd82
+    has a fill-progress region that also sawtooths; the real bar declines
+    on 57% of steps and fill-progress on 3%. Size picked the wrong one, and
+    reading fill progress as a budget would have the agent conserving
+    precisely when it is winning.
+  * Overlap matching cannot follow a thing that moves further than its own
+    width. Measured across four games, genuine non-overlapping
+    reappearances sit at distance 3-5 (each game's own stride: ls20 286 of
+    294 at exactly 5) and the nearest *different* object at 10, so a
+    proximity fallback at **8** sits in the empty gap. ls20 went from **83
+    region ids to 19** and from 70 entities permanently UNASSIGNED to
+    beliefs that form.
+
+**Built — `belief.py`.** Roles read from the contrast *between* actions:
+`responsiveness` (baseline rate across all actions) and `selectivity` (how
+far one action stands out). High responsiveness with no selectivity is
+CONTEXT — which is exactly what the stamina bar is, so it falls out instead
+of contaminating everything. Roles are **relational, not semantic**: each is
+a statement about how an entity's behaviour correlates with our own actions,
+and there is no PLAYER, GOAL or ENEMY here. UNASSIGNED is a first-class
+outcome and roles are recomputed from current evidence every time.
+
+Live, it says what a session of argument had been asking for:
+```
+cd82   #36 AFFECT   acted on by ACTION5 +27%
+       #40 CONTEXT  changes whatever I press (69% of steps)   <- the bar
+wa30   #0  CONTROL  I move this with ACTION2 +39%, ACTION4 +31%
+```
+Notably, on cd82 *without* the shift fallback it also finds
+`#15 CONTROL I move this with ACTION3 +32%, ACTION4 +24%` — the game's real
+left/right control, recovered from region-level contrast alone, which no
+perception lens could see.
+
+Two further bugs, both of the same family as the stamina one:
+  * **Stale cells.** A draining cell has *left* its region, so testing
+    against current cells missed it: the cd82 meter read **7% responsive
+    where it is really 77%** and stayed UNASSIGNED.
+  * **Appearing counted as moving**, so a recolour was described as "I move
+    this" — a claim about the world, and the wrong one.
+  * **False precision.** wa30 reported five entities as ACTION2's; ACTION2
+    is genuinely highest (0.93) but ACTION4 is 0.84 against a 0.53
+    baseline. Several buttons really do drive one thing, so every action
+    above threshold is now named rather than only the winner.
+
+**Status.** 102 tests (from 61 at session start), packaging verified.
+`belief` is recording-only: nothing reads it to decide. That is deliberate
+— naming the consumer before wiring one is the lesson of three
+recording-only layers that moved the score zero.

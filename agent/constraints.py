@@ -121,6 +121,24 @@ class StaminaDetector:
         self._peak: dict[int, int] = {}
         self._min: dict[int, int] = {}
         self._counts: dict[int, int] = {}
+        # Series are keyed by an opaque **series key**, not by colour.
+        # With whole-board totals the key IS the colour (and the old
+        # behaviour is unchanged); with tracked regions it is a region id,
+        # and this map carries the colour back out for callers that still
+        # think in colours. That distinction is the whole fix: cd82's bar
+        # drains 64 -> 0 but shares its colour with 100 static cells, so
+        # measured per colour it only falls 164 -> 100 = 61% and is
+        # rejected, while measured per region it reads 0% and passes.
+        self._key_colour: dict = {}
+        self._key_cells: dict = {}
+        # Every cell the region has ever covered. A draining bar's
+        # front cell has just STOPPED being the meter colour, so it is
+        # absent from the current region and a filter keyed on that
+        # alone still leaks the tick through — measured at 65% of bar
+        # changes on cd82. The full extent is what the meter occupies
+        # when full, which is the right thing to subtract.
+        self._key_extent: dict = {}
+        self._steps = 0
         self._announced = False
 
     @property
@@ -129,8 +147,8 @@ class StaminaDetector:
         return self._counts
 
     @property
-    def stamina_colour(self) -> int | None:
-        """The colour that behaves like depleting stamina, if any."""
+    def _best_key(self):
+        """The series key whose shape is a stamina sawtooth, if any."""
         best, best_start = None, 0
         for colour, starts in self._starts.items():
             if len(starts) < STAMINA_MIN_ATTEMPTS:
@@ -147,10 +165,50 @@ class StaminaDetector:
             spread = (max(starts) - min(starts)) / mean_start
             if spread > STAMINA_START_TOLERANCE:
                 continue
-            # Prefer the largest such meter — finer resolution.
-            if mean_start > best_start:
-                best, best_start = colour, mean_start
+            # Prefer the most PERSISTENT drain, not the largest one.
+            # Stamina depletes whether or not you achieve anything; fill
+            # progress advances only when you do, and both refill on a
+            # restart so both show a sawtooth. Measured on cd82, where the
+            # two sit side by side: the real bar declines on 57% of steps
+            # and the fill-progress region on 3%, a 19x separation. Sizing
+            # alone picked the wrong one (the fill region is larger), and
+            # reading fill progress as a budget would have the agent
+            # conserving precisely when it is winning.
+            persistence = self._down.get(colour, 0) / max(self._steps, 1)
+            if persistence > best_start:
+                best, best_start = colour, persistence
         return best
+
+    @property
+    def stamina_colour(self) -> int | None:
+        """The colour that behaves like depleting stamina, if any."""
+        key = self._best_key
+        if key is None:
+            return None
+        return self._key_colour.get(key, key)
+
+    @property
+    def stamina_region(self):
+        """The tracked region id of the meter, when measured per region.
+
+        Exact, not inferred. A caller that instead matched regions against
+        `stamina_cells` would get the wrong one: that set is the meter's
+        accumulated *extent*, and the canvas grows over cells the meter
+        has vacated, so the canvas intersects it and wins on size.
+        """
+        return self._best_key if self._key_colour else None
+
+    @property
+    def stamina_cells(self) -> frozenset | None:
+        """The cells of the stamina region, when tracked as a region.
+
+        Lets a caller subtract *that bar* rather than every cell sharing
+        its colour — which on a board where 100 unrelated cells are the
+        same colour is the difference between filtering the meter and
+        filtering a chunk of the play area.
+        """
+        key = self._best_key
+        return None if key is None else self._key_extent.get(key)
 
     @property
     def stamina_fraction(self) -> float | None:
@@ -161,15 +219,29 @@ class StaminaDetector:
         gains nothing. Knowing time is short only helps if there is
         something worth rushing toward.
         """
-        colour = self.stamina_colour
-        if colour is None:
+        key = self._best_key
+        if key is None:
             return None
-        starts = self._starts[colour]
+        starts = self._starts[key]
         full = sum(starts) / len(starts)
-        return max(0.0, min(1.0, self._counts.get(colour, 0) / full))
+        return max(0.0, min(1.0, self._counts.get(key, 0) / full))
 
-    def update(self, counts: dict[int, int], game_id: str = "") -> None:
-        """Fold one frame's colour histogram into the sawtooth evidence."""
+    def update(self, counts: dict, game_id: str = "",
+               colours: dict | None = None, cells: dict | None = None) -> None:
+        """Fold one frame's size series into the sawtooth evidence.
+
+        `counts` maps a **series key** to a size. Pass colour->total for
+        the old whole-board behaviour, or region_id->size with `colours`
+        and `cells` alongside to measure per region. The sawtooth logic
+        below is identical either way; only what is being counted changes.
+        """
+        self._steps += 1
+        if colours:
+            self._key_colour.update(colours)
+        if cells:
+            self._key_cells = dict(cells)
+            for k, v in cells.items():
+                self._key_extent[k] = self._key_extent.get(k, frozenset()) | v
         # Look for the sawtooth in the series itself rather than keying
         # off our own RESET: ls20 refills its meter internally (per life)
         # with no GAME_OVER, so refills tied to RESET would never be seen.
@@ -200,11 +272,14 @@ class StaminaDetector:
             for colour in set(counts) | set(self._counts)
         }
 
-        if not self._announced and self.stamina_colour is not None:
+        key = self._best_key
+        if not self._announced and key is not None:
             self._announced = True
-            colour = self.stamina_colour
+            starts = self._starts[key]
             logger.info(
-                "METER on %s: colour %d starts at ~%d each attempt and depletes",
-                game_id, colour,
-                sum(self._starts[colour]) / len(self._starts[colour]),
+                "STAMINA on %s: colour %s, %d cells, starts at ~%d each "
+                "attempt and depletes",
+                game_id, self.stamina_colour,
+                len(self._key_cells.get(key) or ()),
+                sum(starts) / len(starts),
             )
