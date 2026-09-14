@@ -559,8 +559,12 @@ verdict, in force for everything below:
             [x] no stale ids in GROUPS rows, [ ] blocked moves from the
             obstacle map (tu93's reader: "which presses were blocked").
       - [x] **(c) the enumerating proposer + verification loop** —
-            `agent/hypothesis.py`, `ARC_PROPOSER` default OFF, A/B
-            base vs proposer n=30 launched 2026-09-14. Next for it: the
+            `agent/hypothesis.py`, `ARC_PROPOSER` default OFF. **A/B n=30:
+            median 0.0145 -> 0.0420, p = 0.082 (pre-specified, whole
+            sweep); untouched 17 games identical; touched 8 split into
+            navigational gainers (m0r0 0 -> 9 sweeps reaching L1) and
+            cd82 losing 16 -> 4 because movement hypotheses displace the
+            paint action.** Not promoted; re-run after step 6. Next for it: the
             level-boundary diff to tell it which residuals ever mattered;
             walls (a lever that does not move the residual from here should
             consult the obstacle map before being falsified); the LLM

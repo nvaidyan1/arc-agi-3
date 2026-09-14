@@ -2091,3 +2091,42 @@ this environment, and the competition notebook has no internet. The LLM is
 a development-time proposer for growing the vocabulary; the competition
 path is the enumerator, or a local model. Interface is the same
 `Hypothesis` either way.
+
+## 2026-09-14 — A/B: the first brief consumer, base vs proposer (n=30 per arm)
+
+**Pre-specified test: whole 25-game score, medians, permutation.**
+
+| arm | median | mean | zero sweeps | L1 games/sweep | L2 |
+|---|---|---|---|---|---|
+| base | 0.0145 | 0.0384 | 2 | 2.00 | 0 |
+| proposer (`ARC_PROPOSER=1`) | **0.0420** | 0.0588 | 0 | 2.27 | 0 |
+
+Median +0.0275, **p = 0.082**. Not significant at 0.05; the first change
+since the shift fallback to move the median at all, and in the direction
+that the earlier three recording-only layers did not.
+
+**Reach check first, as the protocol says.** The flag changes level reach
+on 8 of 25 games; the untouched 17 score identically in both arms (median
+0.0000 / mean 0.0009 in each, p = 1.0) — the flag genuinely does not touch
+them. On the 8 it touches: median 0.040 -> 0.131, p = 0.063.
+
+**Exploratory, post hoc — not confirmatory.** The 8 split cleanly:
+  * gainers sp80 16->25, m0r0 **0->9**, ar25 9->13, cn04 3->5, sk48 0->1
+    — games where the level is cleared by *reaching* something. Subset
+    median 0.019 -> 0.198, p = 0.004.
+  * losers cd82 **16->4**, ls20 5->1, tr87 1->0 — cd82's level is cleared
+    by a paint action (ACTION5) that the bandit found by stumbling and the
+    proposer now displaces with movement hypotheses. Subset median
+    0.050 -> 0.000, p = 0.001.
+Both p-values were selected after seeing the data and mean nothing on their
+own; the split is the finding, not the numbers. m0r0 reaching level 1 at
+all — never once in 60+ base sweeps — is the single most informative row.
+
+**Inference.** The consumer works exactly as far as its vocabulary does:
+`distance -> 0` is a navigational goal, and it wins on navigational games
+and loses on the one game whose winning move is not a movement. The cd82
+loss is the cost of aiming at whatever moves; the level-boundary diff (step
+6) is the mechanism that would have told it, after one clear, that
+ACTION5 was the lever that mattered there. Not promoted to default: p =
+0.08 on the pre-specified test, and the cd82 regression is real. Next:
+step 6, then re-run this A/B.
