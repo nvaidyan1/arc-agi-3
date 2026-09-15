@@ -2530,3 +2530,27 @@ suggested sequencing.
 still unknown — needs the matched baseline arm next. Full numbers in
 `research/hypotheses/H002_llm_hypothesis_proposer.md`; actionables and
 order in `docs/plan.md` START HERE.
+
+## 2026-09-14 — First real aggregate_score comparison: LLM arm 2.4x baseline mean, not yet significant
+
+**Hypothesis.** The levels-completed comparison (previous entry) showed
+no signal, but levels_completed is a coarse binary; the actual score is
+sensitive to depth and speed and might show a direction that count of
+level-ups cannot.
+
+**Observation.** Re-ran the LLM arm through `play_local.py` directly
+(closing the earlier gap where it never queried the scorecard), same 5
+games/seeds 1-5/200-step cap as the baseline arm. Mean score: baseline
+0.0547 -> **llm 0.1325 (2.4x)**. LLM arm wins 4 of 5 seeds paired.
+Exact sign-permutation p=0.25 (n=5) — not significant, but the direction
+is consistent, not one outlier alone: dropping the largest-gain seed
+still leaves 3 of the remaining 4 positive.
+
+**Inference.** First evidence, however weak, distinguishable in direction
+from the earlier "no signal" read. Not a claim the LLM helps the score —
+a reason to spend a larger n establishing whether it does, which didn't
+exist before this sweep. Full numbers in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`. Both arms' 10
+sweep summaries kept together in `results/sweeps/`, a deliberate
+exception to "latest 5" retention for matched-pair comparisons — see
+`docs/plan.md`.

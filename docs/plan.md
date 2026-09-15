@@ -543,29 +543,49 @@ confirmed correct in a real committed sweep summary.
 **Matched baseline arm: done.** Same 5 games, same seeds 1-5, same
 200-step cap, `ARC_PROPOSER=1` without the LLM, via `play_local.py`
 directly (4m10s wall — confirms LLM latency was E-H002-2's entire cost,
-not game simulation). Paired against E-H002-2: **20 of 25 seed×game
-cells identical; the LLM arm reached level 1+ in 3/25 vs. baseline's
-2/25 — one net run, not distinguishable from noise at this n.** Known
-gap: `eh002_2.py` never queried the scorecard, so this compares
-`levels_completed` only, not `aggregate_score` (which the baseline arm
-has). Full table in `research/hypotheses/H002_llm_hypothesis_proposer.md`.
+not game simulation). Paired against E-H002-2 on `levels_completed`: 20
+of 25 seed×game cells identical; 3/25 vs 2/25 reaching level 1+ — no
+signal, indistinguishable from noise. But `eh002_2.py` never queried the
+scorecard, so this compared the wrong variable.
+
+**The LLM arm re-run through `play_local.py` (same seeds/games/steps) to
+get `aggregate_score` for both arms — first real score-level comparison,
+and it looks different from the levels-completed read:**
+
+| seed | baseline score | llm score | diff |
+|---|---|---|---|
+| 1 | 0.0000 | 0.0497 | +0.0497 |
+| 2 | 0.0000 | 0.0427 | +0.0427 |
+| 3 | 0.0000 | 0.0214 | +0.0214 |
+| 4 | 0.0462 | 0.0000 | -0.0462 |
+| 5 | 0.2276 | 0.5487 | +0.3212 |
+
+Mean: baseline 0.0547 -> **llm 0.1325 (2.4x)**. LLM arm wins 4 of 5 seeds
+paired. Exact sign-permutation p=0.25 (n=5, not significant — the
+smallest achievable two-sided p at this n is 0.0625). Not one outlier:
+dropping the largest-gain seed (5) still leaves 3 of the remaining 4
+positive, mean diff +0.017. **Not a claim the LLM proposer helps the
+score — a reason to find out with a larger n that didn't exist before
+this sweep.** Both arms' 10 sweep summaries kept together in
+`results/sweeps/` (see the amended retention rule above). Full tables in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.
 
 **Order for the next session.**
-1. **A larger-n LLM sweep through `play_local.py` itself** (not another ad
-   hoc script) — closes the `aggregate_score` gap for both arms for free,
-   and is the only way the score question gets an actual answer rather
-   than another "still can't tell" result. n=5 was enough to prove the
-   proposer mechanism works and generalises; it is not enough to see a
-   score effect through this much run-to-run noise.
-2. **The replay-ablation experiment** (second review §14) is now buildable
-   — real LLM traces exist from E-H002-2 and can be replayed offline
-   against a deterministic agent to separate generation quality from
-   integration quality. Do this once (1) gives a reason to keep digging.
+1. **A larger-n score-comparison sweep** (both arms, same seeds extended
+   past 5, through `play_local.py`) — the only way to move p below 0.25.
+   n=10 or n=15 per arm is the next reasonable step; estimate wall time
+   from this session's ~8.5 min/seed for the LLM arm before committing to
+   a number.
+2. **The replay-ablation experiment** (second review §14) is buildable now
+   — real LLM traces exist (from E-H002-2 and this comparison) and can be
+   replayed offline against a deterministic agent to separate generation
+   quality from integration quality. Worth doing regardless of (1)'s
+   outcome, now that it's cheap.
 3. Deferred (per the review's own sequencing, unchanged): the full
    event-sourcing rewrite of `recap.py`/logging beyond the LLM-trace piece
    already done; LLM call-purpose framing (model-discovery vs.
    hypothesis-discrimination vs. experiment-selection prompts);
-   call-budget-by-information-gain. Revisit once (1) shows a real effect.
+   call-budget-by-information-gain. Revisit once (1) is decisive either way.
 
 **Open case, unchanged.** cd82: paint effect is two-factor (side × selected
 paint colour) and the level needs *arrangement*, which has no gradient by
@@ -580,11 +600,15 @@ batch — and re-read the file before writing the commit message if it
 changed on disk since you last touched it (caught one wrong message before
 pushing this session). Never edit `agent/` while a sweep runs. A "before
 vs after" comparison needs the same seeds captured for *both* arms, not
-assumed. Retention: latest 5 sweep summaries. Test on the games a change
-touches, not the full sweep, when the touched set is known. Ollama serves
-one request at a time (`OLLAMA_NUM_PARALLEL=1`) — running multiple game
-processes concurrently does not parallelise LLM-proposer sweeps, only
-non-LLM ones.
+assumed. **Retention: latest 5 sweep summaries — except a matched-pair
+comparison keeps both arms together even past 5.** (Amended 2026-09-14:
+the baseline-vs-LLM score comparison needs both sides' files reproducible
+from the committed record; 10 are currently kept for exactly this reason.
+Prune a pair only once its comparison is superseded by a larger-n rerun,
+not on a file-count schedule.) Test on the games a change touches, not the
+full sweep, when the touched set is known. Ollama serves one request at a
+time (`OLLAMA_NUM_PARALLEL=1`) — running multiple game processes
+concurrently does not parallelise LLM-proposer sweeps, only non-LLM ones.
 
 ## NEXT: relations as residuals, gated by a probe (council verdict 2026-09-14)
 

@@ -1,6 +1,6 @@
 # H002: An intermittent LLM as hypothesis scientist, not controller
 
-Status: IN PROGRESS — matched baseline arm run: 3/25 vs 2/25 runs reaching L1+, indistinguishable from noise at n=5; the score question needs a larger n, not just a baseline
+Status: IN PROGRESS — first real aggregate_score comparison: LLM arm mean 2.4x baseline (0.0547->0.1325), wins 4/5 seeds, p=0.25 (n=5, not significant, consistent direction) -- worth a larger n
 Research question: RQ5 (compute-efficient reasoning) / RQ3 (active testing)
 Date opened: 2026-09-14
 Origin: council verdict step (c'); reviewer C §7, §8, §11, §28, §32 steps 3–4,
@@ -300,3 +300,48 @@ one: route the next LLM sweep through `play_local.py` directly (now that
 it captures `llm_stats`/`llm_trace` automatically), at a larger n, rather
 than another ad hoc script — that gets `aggregate_score` for both arms
 for free and removes this exact comparison gap.
+- 2026-09-14 **aggregate_score comparison** (closing the gap the baseline
+  entry above flagged): the LLM arm re-run through `play_local.py`
+  directly, same 5 games, same seeds 1-5, same 200-step cap, so
+  `aggregate_score` exists for both arms this time.
+
+  | seed | baseline score | llm score | diff |
+  |---|---|---|---|
+  | 1 | 0.0000 | 0.0497 | +0.0497 |
+  | 2 | 0.0000 | 0.0427 | +0.0427 |
+  | 3 | 0.0000 | 0.0214 | +0.0214 |
+  | 4 | 0.0462 | 0.0000 | -0.0462 |
+  | 5 | 0.2276 | 0.5487 | +0.3212 |
+
+  Mean: baseline 0.0547 -> **llm 0.1325 (2.4x)**. Median: 0.0000 ->
+  0.0427. LLM arm wins 4 of 5 seeds paired, loses 1 (seed 4, small).
+  Exact sign-permutation test (n=5, the only valid test at this n, no
+  distributional assumption): **p=0.25** — not significant by any
+  conventional threshold; the smallest achievable two-sided p at n=5 with
+  a clean sweep is 0.0625, so this reads as "consistent direction, not
+  enough seeds to rule out chance" rather than either a positive or null
+  result.
+
+  Seed 5 drives a large share of the mean gain (ar25 reaching level 2
+  under the LLM arm vs level 1 under baseline — matches the
+  levels_completed table in the previous entry). Removing seed 5: mean
+  diff over the remaining 4 becomes (0.0497+0.0427+0.0214-0.0462)/4 =
+  +0.0169 — still positive on 3 of 4, much smaller. The result is not
+  purely one outlier, but is not evenly spread either.
+
+**Inference.** This is the first score-level (not just levels-completed)
+comparison, and it updates the read from the previous entry: the
+levels-completed table looked like noise (3/25 vs 2/25 across all games);
+the score table — which is what the competition actually grades, and
+rewards depth/speed rather than a binary level-reached — is directionally
+consistent (4/5 seeds) though not statistically distinguishable from
+chance at n=5. Not a claim that the LLM proposer helps the score. A
+reason, that didn't exist before this sweep, to spend a larger n finding
+out rather than deprioritising the arm.
+
+**Sweep-retention note.** Both arms' sweep summaries (10 files: 5
+baseline + 5 LLM, seeds 1-5) are kept together in `results/sweeps/`,
+exceeding the usual "latest 5" retention — see `docs/plan.md` standing
+rules for why: a matched-pair comparison needs both arms reproducible
+from the committed record, and pruning either half would make this
+result irreproducible from the repo alone.
