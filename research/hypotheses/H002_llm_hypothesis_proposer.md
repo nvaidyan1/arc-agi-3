@@ -1,6 +1,6 @@
 # H002: An intermittent LLM as hypothesis scientist, not controller
 
-Status: IN PROGRESS — replay-ablation harness built; Stage 1 (reproducibility) confirmed 5/5 on real recorded runs; Stage 2 (counterfactual replay) not yet run
+Status: IN PROGRESS — softened the fix: an ungrounded unconditional claim is now tagged and kept, not rejected, losing only its priority in select_experiment; verified mechanically, not yet matched-seed swept
 Research question: RQ5 (compute-efficient reasoning) / RQ3 (active testing)
 Date opened: 2026-09-14
 Origin: council verdict step (c'); reviewer C §7, §8, §11, §28, §32 steps 3–4,
@@ -418,3 +418,125 @@ the model said*, with no confound from hidden nondeterminism elsewhere in
 the pipeline. **Not yet done**: Stage 2 — an actual counterfactual replay
 (e.g. cd82's oracle two-factor rule) to separate generation quality from
 integration quality, which is the point of building this at all.
+- 2026-09-15 **the generation-quality fix.** Traced one real call in detail
+  (ar25, level_step=20, 5 accepted hypotheses) and found every one of them
+  claimed an unconditional "lever" for a pair the brief's own RELATIONS
+  section explicitly marked `moves under every action alike` — the
+  project's own phrase for `PairRecord.lever() is None`. The model wasn't
+  malformed, it was fabricating groundedness: fluent, plausible-sounding
+  justifications ("the strongest lever," "consistently moving") that
+  contradict the evidence it was just shown, not extend it. One
+  hypothesis was internally contradictory (claimed the pair was moving
+  *apart* while predicting the distance would fall); another misread a
+  single flagged `surprised` deviation from a 100%-flat baseline as a
+  "consistent" trend.
+
+  Fixed in `parse_hypotheses` (`agent/proposer_llm.py`): an unconditional
+  hypothesis (`precondition: null`) is now rejected unless the pair's own
+  tallies actually show a lever (`rec.lever(DOWN) is not None`) — the
+  exact bar the enumerator already holds itself to (`Proposer.propose`
+  never bets without one). A hypothesis *with* a stated precondition is
+  exempt — that's the one case the model is allowed to say something the
+  tallies don't already show (cd82's swatch-state factor is this shape),
+  so nothing here narrows what the LLM can propose beyond the enumerator's
+  reach, only what it can claim without new information. 254 tests.
+
+  **Verified against the exact real failure, no new LLM calls needed** —
+  replayed the recorded ar25 reply (same file as the original finding)
+  through the fixed validator: all 5 fabricated hypotheses now rejected
+  as `no unconditional lever for this pair`. The replay's trajectory then
+  diverged from the original (levels_completed 2 -> 0 on this one seed,
+  and 2 LLM calls consumed instead of 4) — expected, since removing bad
+  pool entries changes what the agent actually does next, not just the
+  accounting. **This is one data point, not a score verdict** — a real
+  before/after read needs a matched-seed sweep, not an anecdote, and
+  hasn't been run yet.
+
+**Inference.** The fix does exactly what it was built to do: stop
+ungrounded claims from entering the pool, at the same evidentiary
+standard the enumerator already applies to itself. Whether *that*
+improves the score is a separate, still-open question — the honest
+position is this reduces noise in what the model contributes, and noise
+reduction is not the same claim as improvement. **Not yet done**: a
+proper matched-seed sweep with this fix in place, to see whether it
+changes the outlier-driven pattern from the n=10 comparison; a
+complementary prompt-side fix (explicitly explain "moves under every
+action alike" in the schema/instructions) that would reduce how often
+the model makes these claims in the first place rather than only
+catching them after the fact — needs live model calls to verify, not
+done here since the validator fix alone was verifiable for free.
+- 2026-09-15 **matched-seed sweep with the fix** (same 5 games, same
+  seeds 1-10, same 200-step cap as the n=10 comparison; only the code
+  changed — the generation-quality fix from the previous entry):
+
+  | | baseline | pre-fix llm | fixed llm |
+  |---|---|---|---|
+  | mean | 0.0523 | 0.1061 | **0.0817** |
+  | median | 0.0413 | 0.0448 | **0.0182** |
+
+  Fixed vs. pre-fix, directly (the actual test of the fix): mean diff
+  **-0.0244**, 2 wins / 5 losses / 3 ties, sign p=0.156 — not
+  significant, but leaning negative, not positive. Fixed vs. baseline:
+  2 wins / 2 losses / **6 ties**, sign p=0.625 — the weakest signal of
+  any comparison run this session.
+
+  Mechanism-level totals confirm the fix fired at scale, not just on the
+  one traced example: 131 `no unconditional lever` rejections across the
+  fixed arm (444 total returned), valid-schema rate **47.1% -> 19.4%** —
+  less than half as many hypotheses now enter the pool. Call counts
+  stayed similar (107 vs 104), so `should_call`'s gating wasn't
+  meaningfully disturbed.
+
+**Inference.** The fix does what it was built to do, confirmed at scale:
+cutting fabricated-justification content by more than half. It is not a
+score win, and leans (not significantly) toward a small score cost.
+Read honestly, not as "the fix is wrong" but as evidence the simple
+story — bad content in, bad content out, remove it and things improve —
+isn't what's happening. A plausible mechanism: even a hypothesis with a
+fabricated "why" still names a real `(action, relation, pair)` triple,
+falsified cheaply (budget 8) if wrong; if some of those "wrong
+justification, plausible target" bets were functioning as exploration
+diversity via the priority tiebreak (`select_experiment` favouring
+untested LLM bets), rejecting them removes that diversity along with the
+noise, not just the noise. **Not reverting** — the fix is correct on its
+own terms regardless of score, and the score effect isn't significant
+either direction. **Open question, not yet decided**: keep the strict
+reject, or accept-but-downweight an ungrounded unconditional claim
+instead of dropping it, to preserve some exploration diversity while
+still not treating a fabricated justification as trustworthy content.
+- 2026-09-15 **the alleviation, decided and shipped.** The open question
+  from the previous entry (strict reject vs. downweight) resolved:
+  reject was throwing away whatever exploration value the *target* of an
+  ungrounded claim carried, even though its *justification* was
+  fabricated. `parse_hypotheses` no longer rejects an unconditional claim
+  with no lever — it tags it `source="llm_ungrounded"` (instead of
+  `"llm"`) and keeps it in the pool. The whole mechanism is that one
+  string: `select_experiment`'s untested-LLM priority tiebreak checks
+  `source == "llm"` exactly, so an ungrounded bet no longer jumps the
+  queue ahead of a well-evidenced enumerator bet on the strength of a
+  fabricated "why" alone, but it is still live, still selectable, and
+  still gets tested through the ordinary flow. `closed_by_source`/
+  `evicted_by_source` (already keyed by `source`) now separate
+  `llm_ungrounded` outcomes from `llm` ones for free, no new plumbing.
+  `LLMProposer.stats["ungrounded"]` counts how many valid hypotheses
+  were tagged this way, separate from `rejects`. `brief.py`'s "N from
+  the model" count fixed to include ungrounded ones (`source.startswith
+  ("llm")` instead of an exact match) so it doesn't undercount. 255
+  tests.
+
+  **Verified for free again**: replayed the same recorded ar25 reply
+  through the softened validator. All 5 hypotheses that were rejected by
+  the strict version are now accepted and tagged `llm_ungrounded`
+  (`stats["ungrounded"]` = 6 across the call). Trajectory diverged from
+  the original run again (expected, not a verdict) — not reading
+  anything into this one seed given how much this session has already
+  warned against exactly that.
+
+**Inference.** The mechanism is exactly as designed and cheap to verify
+without new LLM calls, same as every fix this session. **Not yet
+matched-seed swept** — that is the next thing to actually do, not
+optional: only a real n=10 comparison against both existing arms
+(baseline, pre-fix llm, strict-reject fixed llm) tells us whether
+downweighting recovers the lost exploration value without also
+reintroducing the fabricated-justification problem the strict fix
+correctly solved.

@@ -2602,3 +2602,94 @@ as isolating the model's content, not some other hidden variance. That
 counterfactual run — the actual generation-vs-integration separation —
 is next, not yet done. Full detail in
 `research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-15 — Found the generation-quality problem, and fixed it for free
+
+**Hypothesis.** The score comparison's flat median and the replay
+harness's clean determinism together raise the question the aggregate
+numbers can't answer: what does a *bad* LLM hypothesis actually look
+like, concretely, and is it fixable quickly?
+
+**Observation.** Traced one real recorded call (ar25). All 5 accepted
+hypotheses claimed an unconditional lever for a pair the brief's own
+RELATIONS section had just labelled `moves under every action alike` —
+i.e. explicitly no lever. Not malformed JSON; fabricated groundedness.
+One was internally contradictory (apart, but predicted to fall); another
+mistook a single flagged deviation for a "consistent" trend.
+
+**Built.** `parse_hypotheses` now rejects an unconditional hypothesis
+whose pair has no real lever (`rec.lever(DOWN) is None`) — the same bar
+`Proposer.propose` already holds itself to. A hypothesis with a stated
+precondition is exempt, so nothing here narrows what the LLM can find
+beyond the enumerator, only what it can claim without new information.
+254 tests.
+
+**Verified for free** — replayed the exact recorded reply that produced
+the original finding through the fixed validator, no new LLM calls: all
+5 fabricated hypotheses now rejected, correctly. The replay's trajectory
+then diverged from the original (this one seed's levels_completed went
+2 -> 0) — expected, not a score verdict; removing bad pool entries
+changes what the agent does next.
+
+**Inference.** The fix does what it was built to do — stop ungrounded
+claims from entering the pool. Whether that improves the score needs a
+real matched-seed sweep, not this one anecdote, and that sweep hasn't
+been run. Full detail in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-15 — The generation-quality fix, matched-seed tested: correct, not a score win
+
+**Hypothesis.** The generation-quality fix (previous entry) should be
+measured with a real matched-seed sweep, not the one-seed replay anecdote
+— it might move the outlier-driven score pattern in either direction.
+
+**Observation.** Same 5 games, same seeds 1-10, same 200-step cap as the
+existing baseline and pre-fix LLM arms; only the fix changed. Mean score:
+baseline 0.0523, pre-fix llm 0.1061, **fixed llm 0.0817** — down from the
+pre-fix arm, not up. Fixed vs. pre-fix directly: 2 wins / 5 losses / 3
+ties, sign p=0.156 (not significant, leans negative). Mechanism totals
+confirm the fix fired at scale: 131 `no unconditional lever` rejections,
+valid-schema rate 47.1% -> 19.4%.
+
+**Inference.** The fix works exactly as designed and is not a score win.
+Not reverting — it's correct on its own terms and the score effect isn't
+significant either direction — but it undercuts the simple story that
+removing fabricated content should improve outcomes. Plausible reading:
+some of those hypotheses' *targets* were useful exploration diversity
+even when their *justifications* were fabricated, and cutting them by
+more than half removed that diversity along with the noise. Open
+question for next session: keep the strict reject, or downweight instead
+of dropping. Full detail in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-15 — The alleviation: tag ungrounded claims instead of rejecting them
+
+**Hypothesis.** The matched-seed sweep (previous entry) showed the
+strict reject leaning toward a small score cost, plausibly because it
+also removed whatever exploration diversity an ungrounded claim's
+*target* carried, even though its *justification* was fabricated. A
+softer rule -- keep the target, strip only the priority -- might recover
+that without reintroducing the original problem.
+
+**Built.** `parse_hypotheses` no longer rejects an unconditional claim
+with no lever; it tags it `source="llm_ungrounded"` and keeps it live.
+`select_experiment`'s untested-LLM priority tiebreak checks
+`source == "llm"` exactly, so the one-line tag is the entire mechanism --
+an ungrounded bet no longer jumps the queue, but stays selectable
+through the ordinary flow. `closed_by_source`/`evicted_by_source`
+separate ungrounded outcomes from grounded ones for free.
+`stats["ungrounded"]` counts them. `brief.py`'s "from the model" count
+fixed to not undercount. 255 tests.
+
+**Verified for free** (same recorded ar25 reply, no new LLM calls): all
+5 previously-rejected hypotheses now accepted and tagged
+`llm_ungrounded`. Trajectory diverged from the original run again, as
+expected -- not read as a result, given how often that exact trap has
+already shown up this session.
+
+**Inference.** Mechanism confirmed; score effect not yet known. A
+matched-seed sweep against the existing three arms (baseline, pre-fix
+llm, strict-reject fixed llm) is the next concrete step, not optional --
+only that tells us whether this recovers value or just moves the same
+problem sideways. Full detail in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.

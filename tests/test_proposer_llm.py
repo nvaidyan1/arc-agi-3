@@ -84,6 +84,63 @@ def test_rejections_name_their_reason():
                        "precondition member not on screen or is the controlled thing", "already holds"]
 
 
+def test_an_unconditional_claim_on_a_pair_with_no_lever_is_tagged_not_rejected():
+    # Measured live, 2026-09-14: given a brief whose RELATIONS section
+    # says a pair "moves under every action alike" (no lever, in as many
+    # words), gemma3:4b still returned "ACTION1 is the strongest lever on
+    # this pair" for five different pairs in one call -- all five
+    # contradicting, not extending, the evidence it was just shown.
+    #
+    # Outright rejection was tried first and matched-seed swept (H002
+    # status log, 2026-09-15): it cut this content correctly but the
+    # score leaned slightly negative, not positive -- evidence the
+    # *target* an ungrounded claim names can still carry exploration
+    # value even when its *justification* doesn't. So it is tagged
+    # `source="llm_ungrounded"` and kept in play, not dropped; only its
+    # priority in `select_experiment` (which looks for `source=="llm"`
+    # exactly) is what it loses.
+    e = Engine(**{'("distance", 1, 2)': rec(20)})       # no by_action set: no lever, no data at all
+    item = dict(GOOD, relation="distance", a=1, b=2, precondition=None)
+    hyps, rejects = pl.parse_hypotheses(reply(item), e, LIVE, LEGAL, control={1})
+    assert not rejects and len(hyps) == 1 and hyps[0].source == "llm_ungrounded"
+
+
+def test_an_unconditional_claim_on_a_pair_with_a_real_lever_is_tagged_grounded():
+    e = Engine(**{'("distance", 1, 2)': rec(20)})
+    e.records[("distance", 1, 2)].by_action = {
+        "ACTION3": {relations.DOWN: 4, relations.UP: 0, relations.FLAT: 0},
+        "ACTION1": {relations.DOWN: 0, relations.UP: 0, relations.FLAT: 4}}
+    item = dict(GOOD, relation="distance", a=1, b=2, action="ACTION3", precondition=None)
+    hyps, rejects = pl.parse_hypotheses(reply(item), e, LIVE, LEGAL, control={1})
+    assert not rejects and len(hyps) == 1 and hyps[0].source == "llm"
+
+
+def test_a_conditional_claim_is_always_tagged_grounded_regardless_of_lever():
+    # The one case the model IS allowed to say something the tallies alone
+    # don't already show -- a genuinely new claim (e.g. cd82's swatch-state
+    # factor), not a restatement contradicting the brief's own text. Never
+    # downgraded to "llm_ungrounded", whatever the pair's own lever status.
+    e = Engine(**{'("distance", 1, 2)': rec(20)})       # still no lever at all
+    item = dict(GOOD, relation="distance", a=1, b=2, precondition={"adjacency": "adjacent", "member": 2})
+    hyps, rejects = pl.parse_hypotheses(reply(item), e, LIVE, LEGAL, control={1})
+    assert not rejects and len(hyps) == 1 and hyps[0].source == "llm"
+
+
+def test_an_ungrounded_bet_loses_the_untested_llm_priority_but_stays_selectable():
+    # Lower confidence than the enumerator bet on purpose: the only way it
+    # could still win is the untested-LLM tiebreak (it sits ahead of
+    # confidence in the score tuple) -- proving that tiebreak does NOT
+    # fire for "llm_ungrounded" the way it does for a plain "llm" bet
+    # (tested elsewhere in this file with the same confidence gap).
+    ungrounded = mk(("distance", 1, 2), "ACTION3", 0.5, source="llm_ungrounded")
+    enumerator = mk(("distance", 1, 3), "ACTION4", 0.9, source="enumerator")
+    chosen = pl.select_experiment([ungrounded, enumerator], LEGAL, met=lambda h: True)
+    assert chosen is enumerator
+    # But it is still a live, selectable bet in its own right -- pull the
+    # competing enumerator bet and it gets picked.
+    assert pl.select_experiment([ungrounded], LEGAL, met=lambda h: True) is ungrounded
+
+
 def test_json_inside_prose_and_a_bare_list_both_parse():
     prose = "Sure! Here you go:\n" + reply(GOOD) + "\nHope that helps."
     assert len(pl.parse_hypotheses(prose, ENGINE, LIVE, LEGAL)[0]) == 1
@@ -113,7 +170,12 @@ def test_a_non_numeric_or_missing_id_is_still_rejected():
 
 def test_a_group_pair_is_addressed_by_id_lists():
     e = Engine(); e.group_records[("part_size_diff", (5, 6), (10, 12))] = rec(30)
-    item = dict(GOOD, a=[5, 6], b=[12, 10], precondition=None)
+    # A real lever -- the new grounding check below (agent/proposer_llm.py)
+    # rejects an unconditional claim on a pair with none.
+    e.group_records[("part_size_diff", (5, 6), (10, 12))].by_action = {
+        "ACTION5": {relations.DOWN: 4, relations.UP: 0, relations.FLAT: 0},
+        "ACTION1": {relations.DOWN: 0, relations.UP: 0, relations.FLAT: 4}}
+    item = dict(GOOD, a=[5, 6], b=[12, 10], precondition=None, action="ACTION5")
     hyps, rejects = pl.parse_hypotheses(reply(item), e, {5, 6, 10, 12}, LEGAL)
     assert not rejects and hyps[0].key == ("part_size_diff", (5, 6), (10, 12))
 

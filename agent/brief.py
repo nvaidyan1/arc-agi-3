@@ -151,7 +151,8 @@ class Briefer:
         pool = getattr(agent, "pool", None)
         if pool:
             out.append(f"  waiting: {len(pool)} more bet{'s' if len(pool) != 1 else ''}"
-                       + (f", {sum(1 for g in pool if g.source == 'llm')} from the model" if any(g.source == 'llm' for g in pool) else ""))
+                       + (f", {sum(1 for g in pool if g.source.startswith('llm'))} from the model"
+                          if any(g.source.startswith('llm') for g in pool) else ""))
         if proposer and getattr(proposer, "rivals", 0):
             outcomes = ", ".join(f"{k.replace('_', ' ')} x{n}" for k, n in sorted(proposer.rival_outcomes.items()))
             out.append(f"  rivals: {proposer.rivals} pair{'s' if proposer.rivals != 1 else ''} proposed, "

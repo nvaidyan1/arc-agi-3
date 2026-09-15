@@ -594,25 +594,80 @@ to check bottleneck #4 (exploration/action-budget, below) per-source, not
 yet analysed since none of the existing twenty summaries carry it (only
 live from this point forward). 251 tests.
 
+**Generation-quality fix: shipped, matched-seed tested — correct, not a
+score win.** Traced one real call (ar25) and found the actual failure
+mode: all 5 accepted hypotheses claimed an unconditional lever for a pair
+the brief's own RELATIONS section had just said had none — fabricated
+groundedness, not malformed JSON. `parse_hypotheses` now rejects an
+unconditional claim without a real lever, the same bar the enumerator
+already holds itself to; a stated precondition stays exempt.
+
+Then ran the fix through the same matched-seed comparison (games/seeds
+1-10/200 steps unchanged, only the code differs from the existing pre-fix
+LLM arm): mean score baseline 0.0523, pre-fix llm 0.1061, **fixed llm
+0.0817 — down, not up**. Fixed vs. pre-fix directly: 2 wins / 5 losses /
+3 ties, sign p=0.156 (not significant, leans negative). Mechanism totals
+confirm the fix fired at scale, exactly as intended: 131 `no
+unconditional lever` rejections, valid-schema rate 47.1% -> 19.4%.
+
+**Not reverting** — the fix is correct on its own terms regardless of
+score (an unconditional claim contradicting stated evidence should not
+be accepted), and the score effect isn't significant either direction.
+But it undercuts the simple story that removing fabricated content
+should help: a plausible reading is that even a hypothesis with a
+fabricated "why" still names a real `(action, relation, pair)` target,
+falsified cheaply if wrong (budget 8), and some of those "wrong
+justification, plausible target" bets may have functioned as exploration
+diversity via the untested-LLM priority tiebreak in `select_experiment`
+— rejecting more than half of them may have cost some of that diversity
+along with the noise. 254 tests. All thirty sweep summaries (baseline,
+pre-fix llm, fixed llm — 10 seeds each) kept together in
+`results/sweeps/`, the matched-pair retention exception now covering a
+three-way comparison.
+
+**Resolved: softened to tag-not-reject.** `parse_hypotheses` no longer
+drops an unconditional claim with no lever; it tags it
+`source="llm_ungrounded"` and keeps it live. The whole mechanism is that
+one string — `select_experiment`'s untested-LLM priority tiebreak checks
+`source == "llm"` exactly, so an ungrounded bet stops jumping the queue
+but stays selectable through the ordinary flow, and
+`closed_by_source`/`evicted_by_source` separate its outcomes from
+grounded ones for free. Verified for free again (same recorded ar25
+reply, no new LLM calls): all 5 previously-rejected hypotheses now
+accepted and tagged. 255 tests.
+
+**Not yet matched-seed swept.** This is the real next step, not
+optional — a proper n=10 comparison against all three existing arms
+(baseline, pre-fix llm, strict-reject fixed llm) is the only way to know
+whether this recovers the lost value or just moves the same problem
+sideways.
+
 **Order for the next session.**
-1. **Stage 2 of the replay-ablation**: an actual counterfactual —
+1. **Matched-seed sweep the softened fix** (games/seeds 1-10/200 steps,
+   unchanged) against the three existing arms. Read it the same honest
+   way as every comparison this session: mean *and* median, sign test,
+   and don't call it a win on vibes.
+2. **A complementary prompt-side fix**: explain "moves under every action
+   alike" in the schema/instructions explicitly, to reduce how often the
+   model makes these claims in the first place rather than only catching
+   them after the fact. Needs live model calls to verify (unlike the
+   validator fix, which was free).
+3. **Stage 2 of the replay-ablation**: an actual counterfactual —
    construct a modified reply list (only the `held` hypotheses from a
    recorded run, or a hand-authored oracle reply for cd82's two-factor
    rule) and replay it through the same harness. This is the part that
    actually separates LLM generation quality from LLM integration
    quality; Stage 1 only cleared the way to trust it.
-2. **Check bottleneck #4** (second review §15, "exploration policy": is
+4. **Check bottleneck #4** (second review §15, "exploration policy": is
    action budget spent reaching a hypothesis rather than the hypothesis
    being wrong) on the *next* LLM sweep, now that `hypothesis_log` exists
    — compare the enumerator's and the LLM's `unmet`/`spent` ratios. Cheap:
    analysis of data the next sweep produces anyway, no new sweep type.
-3. Deferred (per the review's own sequencing, unchanged): the full
+5. Deferred (per the review's own sequencing, unchanged): the full
    event-sourcing rewrite of `recap.py`/logging beyond the LLM-trace piece
    already done; LLM call-purpose framing (model-discovery vs.
    hypothesis-discrimination vs. experiment-selection prompts);
-   call-budget-by-information-gain. Revisit only once (1) and (2) have
-   something to act on — reviewer C's own ranking puts both ahead of
-   "make the model smarter."
+   call-budget-by-information-gain.
 
 **Open case, unchanged.** cd82: paint effect is two-factor (side × selected
 paint colour) and the level needs *arrangement*, which has no gradient by

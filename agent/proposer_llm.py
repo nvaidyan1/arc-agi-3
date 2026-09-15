@@ -189,10 +189,43 @@ def parse_hypotheses(text: str, engine, live, legal: set[str], control: set[int]
             rejects.append(Rejection("residual undecidable right now", item)); continue
         if rec.residual == 0:
             rejects.append(Rejection("already holds", item)); continue
+        # Ground an unconditional claim in the tallies, the same bar the
+        # enumerator already holds itself to (`Proposer.propose` never
+        # bets without `rec.lever()` returning something). Measured live,
+        # 2026-09-14: given a brief whose RELATIONS section says a pair
+        # "moves under every action alike" (no lever, in as many words --
+        # `agent/brief.py`'s own phrase for `lever() is None`), gemma3:4b
+        # still returned "ACTION1 is the strongest lever on this pair" for
+        # five different pairs in one call, all five contradicting the
+        # evidence it was just shown, not extending it. A hypothesis WITH
+        # a stated precondition is exempt -- that is the one case the
+        # model is allowed to say something the tallies don't already
+        # show (cd82's swatch-state factor is exactly this shape), and
+        # nothing here second-guesses a genuinely new claim, only a
+        # restated one that contradicts what was already said in the text
+        # the model itself was reading. Checked last, after the cheaper
+        # structural rejections above, so an item that fails several ways
+        # is still attributed to its most fundamental problem.
+        # An unconditional claim with no real lever behind it (measured
+        # live, 2026-09-14: gemma3:4b calling a pair "the strongest lever"
+        # when the brief had just said it moves under every action alike)
+        # is tagged, not dropped. Outright rejection was tried first and
+        # matched-seed swept (H002 status log, 2026-09-15): it correctly
+        # cut fabricated-justification content in half (131 rejections,
+        # valid rate 47%->19%) but the score leaned slightly negative, not
+        # positive -- evidence the *target* named by an ungrounded claim
+        # can still carry exploration value even when its *justification*
+        # doesn't. `source="llm_ungrounded"` (not "llm") is the whole
+        # mechanism: it still enters the pool and can still be tested, it
+        # just falls out of `select_experiment`'s untested-LLM priority
+        # tiebreak (which checks `source == "llm"`), so it no longer jumps
+        # the queue ahead of a well-evidenced enumerator bet on the
+        # strength of a fabricated "why" alone.
+        source = "llm" if not (precondition is None and rec.lever(_relations.DOWN) is None) else "llm_ungrounded"
         out.append(_hypothesis.Hypothesis(
             key=key, action=action, lift=conf, start=rec.residual,
             precondition=precondition, confidence=conf,
-            falsifier=fals.strip(), source="llm", predicted=item["predicted"]))
+            falsifier=fals.strip(), source=source, predicted=item["predicted"]))
     return out, rejects
 
 
@@ -318,6 +351,11 @@ class LLMProposer:
         hyps, rejects = parse_hypotheses(reply, engine, live, legal, control)
         self.stats["returned"] += len(hyps) + len(rejects)
         self.stats["valid"] += len(hyps)
+        # Of the valid ones, how many were tagged ungrounded (accepted,
+        # but without the priority tiebreak — see parse_hypotheses). Kept
+        # separate from `rejects` because these are NOT rejections.
+        self.stats["ungrounded"] = self.stats.get("ungrounded", 0) + \
+            sum(1 for h in hyps if h.source == "llm_ungrounded")
         for r in rejects:
             self.stats["rejects"][r.reason] = self.stats["rejects"].get(r.reason, 0) + 1
         entry.update(
