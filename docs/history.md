@@ -3189,3 +3189,31 @@ from `plan` on sparsely-covered positions, not just a strict
 improvement, and needs a parity check across the games with an existing
 move map before it ships. Full detail in
 `research/hypotheses/H010_position_graph_model.md`.
+
+## 2026-09-15 — A determinism bug in plan_graph, found by a masked test failure
+
+**Hypothesis.** None — this is a caught defect, recorded because of how
+it was found and what it would have broken.
+
+**Observation.** The commit verifying H010 Stage 1 was gated on
+`make test 2>&1 | tail -1`, whose exit status is `tail`'s, not `make`'s
+— a real test failure would not have blocked the commit, and one had
+just happened silently. Re-running the suite repeatedly surfaced it:
+`test_plan_and_plan_graph_agree_when_the_graph_is_action_only` failed
+about 1 run in 3–5. Traced to `plan_graph`'s `actions = {a for (_pos, a)
+in edges}` — a bare set of `GameAction` members. `GameAction`'s hash is
+identity-based and measurably different between separate Python
+invocations, so the set's iteration order varies run to run, and where
+several equally-short routes exist `plan_graph` could choose a different
+one on two runs given byte-identical input.
+
+**Inference.** This would have been a live nondeterminism bug — the same
+recorded seed producing a different route on two replays — directly
+contradicting the guarantee the replay-ablation harness established
+earlier this session (5/5 reproducibility). Fixed by sorting the action
+set by `.value` before the search. Verified stable over 30 consecutive
+runs of the failing test and 10 of the full suite; H010's own offline
+validation numbers (P1–P3) are unchanged by the fix. Standing rule added:
+never gate a commit on a test command piped through `tail`, since the
+pipeline's exit status belongs to the last command, not the one that
+matters.

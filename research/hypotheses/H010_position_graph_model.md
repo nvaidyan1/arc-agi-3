@@ -142,3 +142,26 @@ replayed decisions, against `plan`'s own numbers on the same set.
   that needs a parity sweep across the games with an existing move map
   (sp80, ls20, ar25, m0r0, dc22, …) before it ships, not an assumption
   that "more precise" implies "no worse."
+- 2026-09-15 **A real bug caught by test flakiness, fixed.** The
+  `make test` chain that verified this Stage's commit used
+  `make test 2>&1 | tail -1`, which masks a failure (the pipeline's exit
+  status is `tail`'s, not `make`'s) — the commit landed before the
+  flake was seen. Re-running ten times surfaced it: 1 in ~3-5 runs,
+  `test_plan_and_plan_graph_agree_when_the_graph_is_action_only` failed
+  with the two paths disagreeing. Root cause: `plan_graph`'s
+  `actions = {a for (_pos, a) in edges}` is a bare set of `GameAction`
+  members, whose hash is identity-based and **not stable across process
+  runs** (measured directly: `hash(GameAction.ACTION2)` differs between
+  two Python invocations). Set iteration order therefore varies run to
+  run, and where several equally-short routes exist, `plan_graph` could
+  pick a different one on two runs given byte-identical `edges` — a real
+  determinism defect, not a test artifact, and one that would have
+  broken the seed-reproducibility guarantee this project's replay
+  harness depends on had it reached the live agent. Fixed:
+  `sorted(..., key=lambda a: a.value)`. Verified stable over 30
+  consecutive runs of the affected test and 10 of the full suite; H010's
+  own offline validation (P1–P3) is bit-for-bit unchanged by the fix,
+  as expected — it never depended on which of several equal-length
+  routes was chosen. Lesson recorded for the standing rules: never gate
+  a commit on `make test | tail -N`; the pipeline's exit code is the
+  last command's, not `make`'s.

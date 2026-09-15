@@ -153,8 +153,20 @@ def plan_graph(
     trade for a model class known to be position-dependent: extrapolating
     an untested offset is exactly the mistake `plan` was making on cd82
     (H009: 0 of 1,244 planned paths honoured at their first step).
+
+    `actions` is sorted by `.value` rather than left as a bare set: a
+    `GameAction`'s hash is identity-based and not stable across process
+    runs (measured: two invocations of this file gave `hash(ACTION2)`
+    two different 64-bit values), so a set of them iterates in an order
+    that varies run to run even given byte-identical `edges` — which
+    would make `plan_graph` pick a different one of several equally-short
+    routes on two replays of the same recorded seed. That is exactly the
+    determinism this project's replay harness depends on
+    (`docs/history.md` 2026-09-14, "the replay-ablation harness... passes
+    reproducibility 5/5"), so it is enforced here rather than left to
+    chance.
     """
-    actions = {a for (_pos, a) in edges}
+    actions = sorted({a for (_pos, a) in edges}, key=lambda a: a.value)
 
     def graph_successor(node, action):
         return edges.get((node, action))

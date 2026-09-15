@@ -676,7 +676,13 @@ cross-seed Z1 admission** for `latent_rollout.py` (H008's own finding:
 wa30/sc25/sk48/su15 gained nothing under a per-seed-only admission
 despite wa30 being H006-confirmed at the pooled level).
 
-**Standing rules, unchanged.** Commit/push only when asked, per batch.
+**Standing rules, unchanged, plus one new one (2026-09-15 night):**
+never gate a commit on `make test | tail -N` or any piped test command —
+the pipeline's exit status is the last command's, not the test run's,
+and a real failure (H010's `plan_graph` determinism bug, caught this way
+after the commit had already landed) can slip through silently. Run
+`make test` (or `pytest`) unpiped, or check `${PIPESTATUS[0]}`.
+Commit/push only when asked, per batch.
 Never edit `agent/` while a sweep runs. Same seeds for both arms. Test on
 the touched set, not the full sweep. Retention: latest 5 summaries, a
 matched pair kept together.
