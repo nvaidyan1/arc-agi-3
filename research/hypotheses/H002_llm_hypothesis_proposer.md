@@ -1,6 +1,6 @@
 # H002: An intermittent LLM as hypothesis scientist, not controller
 
-Status: IN PROGRESS — E-H002-2 (n=5 seeds) confirms the fixes generalise (55.9% valid rate); no score verdict yet, missing the matched non-LLM baseline
+Status: IN PROGRESS — matched baseline arm run: 3/25 vs 2/25 runs reaching L1+, indistinguishable from noise at n=5; the score question needs a larger n, not just a baseline
 Research question: RQ5 (compute-efficient reasoning) / RQ3 (active testing)
 Date opened: 2026-09-14
 Origin: council verdict step (c'); reviewer C §7, §8, §11, §28, §32 steps 3–4,
@@ -261,3 +261,42 @@ The score question remains genuinely open. Next: the matched baseline arm
 (same seeds/games/steps, `ARC_PROPOSER=1` without the LLM) before any
 score claim is defensible. Full context and a second external review in
 `docs/plan.md` START HERE and `docs/expert-reviews/reviewer_c_09_14_2026b.md`.
+- 2026-09-14 **matched baseline arm**: same 5 games, same seeds 1-5, same
+  200-step cap, `ARC_PROPOSER=1` **without** the LLM — via `play_local.py`
+  directly (not an ad hoc script), so git sha/flags/seed/config are
+  captured automatically as a proper committed sweep summary this time.
+  4m10s wall (vs. 42 min for the LLM arm — confirms the LLM call latency,
+  not the game simulation, was the entire cost).
+
+  Paired against E-H002-2 at the same seeds:
+
+  | game | seed | baseline levels | llm levels | diff |
+  |---|---|---|---|---|
+  | cn04 | 2 | 0 | 1 | +1 (llm) |
+  | ar25 | 1 | 0 | 1 | +1 (llm) |
+  | ar25 | 4 | 1 | 0 | -1 (llm lost one the baseline had) |
+  | ar25 | 5 | 1 | 2 | +1 (llm went one level deeper) |
+  | *(other 21 of 25 cells)* | | *identical* | | 0 |
+
+  20 of 25 seed×game pairs are identical between arms. Net: LLM arm
+  reached level 1+ in 3/25 runs vs. baseline's 2/25 — one net additional
+  run, with one gain partly offset by one loss on the same game (ar25).
+  At n=5/game this is not distinguishable from ordinary run-to-run noise
+  in either direction.
+
+  **Known gap in this comparison**: `eh002_2.py` (the LLM-arm script)
+  never queried the scorecard, so only `levels_completed` is compared,
+  not `aggregate_score` (which the baseline arm has: 0, 0, 0, 0.046,
+  0.228 by seed). A real score-level comparison needs the LLM arm re-run
+  through `play_local.py` too, which would also close this gap for free
+  going forward (see below).
+
+**Inference.** The matched baseline this doc has been asking for now
+exists, and the honest read is: **still no signal, in either direction,
+at this sample size.** Not a failure of the fixes (mechanism metrics
+E-H002-2 established stand on their own) and not evidence the LLM helps
+the score. The fix for *this* gap is the same fix as the metadata-freeze
+one: route the next LLM sweep through `play_local.py` directly (now that
+it captures `llm_stats`/`llm_trace` automatically), at a larger n, rather
+than another ad hoc script — that gets `aggregate_score` for both arms
+for free and removes this exact comparison gap.

@@ -261,6 +261,16 @@ def main() -> None:
             # compared across arms.
             "prediction": (agent.predictor.game.summary()
                            if getattr(agent, "predictor", None) is not None else None),
+            # The LLM proposer's auditable call record (agent/proposer_llm.py,
+            # H002): every prompt, every raw reply, what was accepted and
+            # rejected and why -- not just the summary counts in `stats`.
+            # None when the LLM proposer is off. Second review, 2026-09-14
+            # ("don't save the LLM's reasoning; save its actual interface"):
+            # this is what makes a sweep summary reproducible evidence for
+            # what the model actually said, rather than a score plus a
+            # memory of what someone thinks it probably said.
+            "llm_stats": (dict(agent.llm.stats) if getattr(agent, "llm", None) is not None else None),
+            "llm_trace": (agent.llm.export_trace() if getattr(agent, "llm", None) is not None else None),
         }
         print(f"  → state={final.state}, levels_completed={final.levels_completed}, "
               f"actions={agent.action_counter}"

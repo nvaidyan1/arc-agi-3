@@ -20,6 +20,23 @@ Two properties make it worth trusting:
     run. (Before this existed the RNG mixed in wall-clock time and a
     per-process-salted `hash()`, so no run could ever be revisited.)
 
+**This is a rerun, not a replay, and the difference matters once
+`ARC_LLM_PROPOSER=1`.** With the deterministic enumerator, seed + code +
+game fully determine the trajectory, so re-running under the same seed
+reproduces it exactly — a legitimate replay. With the LLM proposer on,
+each call is a fresh, non-deterministic request to the model
+(`temperature=0.2`, and the server's own behaviour is not guaranteed
+repeatable either); re-running the same seed makes new calls and can get
+different hypotheses, different verdicts, a different trajectory
+downstream of the first divergence. A page generated this way for an
+LLM-enabled run is *a* run that plausibly happened, not *the* run that
+was originally observed — do not treat it as the authoritative record of
+what an LLM said or did. For that, the actual prompt/reply/verdict has to
+be captured at the time of the call (`LLMProposer` does this now — see
+`propose()`), not reconstructed afterwards. (Second review,
+`docs/expert-reviews/reviewer_c_09_14_2026b.md`, §4: "a replay that calls
+the LLM again is not a replay, it is a rerun.")
+
 Usage:
     .venv/bin/python scripts/recap.py --game cd82 --max-steps 400
     .venv/bin/python scripts/recap.py --game sp80 --seed 1556935581 --open

@@ -38,6 +38,15 @@ import relations as _relations
 
 RELATION_NAMES = set(_relations.RELATIONS) - _relations.EVIDENCE_ONLY - {"distance_drift"}
 
+# Bumped whenever build_prompt/SCHEMA_DOC's wording changes, so a saved
+# LLM trace (see LLMProposer.propose) can be read against the prompt that
+# actually produced it rather than whatever the file currently says.
+# Second review (docs/expert-reviews/reviewer_c_09_14_2026b.md, "freeze
+# everything before launching"): an experiment record without this is not
+# reproducible even with the git sha, since a prompt is data, not code, to
+# anyone auditing a saved reply after the fact.
+PROMPT_VERSION = "P002"  # P001: original schema; P002: lenient ids + worked example (2026-09-14)
+
 # One worked example, added after E-H002-1 (2026-09-14) measured the
 # single largest rejection category (18 of 46 across five games, mostly
 # gemma3:4b) was entities written the way the brief DISPLAYS them ("#5")
@@ -252,6 +261,18 @@ class LLMProposer:
     last_call_step: int = -10**9
     stats: dict = field(default_factory=lambda: {"calls": 0, "returned": 0, "valid": 0,
                                                   "rejects": {}, "latency_s": []})
+    # The auditable record of every call: exact prompt, exact raw reply,
+    # what was parsed out of it and what was rejected and why, never the
+    # human-readable reasoning string alone. Second review, 2026-09-14
+    # ("don't save the LLM's reasoning; save its actual interface" --
+    # docs/expert-reviews/reviewer_c_09_14_2026b.md §7): a saved run that
+    # only has `Hypothesis.describe()` text cannot answer "Gemma suggested
+    # the right thing, why didn't we use it?" or "Gemma was wrong, why did
+    # the validator accept it?" -- both need the real input/output, not a
+    # paraphrase. Grows by one entry per call (<=3/level by construction),
+    # so this is bounded and cheap to keep for a whole run; nothing here
+    # decides anything, it is purely for `export_trace`/post-hoc audit.
+    trace: list = field(default_factory=list)
 
     def new_level(self) -> None:
         self.calls_this_level = 0
@@ -272,22 +293,49 @@ class LLMProposer:
         # server is tried at most `max_calls_per_level` times per level
         # rather than on every step the pool runs dry.
         self.stats["calls"] += 1
+        # Ready before the counter below changes it: distinguishes the two
+        # reasons `should_call` ever fires, and is the "call trigger" field
+        # the second review asked for.
+        trigger = "level_start" if self.calls_this_level == 0 else "falsified_streak"
         self.calls_this_level += 1
         self.falsified_since_call = 0
         self.last_call_step = level_step
+        prompt = build_prompt(brief_text, legal)
+        entry = {"level_step": level_step, "trigger": trigger,
+                 "model": getattr(self.client, "model", type(self.client).__name__),
+                 "prompt_version": PROMPT_VERSION, "prompt": prompt}
         try:
-            reply = self.client.complete(build_prompt(brief_text, legal))
+            reply = self.client.complete(prompt)
         except Exception as exc:  # noqa: BLE001 — any client failure, the game must go on
             self.stats["errors"] = self.stats.get("errors", 0) + 1
             self.stats["last_error"] = f"{type(exc).__name__}: {exc}"[:200]
+            entry["error"] = self.stats["last_error"]
+            entry["latency_s"] = round(time.time() - t0, 2)
+            self.trace.append(entry)
             return []
-        self.stats["latency_s"].append(round(time.time() - t0, 2))
+        latency = round(time.time() - t0, 2)
+        self.stats["latency_s"].append(latency)
         hyps, rejects = parse_hypotheses(reply, engine, live, legal, control)
         self.stats["returned"] += len(hyps) + len(rejects)
         self.stats["valid"] += len(hyps)
         for r in rejects:
             self.stats["rejects"][r.reason] = self.stats["rejects"].get(r.reason, 0) + 1
+        entry.update(
+            raw_reply=reply, latency_s=latency,
+            accepted=[{"relation": h.key[0], "a": h.key[1], "b": h.key[2], "action": h.action,
+                      "precondition": h.precondition, "predicted": h.predicted,
+                      "confidence": h.confidence, "falsifier": h.falsifier} for h in hyps],
+            rejected=[{"reason": r.reason, "item": r.item} for r in rejects],
+        )
+        self.trace.append(entry)
         return hyps
+
+    def export_trace(self) -> list[dict]:
+        """The full auditable call record, JSON-able as-is -- every prompt,
+        every raw reply, exactly what was accepted and rejected and why.
+        Callers (a sweep script, a saved-run artifact) decide where this
+        goes; this class only accumulates it. See `trace`."""
+        return self.trace
 
 
 def select_experiment(pool: list[_hypothesis.Hypothesis], legal: set[str], met) -> _hypothesis.Hypothesis | None:

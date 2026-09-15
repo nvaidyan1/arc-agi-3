@@ -130,6 +130,46 @@ def test_scripted_client_end_to_end_with_stats():
     assert "=== BRIEF ===" in client.prompts[0] and "ACTION5" in client.prompts[0]
 
 
+def test_trace_records_the_full_call_not_just_the_summary_counts():
+    # Second review, 2026-09-14: "don't save the LLM's reasoning; save its
+    # actual interface" -- the trace must carry the exact prompt and raw
+    # reply, not only the human-readable Hypothesis.describe() text.
+    client = pl.ScriptedClient([reply(GOOD, dict(GOOD, relation="nope"))])
+    p = pl.LLMProposer(client, max_calls_per_level=2, min_step=0)
+    p.propose("BRIEF TEXT", ENGINE, LIVE, LEGAL, control={1}, level_step=5)
+    assert len(p.trace) == 1 == len(p.export_trace())
+    entry = p.trace[0]
+    assert entry["trigger"] == "level_start" and entry["level_step"] == 5
+    assert entry["prompt_version"] == pl.PROMPT_VERSION
+    assert "BRIEF TEXT" in entry["prompt"]
+    assert entry["raw_reply"] == reply(GOOD, dict(GOOD, relation="nope"))
+    assert len(entry["accepted"]) == 1 and entry["accepted"][0]["action"] == "ACTION5"
+    assert len(entry["rejected"]) == 1 and entry["rejected"][0]["reason"] == "unknown relation"
+    assert isinstance(entry["latency_s"], float)
+
+
+def test_trace_marks_the_second_call_in_a_level_as_a_falsification_streak():
+    p = pl.LLMProposer(pl.ScriptedClient(["{}"]), max_calls_per_level=3, min_step=0)
+    p.propose("b", ENGINE, LIVE, LEGAL, control=set(), level_step=1)
+    p.propose("b", ENGINE, LIVE, LEGAL, control=set(), level_step=30)
+    assert [e["trigger"] for e in p.trace] == ["level_start", "falsified_streak"]
+    p.new_level()
+    p.propose("b", ENGINE, LIVE, LEGAL, control=set(), level_step=1)
+    assert p.trace[-1]["trigger"] == "level_start"          # resets with the level
+
+
+def test_a_failed_call_still_produces_a_trace_entry():
+    class Dead:
+        model = "dead-model"
+        def complete(self, prompt):
+            raise RuntimeError("connection refused")
+    p = pl.LLMProposer(Dead(), max_calls_per_level=2, min_step=0)
+    hyps = p.propose("b", ENGINE, LIVE, LEGAL, control=set(), level_step=1)
+    assert hyps == [] and len(p.trace) == 1
+    assert "connection refused" in p.trace[0]["error"] and p.trace[0]["model"] == "dead-model"
+    assert "raw_reply" not in p.trace[0]                    # nothing was ever received
+
+
 def test_call_policy_first_at_min_step_then_only_after_falsifications():
     p = pl.LLMProposer(pl.ScriptedClient(["{}"]), max_calls_per_level=3, min_step=20, after_falsified=4)
     assert not p.should_call(10, pool_empty=True)          # brief too thin yet

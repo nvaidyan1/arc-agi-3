@@ -525,27 +525,47 @@ the review's own recommended sequencing agrees (logging rework comes
 *after* analysis, not before). Also flagged: the "paired experiment" framing
 assumed a baseline that doesn't exist yet.
 
+**Three "before the next churn" items done, same session, before the order
+below was acted on.** All bounded, low-risk, cheap — done rather than
+deferred once the user pushed back on sequencing them after the baseline
+arm: (a) durable per-LLM-call I/O capture — `LLMProposer.trace` /
+`export_trace()`, exact prompt + raw reply + accepted/rejected + trigger +
+latency + model + a new `PROMPT_VERSION`, wired into `play_local.py`'s
+sweep summary as `llm_stats`/`llm_trace` so it's captured automatically
+in the durable committed format going forward; (b) `recap.py`'s docstring
+now states the rerun-vs-replay distinction explicitly; (c) the metadata-
+freeze problem resolved structurally, not by convention: route sweeps
+through `play_local.py` itself (which already captures git sha/flags/
+seed/config via `sweep_summary.py`) instead of ad hoc scripts. 245 tests.
+Smoke-tested end to end against `gemma3:4b` on cd82 — trace fields
+confirmed correct in a real committed sweep summary.
+
+**Matched baseline arm: done.** Same 5 games, same seeds 1-5, same
+200-step cap, `ARC_PROPOSER=1` without the LLM, via `play_local.py`
+directly (4m10s wall — confirms LLM latency was E-H002-2's entire cost,
+not game simulation). Paired against E-H002-2: **20 of 25 seed×game
+cells identical; the LLM arm reached level 1+ in 3/25 vs. baseline's
+2/25 — one net run, not distinguishable from noise at this n.** Known
+gap: `eh002_2.py` never queried the scorecard, so this compares
+`levels_completed` only, not `aggregate_score` (which the baseline arm
+has). Full table in `research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
 **Order for the next session.**
-1. **Matched baseline arm**: same 5 games (cd82, cn04, tu93, ka59, ar25),
-   same seeds 1-5, same 200-step cap, `ARC_PROPOSER=1` **without** the LLM
-   — the missing half of E-H002-2's comparison. Only then does "does Gemma
-   help" have an answer.
-2. **Durable per-LLM-call I/O capture** — prompt, raw reply, parsed/accepted
-   hypotheses, rejection reasons, latency, trigger reason, persisted to
-   disk. Small, bounded addition to `LLMProposer` (which already holds
-   most of this in memory as `stats`, just never writes it). Prerequisite
-   for the highest-value follow-up experiment: inject the exact hypotheses
-   a run actually generated offline against a deterministic agent, to
-   separate LLM generation quality from LLM integration quality.
-3. Document the rerun-vs-replay distinction explicitly in `recap.py`'s own
-   docstring, so a regenerated LLM-run page is never mistaken for the
-   authoritative trace of what happened.
-4. Deferred (correctly, per the review's own sequencing): the full
-   event-sourcing rewrite of `recap.py`/logging; LLM call-purpose framing
-   (model-discovery vs. hypothesis-discrimination vs. experiment-selection
-   prompts); call-budget-by-information-gain; the full ablation ladder
-   (baseline / LLM-ignored / LLM-accepted / LLM-injected-offline). Revisit
-   once (1) exists and says the LLM is worth keeping.
+1. **A larger-n LLM sweep through `play_local.py` itself** (not another ad
+   hoc script) — closes the `aggregate_score` gap for both arms for free,
+   and is the only way the score question gets an actual answer rather
+   than another "still can't tell" result. n=5 was enough to prove the
+   proposer mechanism works and generalises; it is not enough to see a
+   score effect through this much run-to-run noise.
+2. **The replay-ablation experiment** (second review §14) is now buildable
+   — real LLM traces exist from E-H002-2 and can be replayed offline
+   against a deterministic agent to separate generation quality from
+   integration quality. Do this once (1) gives a reason to keep digging.
+3. Deferred (per the review's own sequencing, unchanged): the full
+   event-sourcing rewrite of `recap.py`/logging beyond the LLM-trace piece
+   already done; LLM call-purpose framing (model-discovery vs.
+   hypothesis-discrimination vs. experiment-selection prompts);
+   call-budget-by-information-gain. Revisit once (1) shows a real effect.
 
 **Open case, unchanged.** cd82: paint effect is two-factor (side × selected
 paint colour) and the level needs *arrangement*, which has no gradient by
