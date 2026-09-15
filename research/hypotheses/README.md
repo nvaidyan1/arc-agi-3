@@ -12,3 +12,4 @@ chronological record; these are the scientific claims it tests.
 | H002 | An intermittent LLM as hypothesis scientist, not controller | IN PROGRESS — no model attached |
 | H003 | A predictive transition model from the evidence already held | IN PROGRESS |
 | H004 | Competing transition hypotheses — one press falsifies one | TESTED — mechanism sound, net score down 0.110->0.075 unpaired vs E-7a, not promoted |
+| H005 | Conjunctive preconditions — carrying a two-factor rule intact | IN PROGRESS — mechanism confirmed live on cd82; needs a second condition kind (state, not adjacency) |

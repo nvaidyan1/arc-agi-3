@@ -1,6 +1,6 @@
 # H005: Conjunctive preconditions — carrying a two-factor rule intact
 
-Status: IN PROGRESS — Stage 1 (representation + tests) built and green; Stage 2 (historical replay), Stage 3 (cd82 oracle replay) and Stage 4 (matched-seed) open
+Status: IN PROGRESS — Stage 1 (representation + tests) built and green; Stage 3 (cd82 oracle replay) run on 3 seeds, mechanism confirmed, the anticipated condition-kind gap found; Stage 2 (historical replay) and Stage 4 (matched-seed) still open
 Research question: RQ2 (predictive world modelling) / RQ3 (active testing)
 Date opened: 2026-09-15
 Origin: a third reviewer-C pass narrowed to one concrete, evidence-backed
@@ -191,27 +191,89 @@ follow-up (a second condition kind) rather than a bigger one.
 1. **Unit/mechanism tests — DONE.** See "What was built" above. 261/261
    green, 4 new tests targeting exactly the conjunction and the
    normalization helpers.
+
+3. **cd82 oracle replay — DONE (out of order; answered before Stage 2
+   below, since it needed no new LLM/data-mining work and settles the
+   more important question first).** `scripts/h005_cd82_oracle.py`: no LLM,
+   no parser — a hand-built two-condition `Hypothesis` is injected
+   directly into `agent.hypothesis` after 20 steps (long enough that its
+   target entities are confirmed live), bypassing the schema entirely
+   since it was deliberately not extended this stage. Key
+   `("part_size_diff", (0,1,5,6), (8,9))` (template vs. bucket/block, the
+   same relation `H001`'s oracle used); precondition
+   `(("adjacent:-x", 0), ("adjacent", 3))` — condition 1 is `H001`'s
+   finding verbatim (template, side −x); condition 2 is *not* an attempt
+   to correctly encode "swatch is selected" (a persistent state fact) —
+   it is the cheapest test of the conjunction machinery available this
+   stage: adjacency to a second real entity, `#3`, one member of the
+   strip/swatch group. Entity ids read from an actual run (same method
+   `H001`'s Stage 2 used) and confirmed identical across seeds 1-3 at
+   this early a step.
+
+   Ran on seeds 1-3 (matching `H001`'s Stage 2 seed count):
+
+   | seed | oracle status | met/8 steps | history | levels | score |
+   |---|---|---|---|---|---|
+   | 1 | expired | 0/8 | all `None` | 1 | 0.6235 |
+   | 2 | expired | 1/8 | `[34, None×7]` (fell) | 0 | 0.0000 |
+   | 3 | expired | 1/8 | `[35, None×7]` (rose) | 0 | 0.0000 |
+
+   **Mechanism (P1, P2): confirmed.** The two-condition hypothesis was
+   built, injected, described (`"...when adjacent on side -x of #0 and
+   adjacent of #3..."`), and its conjunction gated correctly — on seeds
+   2 and 3 exactly one step found *both* conditions met simultaneously,
+   and only that step was scored as real evidence (a residual move, down
+   on seed 2 and up on seed 3); every other step correctly recorded as
+   precondition-unmet, costing budget without being treated as evidence.
+   The full two-condition precondition survived `close()`/logging intact
+   on seeds 2 and 3 (seed 1's log entry itself didn't survive to the end
+   of the episode only because `Proposer.clear()` runs on every level
+   transition and seed 1 reached level 1 — a pre-existing, unrelated
+   behavior of `proposer.log`, not a defect in this change; the oracle's
+   own `.status`/`.history` still confirm it expired correctly).
+
+   **The anticipated condition-kind gap: confirmed, exactly as the Scope
+   section predicted.** The conjunction was almost never jointly
+   satisfiable — the template and the swatch are in different screen
+   regions, so being simultaneously adjacent to both is geometrically
+   rare. This is direct evidence that "adjacency to the swatch" is the
+   wrong proxy for "the swatch is selected": selection is plausibly a
+   persistent state set by an earlier click, not a fact about where the
+   controlled thing is standing right now. Confirms, rather than assumes,
+   that solving cd82 for real needs a second condition *kind* (a state/
+   attribute check, not another adjacency), which this stage deliberately
+   did not build.
+
+   **Score note, read cautiously.** Seed 1 reached level 1 — cd82's
+   first level-1 clear anywhere in this session's ~30+ recorded runs.
+   Not attributed to the oracle succeeding (it expired unmet on all 8
+   steps): more likely the injection perturbed the first ~20-28 steps'
+   trajectory, same sensitivity-to-early-perturbation this project has
+   documented all session on the LLM side (Case D, the matched-seed
+   arms). One seed is exactly the sample size this project's own
+   protocol says not to read anything into.
+
 2. **Historical replay — OPEN, and limited by construction.** Feed
    existing recorded LLM outputs through the new representation. Caveat
    worth stating up front: the *old* schema never let the model emit a
    second precondition object, so this can at best surface *felt need*
    (a `why` field gesturing at a second qualifier it had nowhere to put)
-   — not literal multi-condition JSON, since none exists yet. A null
-   result here does not bear on P1–P3.
-3. **cd82 oracle replay — OPEN, the critical mechanism test.** Build the
-   smallest two-condition oracle expressible under this stage's
-   representation (adjacent side −x, plus whatever the second factor
-   turns out to be constructible from) and replay it against the same
-   recorded seeds `H001`'s one-condition oracle used. The question is
-   narrower than "does it solve cd82": does the agent now *test the
-   complete hypothesis* rather than only its first factor? If the second
-   factor cannot be expressed even as a hand-built condition under this
-   stage's vocabulary, that is the Scope section's anticipated finding,
-   not a bug.
-4. **Small matched evaluation — OPEN, gated on Stage 3 passing.** Not
-   before. Isolated: no simultaneous change to the proposer, experiment
-   selector, exploration, or predictor, so a result is attributable to
-   representation alone.
+   — not literal multi-condition JSON, since none exists yet. Lower
+   priority now that Stage 3 has already answered the mechanism question
+   directly.
+
+4. **Small matched evaluation — OPEN, and now a different question than
+   originally scoped.** Stage 3 already shows this stage's condition kind
+   (adjacency-only conjunction) is not the fix for cd82 specifically — a
+   matched-seed sweep of *this* oracle would mostly be re-measuring
+   trajectory-perturbation noise (seed 1's level-1 clear vs. seeds 2-3's
+   zero), not a representation effect. The better next step Stage 3
+   points at directly: a second condition *kind* — a persistent
+   entity-state check ("is `#S`'s current descriptor equal to its
+   'selected' appearance", answerable the same falsifiable way
+   `kinds.py`'s equal-descriptor view already works) rather than another
+   adjacency — is its own, smaller follow-up, not a bigger sweep of what
+   Stage 1 already built.
 
 ## Success criteria
 

@@ -2863,3 +2863,50 @@ whether it solves cd82, which may still need a condition *kind* this
 stage doesn't build (adjacency-shaped conjunction, not an "entity is in
 state X" check). Full detail in
 `research/hypotheses/H005_compositional_preconditions.md`.
+
+## 2026-09-15 — H005 Stage 3: the cd82 oracle, two conditions, live
+
+**Hypothesis.** The plumbing built in Stage 1 should carry a real
+two-condition hypothesis through a live cd82 game -- injection,
+conjunctive gating, routing, testing, and logging -- without needing the
+LLM schema touched, since the oracle is hand-built and bypasses the
+parser entirely.
+
+**Built.** `scripts/h005_cd82_oracle.py`: no LLM, no ScriptedClient --
+`agent.hypothesis` is set directly to a hand-built `Hypothesis` after 20
+steps (long enough its target entities are confirmed live), using the
+same relation `H001`'s one-condition oracle used
+(`part_size_diff(template, bucket)`) and its exact first condition
+(adjacent, side -x, to the template). The second condition is adjacency
+to `#3`, one member of the strip/swatch group -- not a claim that this
+correctly encodes "the swatch is selected" (a persistent state fact),
+but the cheapest live test of the conjunction machinery this stage
+actually built.
+
+**Observation.** Ran on cd82 seeds 1-3 (matching H001's Stage 2 seed
+count). All three: oracle expired at budget (8/8 spent). Seeds 2 and 3
+each found exactly one step where BOTH conditions held at once -- the
+conjunction correctly gated on that step alone as real evidence (a
+residual move, tracked correctly) and recorded every other step as
+precondition-unmet, not evidence. Seed 1 found zero such steps. The full
+two-condition precondition survived close()/logging intact (seeds 2, 3;
+seed 1's own log entry didn't survive to the end only because
+`Proposer.clear()` runs on every level transition and seed 1 reached
+level 1 -- unrelated to this change). Seed 1 also scored 0.6235 (cd82's
+first level-1 clear anywhere in this session's ~30+ recorded runs) while
+seeds 2-3 scored 0.0000 -- not attributed to the oracle (it expired
+unmet on all 8 of seed 1's steps too), more likely the injection
+perturbing the early trajectory the same way this project has already
+documented all session on the LLM side.
+
+**Inference.** Mechanism confirmed: the conjunction gates correctly, the
+representation survives a live game end to end. The anticipated
+condition-kind gap confirmed too, exactly as `docs/plan.md`'s Scope
+section predicted before running this: the template and the swatch sit
+in different screen regions, so simultaneous adjacency to both is
+geometrically rare -- direct evidence that "adjacent to the swatch" is
+the wrong proxy for "the swatch is selected," and that solving cd82 for
+real needs a second condition *kind* (a persistent state/attribute
+check), not another adjacency. That is a smaller, more specific next
+step than a bigger sweep of what Stage 1 already built. Full detail in
+`research/hypotheses/H005_compositional_preconditions.md`.

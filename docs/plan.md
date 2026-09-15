@@ -719,16 +719,35 @@ LLM parser untouched; `_precondition_met` conjoins a new
 conjunction). Full detail in `docs/history.md` (2026-09-15, "H005:
 conjunctive preconditions, Stage 1 built and green") and the H005 doc.
 
+**H005 Stage 3 — done, same session.** `scripts/h005_cd82_oracle.py`
+injected a hand-built two-condition oracle directly (no LLM, no parser)
+into a live cd82 game on seeds 1-3: `H001`'s exact first condition
+(adjacent, side −x, to the template) plus a second — adjacency to one
+swatch entity — as the cheapest live test of the conjunction, not a
+claim that it correctly encodes "the swatch is selected". Mechanism
+confirmed: the conjunction gated correctly (seeds 2, 3 each found exactly
+one step where both conditions held, scored as real evidence; every
+other step correctly filed as precondition-unmet), and the two-condition
+precondition survived logging intact. The anticipated gap confirmed too:
+the conjunction was almost never jointly satisfiable, because the
+template and the swatch sit in different screen regions — direct
+evidence "adjacent to the swatch" is the wrong proxy for "the swatch is
+selected," which is a persistent state, not a spatial fact. Seed 1
+reached level 1 (cd82's first this session) but not attributably to the
+oracle (it expired unmet there too) — read as early-trajectory
+perturbation, the same sensitivity documented all session on the LLM
+side, not a result. Full table and detail in `docs/history.md`
+(2026-09-15, "H005 Stage 3: the cd82 oracle, two conditions, live") and
+the H005 doc.
+
 **Order for the next session.**
-1. **H005 Stage 3 — the cd82 oracle, two conditions.** Build the
-   smallest two-condition oracle this stage's representation can express
-   and replay it against the same recorded seeds `H001`'s one-condition
-   oracle used (`docs/history.md` 2026-09-15, "Stage 2 of the replay-
-   ablation"). The question: does the agent now test the *complete*
-   hypothesis, not whether it solves cd82 — the second factor ("which
-   swatch is selected") may need a condition *kind* this stage doesn't
-   build (a persistent state check, not adjacency), which would itself
-   be a finding. Free — no new LLM calls, reuses `replay_ablation.py`.
+1. **A second condition kind for H005** — the concrete next step Stage 3
+   points at: a persistent entity-state check ("is `#S`'s current
+   descriptor equal to its 'selected' appearance", answerable the same
+   falsifiable way `kinds.py`'s equal-descriptor view already works)
+   rather than another adjacency. Smaller, more specific follow-up than
+   a bigger sweep of what Stage 1 already built — and the representation
+   piece cd82 actually needs, per Stage 3's own result.
 2. **Trace `ar25` seeds 3, 9, 10 directly** — the Case-D result says the
    dropped hypotheses' *targets* carry real value on this game
    specifically, but not *which* one or *why*. Read those three traces to
