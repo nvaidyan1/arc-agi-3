@@ -2554,3 +2554,51 @@ exist before this sweep. Full numbers in
 sweep summaries kept together in `results/sweeps/`, a deliberate
 exception to "latest 5" retention for matched-pair comparisons — see
 `docs/plan.md`.
+
+## 2026-09-14 — n=10 extension: doubling the sample didn't resolve it, and the way it didn't is the finding
+
+**Hypothesis.** The n=5 score comparison (previous entry, p=0.25) was
+underpowered; doubling to n=10 should sharpen the read.
+
+**Observation.** Mean score baseline 0.0523 -> llm 0.1061 (2.0x) held up.
+But **median barely moved (0.0413 -> 0.0448)**, and the more sensitive
+Wilcoxon signed-rank test (p=0.193) is *less* significant than the simple
+sign test (p=0.125) — the wins are mostly small, the two losses are
+moderate, and the mean is carried by two standout runs (seeds 5, 7).
+
+**Inference.** That pattern is the signature of outlier-driven variance,
+not a uniform effect — a real shift should sharpen both tests together as
+n grows; this sharpened neither cleanly. Stopping the larger-n chase on
+this specific comparison: the marginal information per 40-minute sweep is
+low, and the second review's own bottleneck ranking (policy integration
+before model reasoning) points at a more informative next experiment —
+the replay ablation, using traces already recorded from these ten runs,
+no new sweeps needed. Full numbers in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-15 — The replay-ablation harness, and it passes reproducibility 5/5
+
+**Hypothesis.** `ScriptedClient` already replays canned replies in order;
+`LLMProposer.trace` already saves every call's exact reply into the sweep
+summary. Joining them should let a recorded run be replayed fully offline
+and reach the same outcome, with no model call made.
+
+**Built.** `scripts/replay_ablation.py` — small on purpose, reuses both
+existing pieces rather than adding new ones. Bundled while in the area:
+`Proposer.log` now tags each closed hypothesis with `source`, and
+`play_local.py`'s sweep summary carries the full log as `hypothesis_log`
+— needed to check the second review's bottleneck #4 (exploration/action-
+budget) per-source, which the existing `llm_stats` cannot do. 251 tests.
+
+**Observation.** Ran the replay against five real recorded games (ar25
+seeds 1/3/5, cd82 from two seeds, 3-4 LLM calls each): **5 of 5 exact
+matches** on levels completed, actions, final state, and call count.
+
+**Inference.** The pipeline is genuinely deterministic once the model's
+output is fixed — confirms what `recap.py`'s rerun-vs-replay docstring
+only asserted. Clears the way to trust a counterfactual replay (a
+hand-authored oracle reply, or only the confirmed-correct hypotheses)
+as isolating the model's content, not some other hidden variance. That
+counterfactual run — the actual generation-vs-integration separation —
+is next, not yet done. Full detail in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.

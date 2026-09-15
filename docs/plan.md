@@ -562,30 +562,57 @@ and it looks different from the levels-completed read:**
 
 Mean: baseline 0.0547 -> **llm 0.1325 (2.4x)**. LLM arm wins 4 of 5 seeds
 paired. Exact sign-permutation p=0.25 (n=5, not significant — the
-smallest achievable two-sided p at this n is 0.0625). Not one outlier:
-dropping the largest-gain seed (5) still leaves 3 of the remaining 4
-positive, mean diff +0.017. **Not a claim the LLM proposer helps the
-score — a reason to find out with a larger n that didn't exist before
-this sweep.** Both arms' 10 sweep summaries kept together in
+smallest achievable two-sided p at this n is 0.0625).
+
+**Extended to n=10 (seeds 6-10, both arms) — doubling the sample did not
+resolve it, and the way it didn't is the actual finding.** Mean held at
+2.0x (0.0523 -> 0.1061), but **median barely moved (0.0413 -> 0.0448)**,
+6 wins / 2 losses / 2 ties, sign-test p=0.125 (improved) but Wilcoxon
+signed-rank (weights by magnitude) p=**0.193** — *less* significant than
+the sign test, because the wins are mostly small while the two losses
+(seeds 4, 10) are moderate; the mean is carried almost entirely by two
+standout runs (seeds 5, 7: +0.32, +0.15). A real, uniform effect should
+sharpen both tests together as n grows; this sharpened neither cleanly —
+the signature of a couple of good outlier runs on top of a flat typical
+case, not a shift in the typical case. **Decided not to chase this
+further via larger n**: marginal information per 40-minute sweep is low,
+and there is a more informative next experiment that needs no new sweeps
+at all. All 20 sweep summaries (10 baseline + 10 llm) kept together in
 `results/sweeps/` (see the amended retention rule above). Full tables in
 `research/hypotheses/H002_llm_hypothesis_proposer.md`.
 
+**The replay-ablation harness: built and Stage 1 passed.**
+`scripts/replay_ablation.py` — small, reuses `ScriptedClient` (already
+existed) and `LLMProposer.trace` (previous entry) rather than adding new
+machinery. Stage 1 (does replaying the exact recorded replies, offline,
+reach the same outcome as the original live run?): **5 of 5 exact matches**
+across ar25 (seeds 1, 3, 5) and cd82 (two seeds), 3-4 calls each. The
+pipeline is genuinely deterministic once the model's output is fixed.
+Bundled in the same pass: `Proposer.log` now tags each closed hypothesis
+with `source`, saved as `hypothesis_log` in every sweep summary — needed
+to check bottleneck #4 (exploration/action-budget, below) per-source, not
+yet analysed since none of the existing twenty summaries carry it (only
+live from this point forward). 251 tests.
+
 **Order for the next session.**
-1. **A larger-n score-comparison sweep** (both arms, same seeds extended
-   past 5, through `play_local.py`) — the only way to move p below 0.25.
-   n=10 or n=15 per arm is the next reasonable step; estimate wall time
-   from this session's ~8.5 min/seed for the LLM arm before committing to
-   a number.
-2. **The replay-ablation experiment** (second review §14) is buildable now
-   — real LLM traces exist (from E-H002-2 and this comparison) and can be
-   replayed offline against a deterministic agent to separate generation
-   quality from integration quality. Worth doing regardless of (1)'s
-   outcome, now that it's cheap.
+1. **Stage 2 of the replay-ablation**: an actual counterfactual —
+   construct a modified reply list (only the `held` hypotheses from a
+   recorded run, or a hand-authored oracle reply for cd82's two-factor
+   rule) and replay it through the same harness. This is the part that
+   actually separates LLM generation quality from LLM integration
+   quality; Stage 1 only cleared the way to trust it.
+2. **Check bottleneck #4** (second review §15, "exploration policy": is
+   action budget spent reaching a hypothesis rather than the hypothesis
+   being wrong) on the *next* LLM sweep, now that `hypothesis_log` exists
+   — compare the enumerator's and the LLM's `unmet`/`spent` ratios. Cheap:
+   analysis of data the next sweep produces anyway, no new sweep type.
 3. Deferred (per the review's own sequencing, unchanged): the full
    event-sourcing rewrite of `recap.py`/logging beyond the LLM-trace piece
    already done; LLM call-purpose framing (model-discovery vs.
    hypothesis-discrimination vs. experiment-selection prompts);
-   call-budget-by-information-gain. Revisit once (1) is decisive either way.
+   call-budget-by-information-gain. Revisit only once (1) and (2) have
+   something to act on — reviewer C's own ranking puts both ahead of
+   "make the model smarter."
 
 **Open case, unchanged.** cd82: paint effect is two-factor (side × selected
 paint colour) and the level needs *arrangement*, which has no gradient by

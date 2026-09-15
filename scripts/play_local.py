@@ -271,6 +271,19 @@ def main() -> None:
             # memory of what someone thinks it probably said.
             "llm_stats": (dict(agent.llm.stats) if getattr(agent, "llm", None) is not None else None),
             "llm_trace": (agent.llm.export_trace() if getattr(agent, "llm", None) is not None else None),
+            # Every closed hypothesis, enumerator- and LLM-sourced alike:
+            # (key, action, start, end, status, spent, unmet, precondition,
+            # exclusive, source). `unmet` is budget spent satisfying a
+            # precondition rather than testing the bet -- the figure
+            # reviewer C's bottleneck #4 ("exploration policy": is action
+            # budget being spent reaching a hypothesis rather than the
+            # hypothesis being wrong, second review 2026-09-14) needs, and
+            # which `llm_stats`/`closed_by_source` alone cannot answer
+            # since neither carries spent/unmet per hypothesis.
+            # Plain tuples/None/str/int/bool throughout -- json.dumps
+            # serialises tuples as arrays natively, no _jsonable needed.
+            "hypothesis_log": (list(agent.proposer.log)
+                               if getattr(agent, "proposer", None) is not None else None),
         }
         print(f"  → state={final.state}, levels_completed={final.levels_completed}, "
               f"actions={agent.action_counter}"

@@ -63,6 +63,20 @@ def test_refuses_illegal_levers_click_levers_and_ghost_pairs():
     assert hypothesis.Proposer().propose(e, live={1, 2, 3}, legal=LEGAL, step=0) is None
 
 
+def test_close_logs_which_source_the_closed_bet_came_from():
+    # Second review, 2026-09-14, bottleneck #4 ("exploration policy"): the
+    # unmet/spent breakdown needs to be splittable by source, which
+    # `closed_by_source` (status counts only) cannot do -- the log itself
+    # has to carry it.
+    p = hypothesis.Proposer()
+    h = make(10); h.source = "llm"
+    h.status = hypothesis.FALSIFIED
+    p.close(h, step=1)
+    assert p.log[-1][-1] == "llm"
+    assert p.log[-1][:9] == (h.key, h.action, h.start, h.current, h.status, h.spent, h.unmet,
+                             h.precondition, h.exclusive)
+
+
 def test_a_cooled_key_is_not_proposed_again_until_the_cooldown_ends():
     e = Engine(**{'("distance", 1, 2)': rec(20, ACTION3=(8, 0, 2), ACTION4=(0, 8, 2))})
     p = hypothesis.Proposer()

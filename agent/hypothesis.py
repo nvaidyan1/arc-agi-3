@@ -171,7 +171,16 @@ class Proposer:
 
     def __init__(self) -> None:
         self._cooldown: dict[tuple, int] = {}   # key -> step it may be proposed again
-        self.log: list[tuple] = []              # (key, action, start, end, status, spent, unmet, precondition, exclusive)
+        self.log: list[tuple] = []              # (key, action, start, end, status, spent, unmet, precondition, exclusive, source)
+        # `source` at the end, appended after `exclusive`, rather than
+        # reordering the existing 9 fields: kept every reader that already
+        # unpacks this tuple positionally (agent/brief.py) from silently
+        # taking the wrong field when this was added. Needed to check
+        # reviewer C's bottleneck #4 (second review, 2026-09-14,
+        # "exploration policy": is action budget being spent reaching a
+        # hypothesis rather than the hypothesis being wrong) SEPARATELY
+        # for LLM- vs enumerator-sourced bets -- `closed_by_source` has
+        # the status counts but not the unmet/spent figures this needs.
         self.closed_by_source: dict[str, dict[str, int]] = {}   # "enumerator"/"llm" -> status -> n
         # H004 accounting: rival pairs proposed, presses taken where two
         # live bets on the action disagreed, and which of a pair died first.
@@ -202,7 +211,7 @@ class Proposer:
 
     def close(self, h: Hypothesis, step: int) -> None:
         self.log.append((h.key, h.action, h.start, h.current, h.status, h.spent, h.unmet,
-                         h.precondition, h.exclusive))
+                         h.precondition, h.exclusive, h.source))
         self.closed_by_source[h.source] = self.closed_by_source.get(h.source, {})
         self.closed_by_source[h.source][h.status] = self.closed_by_source[h.source].get(h.status, 0) + 1
         if h.rival is not None:

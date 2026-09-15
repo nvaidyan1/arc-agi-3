@@ -159,7 +159,7 @@ class Briefer:
                        + (f"; {outcomes}" if outcomes else ""))
         if proposer and proposer.log:
             name = lambda k: ("{" + ",".join(f"#{m}" for m in k) + "}") if isinstance(k, tuple) else f"#{k}"  # noqa: E731
-            for key, action, start, end, status, spent, unmet, precondition, exclusive in proposer.log[-3:]:
+            for key, action, start, end, status, spent, unmet, precondition, exclusive, _source in proposer.log[-3:]:
                 rel, a, b = key
                 extra = f", {unmet} with the precondition unmet" if unmet else ""
                 cond = (f" {'only ' if exclusive else ''}when {precondition[0].replace(':', ' on side ')} of #{precondition[1]}"

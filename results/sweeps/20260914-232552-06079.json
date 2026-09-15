@@ -1,0 +1,2154 @@
+{
+  "schema_version": 1,
+  "run_id": "20260914-232552-06079",
+  "recorded_at": "2026-09-15T03:43:49+00:00",
+  "config": {
+    "max_steps": 200,
+    "games_requested": [
+      "tu93",
+      "ar25",
+      "cn04",
+      "ka59",
+      "cd82"
+    ],
+    "seed": 8,
+    "flags": {
+      "shift_fallback": true,
+      "belief_target": false,
+      "route_per_level": false
+    },
+    "git": {
+      "sha": "0e18bf9003672f46946e44de3f73fe0e6753f5e8",
+      "dirty": true,
+      "subject": "First real aggregate_score comparison: LLM arm 2.4x baseline mean, p=0.25 at n=5"
+    }
+  },
+  "aggregate_score": 0.03972189947194907,
+  "observed": {
+    "ar25": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 2041053684,
+      "levels_completed": 0,
+      "actions": 201,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 196,
+        "entity": {
+          "hits": 1314,
+          "misses": 157,
+          "undecidable": 0,
+          "abstained": 243,
+          "accuracy": 0.893,
+          "coverage": 0.858,
+          "brier": 0.084
+        },
+        "pair": {
+          "hits": 23545,
+          "misses": 1748,
+          "undecidable": 532,
+          "abstained": 6123,
+          "accuracy": 0.931,
+          "coverage": 0.805,
+          "brier": 0.05
+        },
+        "by_action": {
+          "ACTION2": {
+            "entity": [
+              623,
+              58
+            ],
+            "pair": [
+              10795,
+              744
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              71,
+              54
+            ],
+            "pair": [
+              1802,
+              196
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              500,
+              39
+            ],
+            "pair": [
+              9073,
+              789
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              109,
+              1
+            ],
+            "pair": [
+              1786,
+              15
+            ]
+          },
+          "ACTION7": {
+            "entity": [
+              11,
+              5
+            ],
+            "pair": [
+              89,
+              4
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            3816,
+            314
+          ],
+          "palette_diff": [
+            5488,
+            0
+          ],
+          "distance": [
+            3340,
+            790
+          ],
+          "containment": [
+            7745,
+            515
+          ],
+          "shape_diff": [
+            142,
+            0
+          ],
+          "palette_missing": [
+            2716,
+            0
+          ],
+          "part_size_diff": [
+            298,
+            129
+          ]
+        },
+        "conditional": [
+          14103,
+          809
+        ],
+        "unconditional": [
+          9442,
+          939
+        ],
+        "moving": {
+          "entity": [
+            754,
+            115
+          ],
+          "pair": [
+            2317,
+            868
+          ]
+        },
+        "moved": {
+          "entity": [
+            754,
+            76
+          ],
+          "pair": [
+            2317,
+            1069
+          ]
+        },
+        "cells": {
+          "ACTION2 containment": [
+            733,
+            197
+          ],
+          "ACTION2 distance": [
+            265,
+            357
+          ],
+          "ACTION2 part_size_diff": [
+            117,
+            63
+          ],
+          "ACTION2 count_diff": [
+            1,
+            127
+          ],
+          "ACTION3 containment": [
+            57,
+            100
+          ],
+          "ACTION3 distance": [
+            7,
+            85
+          ],
+          "ACTION3 count_diff": [
+            0,
+            2
+          ],
+          "ACTION1 count_diff": [
+            12,
+            178
+          ],
+          "ACTION1 containment": [
+            798,
+            216
+          ],
+          "ACTION1 distance": [
+            182,
+            338
+          ],
+          "ACTION1 part_size_diff": [
+            143,
+            57
+          ],
+          "ACTION3 part_size_diff": [
+            0,
+            9
+          ],
+          "ACTION7 distance": [
+            2,
+            4
+          ],
+          "ACTION6 distance": [
+            0,
+            6
+          ],
+          "ACTION6 count_diff": [
+            0,
+            7
+          ],
+          "ACTION6 containment": [
+            0,
+            2
+          ]
+        }
+      },
+      "llm_stats": {
+        "calls": 1,
+        "returned": 1,
+        "valid": 0,
+        "rejects": {
+          "unparseable": 1
+        },
+        "latency_s": [
+          27.17
+        ]
+      },
+      "llm_trace": [
+        {
+          "level_step": 20,
+          "trigger": "level_start",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION3, ACTION4, ACTION5, ACTION6, ACTION7.\n\n=== BRIEF ===\nstep 20 of this level  (level 0)\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6, ACTION7  (ACTION6 takes an x,y)\nTHINGS (8 on screen)\n  #0 colour 9 1845 cells 30x63 at (14, 30)  \u2014 the canvas\n  #2 colour 9 1800 cells 30x63 at (47, 30)  CONTEXT \u2014 turned whatever I press (93% of steps)\n  #3 colour 11 46 cells 1x46 at (63, 40)  CONTEXT \u2014 shrank whatever I press (100% of steps)\n  #7 colour 5 108 cells 63x10 at (25, 60)  AFFECT \u2014 ACTION1 shrank it +100%\n  #5 colour 4 45 cells 9x9 at (45, 57)  CONTEXT \u2014 moved whatever I press (93% of steps)\n  #8 colour 5 18 cells 1x18 at (63, 8)  \u2014 no role yet (12 obs)\n  static (2): #1 colour 10 189 cells 3x63 at (31, 31); #6 colour 11 45 cells 9x9 at (54, 48)\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#2, #5, #6} colours [4, 9, 11]\n  {#3, #8} colours [5, 11]\n  {#2,#5,#6} vs {#3,#8}: palette_diff 3; palette_missing 2; palette_missing\u2190 1; part_size_diff 1\n  {#5,#6} vs {#3,#8}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 1\n  {#2,#5,#6} vs #3: palette_diff 2; palette_missing 2; palette_missing\u2190 0; part_size_diff 9\n  {#5,#6} vs #3: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\n  {#3,#8} vs #7: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 90\n  {#2,#5} vs #1: palette_diff 3; palette_missing 2; palette_missing\u2190 1\nCONTROL\n  ACTION2 moves something by (0, 5)\n  ACTION1 shrank #7\n  blocked from here: ACTION2\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 90% of 94 (coverage 58%); changes: forecast 89% of 61 right, actual 93% of 58 foreseen\n  relations: 92% of 1353 (coverage 52%); changes: forecast 73% of 171 right, actual 65% of 190 foreseen\n  least predictable: ACTION2 (114 of 1447 wrong)\n  where the vocabulary is short: ACTION2 on distance (50 of 84 change forecasts wrong), ACTION2 on containment (30 of 112 change forecasts wrong), ACTION2 on count_diff (20 of 20 change forecasts wrong)\n  surprised t=20 ACTION2: containment(#6,#7) expected flat (92%), got up 63->108\n  surprised t=20 ACTION2: count_diff(#6,#8) expected flat (88%), got down 1->0\n  surprised t=20 ACTION2: containment(#8,#7) expected flat (88%), got up 63->108\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#3, each of #1=46, #2=46, #5=46, #6=46)   moves under every action alike\n  distance(#5, each of #1=26, #6=9)   moves under every action alike\n  containment(#7, each of #3=46, #8=18, #1=108, #1=162, #2=108, #2=1575 \u2026 +5)   moves under every action alike\n  distance(#2, each of #5=27, #6=18, #1=16)   moves under every action alike\n  distance(#7, each of #5=20, #2=30, #8=52, #1=29, #3=38, #6=29)   moves under every action alike\n  count_diff(#7, each of #1=1, #2=1, #3=0, #5=1, #6=0)   moves under every action alike\n  containment(#8, each of #1=18, #2=18, #3=18, #3=46, #5=18, #6=18)   moves under every action alike\n  distance(#8, each of #5=48, #6=39, #2=21)   moves under every action alike\n  count_diff(#8, each of #1=1, #2=1, #3=0, #5=1, #6=0)   moves under every action alike\n  distance(#3, each of #6=9, #5=18, #2=16)   moves under every action alike\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  nothing\nOPEN (20 undecidable between things on screen, 63 involving things off screen)\n  shape_diff(#1,#2) \u2014 not yet decidable\n  shape_diff(#1,#3) \u2014 not yet decidable\n  shape_diff(#1,#5) \u2014 not yet decidable\nRECENT\n  t=13 ACTION2: distance(#2,#5) 11->15; distance(#4,#7) 21->18; distance(#5,#7) 21->18\n  t=14 ACTION2: distance(#1,#4) 14->17; distance(#1,#5) 14->17; distance(#2,#5) 15->18\n  t=15 ACTION2: distance(#1,#4) 17->20; distance(#1,#5) 17->20; distance(#2,#5) 18->21\n  t=16 ACTION2: distance(#1,#4) 20->23; distance(#1,#5) 20->23; distance(#2,#5) 21->24\n  t=17 ACTION2: #4 vanished; containment(#7,#2) 1800->1575; containment(#1,#7) 63->108; containment(#2,#7) 63->108\n  t=18 ACTION2: nothing changed\n  t=19 ACTION1: #4 appeared; #2 lost 27 cells that #5 gained; #5 lost 27 cells that #2 gained; containment(#7,#2) 1575->1800; containment(#1,#7) 108->63; containment(#2,#7) 108->63\n  t=20 ACTION2: #4 vanished; containment(#7,#2) 1800->1575; containment(#1,#7) 63->108; containment(#2,#7) 63->108\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 7, \"b\": 2, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"ACTION2 does not cause #7 to contain #2 after 5 presses.\",\n   \"confidence\": 0.8, \"why\": \"ACTION2 has consistently moved #2 towards #7.\"}\n],\n  {\"relation\": \"containment\", \"a\": 3, \"b\": 1, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"ACTION2 does not cause #3 to contain #1 after 5 presses.\",\n   \"confidence\": 0.6, \"why\": \"ACTION2 has frequently moved #1 towards #3.\"}\n],\n  {\"relation\": \"distance\", \"a\": 7, \"b\": 5, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"ACTION2 does not cause #7 to move closer to #5 after 5 presses.\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has consistently moved #5 towards #7.\"}\n],\n  {\"relation\": \"count_diff\", \"a\": 7, \"b\": 1, \"action\": \"ACTION1\",\n   \"precondition\": null, \"predicted\": \"zero\",\n   \"falsifier\": \"ACTION1 does not reduce the count difference between #7 and #1 after 5 presses.\",\n   \"confidence\": 0.5, \"why\": \"ACTION1 consistently shrinks #7, which is currently a large difference from #1.\"}\n],\n  {\"relation\": \"distance\", \"a\": 7, \"b\": 8, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"ACTION2 does not cause #7 to move closer to #8 after 5 presses.\",\n   \"confidence\": 0.4, \"why\": \"ACTION2 has frequently moved #8 towards #7.\"}\n]}\n```",
+          "latency_s": 27.17,
+          "accepted": [],
+          "rejected": [
+            {
+              "reason": "unparseable",
+              "item": {
+                "text": "```json\n{\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 7, \"b\": 2, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"ACTION2 does not cause #7 to contain #2 after"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "cd82": {
+      "state": "GameState.GAME_OVER",
+      "seed": 1374973632,
+      "levels_completed": 0,
+      "actions": 201,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 198,
+        "entity": {
+          "hits": 1974,
+          "misses": 193,
+          "undecidable": 0,
+          "abstained": 299,
+          "accuracy": 0.911,
+          "coverage": 0.879,
+          "brier": 0.06
+        },
+        "pair": {
+          "hits": 62951,
+          "misses": 3207,
+          "undecidable": 352,
+          "abstained": 10932,
+          "accuracy": 0.952,
+          "coverage": 0.858,
+          "brier": 0.03
+        },
+        "by_action": {
+          "ACTION4": {
+            "entity": [
+              496,
+              53
+            ],
+            "pair": [
+              15841,
+              598
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              167,
+              8
+            ],
+            "pair": [
+              5040,
+              39
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              330,
+              23
+            ],
+            "pair": [
+              10601,
+              343
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              433,
+              40
+            ],
+            "pair": [
+              13640,
+              1085
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              426,
+              48
+            ],
+            "pair": [
+              14018,
+              805
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              122,
+              21
+            ],
+            "pair": [
+              3811,
+              337
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            10171,
+            104
+          ],
+          "palette_diff": [
+            14343,
+            0
+          ],
+          "distance": [
+            9592,
+            683
+          ],
+          "containment": [
+            18634,
+            1916
+          ],
+          "shape_diff": [
+            459,
+            0
+          ],
+          "palette_missing": [
+            8136,
+            0
+          ],
+          "part_size_diff": [
+            1616,
+            504
+          ]
+        },
+        "conditional": [
+          44924,
+          2140
+        ],
+        "unconditional": [
+          18027,
+          1067
+        ],
+        "moving": {
+          "entity": [
+            339,
+            146
+          ],
+          "pair": [
+            3467,
+            2064
+          ]
+        },
+        "moved": {
+          "entity": [
+            339,
+            96
+          ],
+          "pair": [
+            3467,
+            2226
+          ]
+        },
+        "cells": {
+          "ACTION4 containment": [
+            285,
+            333
+          ],
+          "ACTION4 distance": [
+            22,
+            164
+          ],
+          "ACTION4 part_size_diff": [
+            75,
+            80
+          ],
+          "ACTION6 containment": [
+            105,
+            22
+          ],
+          "ACTION6 part_size_diff": [
+            24,
+            12
+          ],
+          "ACTION5 containment": [
+            212,
+            180
+          ],
+          "ACTION5 distance": [
+            0,
+            88
+          ],
+          "ACTION5 part_size_diff": [
+            48,
+            47
+          ],
+          "ACTION6 distance": [
+            0,
+            5
+          ],
+          "ACTION2 distance": [
+            589,
+            157
+          ],
+          "ACTION2 containment": [
+            442,
+            703
+          ],
+          "ACTION2 part_size_diff": [
+            86,
+            201
+          ],
+          "ACTION1 distance": [
+            610,
+            141
+          ],
+          "ACTION1 containment": [
+            600,
+            508
+          ],
+          "ACTION1 part_size_diff": [
+            156,
+            125
+          ],
+          "ACTION2 count_diff": [
+            0,
+            24
+          ],
+          "ACTION1 count_diff": [
+            0,
+            31
+          ],
+          "ACTION5 count_diff": [
+            0,
+            28
+          ],
+          "ACTION3 distance": [
+            55,
+            128
+          ],
+          "ACTION3 containment": [
+            122,
+            170
+          ],
+          "ACTION3 part_size_diff": [
+            36,
+            39
+          ],
+          "ACTION4 count_diff": [
+            0,
+            21
+          ]
+        }
+      },
+      "llm_stats": {
+        "calls": 3,
+        "returned": 11,
+        "valid": 3,
+        "rejects": {
+          "precondition member not on screen or is the controlled thing": 3,
+          "action not legal (or a bare click)": 4,
+          "no such pair in the relation records": 1
+        },
+        "latency_s": [
+          39.48,
+          39.38,
+          39.81
+        ]
+      },
+      "llm_trace": [
+        {
+          "level_step": 24,
+          "trigger": "level_start",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6.\n\n=== BRIEF ===\nstep 24 of this level  (level 0)\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  waiting: 2 more bets\n  rivals: 1 pair proposed, 0 discriminating presses\n  expired: containment(#10,#11) 55->49 with ACTION4 in 8 steps\nTHINGS (13 on screen)\n  #7 colour 5 3095 cells 64x55 at (32, 37)  \u2014 the canvas\n  #10 colour 0 50 cells 5x10 at (29, 38)  AFFECT \u2014 ACTION5 shrank it +100%\n  #9 colour 15 84 cells 7x12 at (42, 38)  CONTROL \u2014 ACTION3 moved it +93%, ACTION2 moved it +93%\n  #11 colour 4 49 cells 49x1 at (24, 63)  \u2014 no role yet (24 obs)\n  #8 colour 2 30 cells 9x14 at (44, 38)  CONTROL \u2014 ACTION3 moved it +93%, ACTION2 moved it +93%\n  #12 colour 15 50 cells 5x10 at (34, 38)  \u2014 no role yet (6 obs)\n  static (7): #2 colour 3 359 cells 46x9 at (41, 4); #0 colour 5 156 cells 16x16 at (8, 8); #1 colour 4 68 cells 18x18 at (12, 12); #5 colour 0 50 cells 10x5 at (8, 5); #6 colour 15 50 cells 10x5 at (8, 10); #3 colour 4 25 cells 5x5 at (37, 4) \u2026 +1\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#0, #1, #5, #6} colours [0, 4, 5, 15]\n  {#2, #3, #4} colours [3, 4]\n  {#8, #9} colours [2, 15]\n  {#0,#1,#5,#6} vs {#3,#4}: palette_diff 3; palette_missing 3; palette_missing\u2190 0; part_size_diff 18\n  {#0,#1,#5,#6} vs {#2,#3,#4}: palette_diff 4; palette_missing 3; palette_missing\u2190 1; part_size_diff 18\n  {#0,#1,#5,#6} vs {#8,#9}: palette_diff 4; palette_missing 3; palette_missing\u2190 1; part_size_diff 34\n  {#5,#6} vs {#3,#4}: palette_diff 3; palette_missing 2; palette_missing\u2190 1\n  {#5,#6} vs {#8,#9}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 34\n  {#3,#4} vs {#8,#9}: palette_diff 3; palette_missing 1; palette_missing\u2190 2\nKINDS (things that look alike; a view, not a claim)\n  kind {15} x2 (same colours): #9 holds the CONTROL thing \u00b7 #12 no role yet\nCONTROL\n  ACTION2 moved #9, moved #8\n  ACTION3 moved #9, moved #8\n  ACTION5 shrank #10\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 90% of 133 (coverage 47%); changes: forecast 55% of 20 right, actual 69% of 16 foreseen\n  relations: 97% of 3052 (coverage 38%); changes: forecast 54% of 111 right, actual 59% of 102 foreseen\n  least predictable: ACTION6 (2 of 12 wrong), ACTION4 (102 of 3173 wrong)\n  where the vocabulary is short: ACTION4 on containment (61 of 111 change forecasts wrong), ACTION4 on distance (19 of 19 change forecasts wrong), ACTION4 on part_size_diff (11 of 21 change forecasts wrong)\n  surprised t=24 ACTION4: containment(#8,#11) expected down (75%), got flat 49->49\n  surprised t=24 ACTION4: containment(#9,#11) expected down (75%), got flat 49->49\n  surprised t=24 ACTION4: containment(#10,#11) expected down (75%), got flat 49->49\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#11, each of #0=49, #1=49, #2=49, #3=49, #4=49, #5=49 \u2026 +1)   ACTION4 drives it down when the controlled thing is apart on side -y (+50%)\n  containment(#8,#11) = 49   ACTION4 drives it down when the controlled thing is apart on side -y (+50%)\n  containment(#9,#11) = 49   ACTION4 drives it down when the controlled thing is apart on side -y (+50%)\n  containment(#11,#10) = 49   ACTION4 drives it down when the controlled thing is apart on side +x (+50%)\n  containment(#11,#12) = 49   ACTION4 drives it down when the controlled thing is adjacent on side +x (+50%)\n  distance(#8, each of #10=15, #0=36, #1=31, #2=35, #3=34, #4=34 \u2026 +3)   moves under every action alike\n  containment(#8, each of #10=50, #0=30, #1=30, #2=30, #3=30, #4=30 \u2026 +4)   moves under every action alike\n  distance(#9, each of #10=13, #0=34, #1=30, #2=35, #3=34, #4=34 \u2026 +4)   moves under every action alike\n  containment(#9, each of #10=50, #0=84, #1=84, #2=84, #3=84, #4=84 \u2026 +5)   moves under every action alike\n  count_diff(#6, each of #0=2, #1=1, #2=2, #3=1, #4=1, #5=1)   moves under every action alike\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  nothing\nOPEN (63 undecidable between things on screen, 0 involving things off screen)\n  shape_diff(#0,#1) \u2014 not yet decidable\n  shape_diff(#0,#2) \u2014 not yet decidable\n  shape_diff(#0,#3) \u2014 not yet decidable\nRECENT\n  t=17 ACTION4: containment(#0,#11) 54->53; containment(#1,#11) 54->53; containment(#2,#11) 54->53\n  t=18 ACTION2: #8 lost 6 cells that #9 gained; #9 lost 8 cells that #8 gained; containment(#9,#8) 14->30; containment(#8,#10) 84->100; containment(#0,#8) 43->30\n  t=19 ACTION5: #12 appeared; containment(#0,#10) 100->50; containment(#1,#10) 100->50; containment(#2,#10) 100->50\n  t=20 ACTION4: containment(#0,#11) 52->51; containment(#1,#11) 52->51; containment(#2,#11) 52->51\n  t=21 ACTION4: nothing changed\n  t=22 ACTION4: containment(#0,#11) 51->50; containment(#1,#11) 51->50; containment(#2,#11) 51->50\n  t=23 ACTION4: containment(#0,#11) 50->49; containment(#1,#11) 50->49; containment(#2,#11) 50->49\n  t=24 ACTION4: nothing changed\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 10, \"b\": 11, \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"apart\", \"side\": \"+x\", \"member\": 10},\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#10,#11) does not fall when ACTION4 is applied\",\n   \"confidence\": 0.95, \"why\": \"ACTION4 consistently drives containment between #10 and #11, suggesting a direct relationship.\"}\n],\n\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 9, \"b\": 11, \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"apart\", \"side\": \"+x\", \"member\": 9},\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#9,#11) does not fall when ACTION4 is applied\",\n   \"confidence\": 0.95, \"why\": \"ACTION4 consistently drives containment between #9 and #11, suggesting a direct relationship.\"}\n],\n\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 11, \"b\": 10, \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"apart\", \"side\": \"-y\", \"member\": 11},\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#11,#10) does not fall when ACTION4 is applied\",\n   \"confidence\": 0.95, \"why\": \"ACTION4 consistently drives containment between #11 and #10, suggesting a direct relationship.\"}\n],\n\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 11, \"b\": 0, \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"apart\", \"side\": \"-y\", \"member\": 11},\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#11,#0) does not fall when ACTION4 is applied\",\n   \"confidence\": 0.95, \"why\": \"ACTION4 consistently drives containment between #11 and #0, suggesting a direct relationship.\"}\n],\n\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 11, \"b\": 2, \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"apart\", \"side\": \"-y\", \"member\": 11},\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#11,#2) does not fall when ACTION4 is applied\",\n   \"confidence\": 0.95, \"why\": \"ACTION4 consistently drives containment between #11 and #2, suggesting a direct relationship.\"}\n]}\n```",
+          "latency_s": 39.48,
+          "accepted": [
+            {
+              "relation": "containment",
+              "a": 11,
+              "b": 2,
+              "action": "ACTION4",
+              "precondition": [
+                "apart:-y",
+                11
+              ],
+              "predicted": "down",
+              "confidence": 0.95,
+              "falsifier": "containment(#11,#2) does not fall when ACTION4 is applied"
+            }
+          ],
+          "rejected": []
+        },
+        {
+          "level_step": 44,
+          "trigger": "falsified_streak",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6.\n\n=== BRIEF ===\nstep 44 of this level  (level 0)\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  rivals: 1 pair proposed, 1 discriminating press; specific died first x1\n  expired: containment(#12,#11) 49->43 with ACTION4 only when adjacent on side +x of #12 in 8 steps\n  expired: containment(#12,#11) 49->43 with ACTION4 in 8 steps\n  expired: containment(#9,#11) 43->36 with ACTION4 in 8 steps\nTHINGS (13 on screen)\n  #7 colour 5 3108 cells 64x55 at (32, 37)  \u2014 the canvas\n  #10 colour 0 50 cells 5x10 at (29, 38)  AFFECT \u2014 ACTION5 shrank it +100%\n  #9 colour 15 84 cells 7x12 at (42, 38)  CONTROL \u2014 ACTION3 moved it +80%, ACTION2 moved it +80%\n  #11 colour 4 36 cells 36x1 at (18, 63)  \u2014 no role yet (44 obs)\n  #8 colour 2 30 cells 9x14 at (44, 38)  CONTROL \u2014 ACTION3 moved it +80%, ACTION2 moved it +80%\n  #12 colour 15 50 cells 5x10 at (34, 38)  AFFECT \u2014 ACTION5 appeared it +100%\n  static (7): #2 colour 3 359 cells 46x9 at (41, 4); #0 colour 5 156 cells 16x16 at (8, 8); #1 colour 4 68 cells 18x18 at (12, 12); #5 colour 0 50 cells 10x5 at (8, 5); #6 colour 15 50 cells 10x5 at (8, 10); #3 colour 4 25 cells 5x5 at (37, 4) \u2026 +1\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#0, #1, #5, #6} colours [0, 4, 5, 15]\n  {#2, #3, #4} colours [3, 4]\n  {#8, #9} colours [2, 15]\n  {#0,#1,#5,#6} vs {#3,#4}: palette_diff 3; palette_missing 3; palette_missing\u2190 0; part_size_diff 18\n  {#0,#1,#5,#6} vs {#2,#3,#4}: palette_diff 4; palette_missing 3; palette_missing\u2190 1; part_size_diff 18\n  {#0,#1,#5,#6} vs {#8,#9}: palette_diff 4; palette_missing 3; palette_missing\u2190 1; part_size_diff 34\n  {#5,#6} vs {#3,#4}: palette_diff 3; palette_missing 2; palette_missing\u2190 1\n  {#5,#6} vs {#8,#9}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 34\n  {#3,#4} vs {#8,#9}: palette_diff 3; palette_missing 1; palette_missing\u2190 2\nKINDS (things that look alike; a view, not a claim)\n  kind {15} x2 (same colours): #9 holds the CONTROL thing \u00b7 #12 changes under my actions\nCONTROL\n  ACTION2 moved #9, moved #8\n  ACTION3 moved #9, moved #8\n  ACTION5 shrank #10, appeared #12\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 93% of 366 (coverage 68%); changes: forecast 65% of 54 right, actual 83% of 42 foreseen\n  relations: 98% of 10682 (coverage 65%); changes: forecast 65% of 360 right, actual 83% of 284 foreseen\n  relations with a precondition 99% of 6143, without 97% of 4539\n  least predictable: ACTION4 (187 of 10670 wrong), ACTION6 (6 of 378 wrong)\n  where the vocabulary is short: ACTION4 on containment (116 of 298 change forecasts wrong), ACTION4 on part_size_diff (30 of 72 change forecasts wrong), ACTION4 on distance (20 of 20 change forecasts wrong)\n  surprised t=44 ACTION4: containment(#5,#11) expected down (78%), got flat 36->36\n  surprised t=44 ACTION4: containment(#6,#11) expected down (78%), got flat 36->36\n  surprised t=44 ACTION4: part_size_diff({#0,#1,#5,#6},{#11}) expected up (78%), got flat 32->32\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#11, each of #0=36, #1=36, #2=36, #3=36, #4=36, #5=36 \u2026 +4)   moves under every action alike\n  containment(#8, each of #11=36, #0=30, #1=30, #2=30, #3=30, #4=30 \u2026 +7)   moves under every action alike\n  containment(#9, each of #11=36, #0=84, #1=84, #2=84, #3=84, #4=84 \u2026 +8)   moves under every action alike\n  distance(#8, each of #11=26, #0=36, #1=31, #2=35, #3=34, #4=34 \u2026 +4)   moves under every action alike\n  distance(#9, each of #0=34, #1=30, #2=35, #3=34, #4=34, #5=34 \u2026 +5)   moves under every action alike\n  count_diff(#6, each of #0=2, #1=1, #2=2, #3=1, #4=1, #5=1)   moves under every action alike\n  count_diff(#9, each of #0=2, #1=1, #2=2, #3=1, #4=1, #5=1 \u2026 +3)   moves under every action alike\n  containment(#10, each of #0=50, #1=50, #2=50, #3=50, #4=50, #5=50 \u2026 +1)   moves under every action alike\n  count_diff(#8,#6) = 2   moves under every action alike\n  count_diff(#10,#6) = 1   moves under every action alike\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  nothing\nOPEN (63 undecidable between things on screen, 0 involving things off screen)\n  shape_diff(#0,#1) \u2014 not yet decidable\n  shape_diff(#0,#2) \u2014 not yet decidable\n  shape_diff(#0,#3) \u2014 not yet decidable\nRECENT\n  t=37 ACTION6@(38,23): containment(#0,#11) 41->40; containment(#1,#11) 41->40; containment(#2,#11) 41->40\n  t=38 ACTION4: nothing changed\n  t=39 ACTION4: containment(#0,#11) 40->39; containment(#1,#11) 40->39; containment(#2,#11) 40->39\n  t=40 ACTION4: containment(#0,#11) 39->38; containment(#1,#11) 39->38; containment(#2,#11) 39->38\n  t=41 ACTION2: #8 lost 6 cells that #9 gained; #9 lost 8 cells that #8 gained; containment(#9,#8) 14->30; containment(#8,#12) 34->50; containment(#0,#8) 43->30\n  t=42 ACTION4: containment(#0,#11) 38->37; containment(#1,#11) 38->37; containment(#2,#11) 38->37\n  t=43 ACTION4: containment(#0,#11) 37->36; containment(#1,#11) 37->36; containment(#2,#11) 37->36\n  t=44 ACTION4: nothing changed\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 11, \"b\": 0, \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"adjacent\", \"side\": \"+x\"},\n   \"predicted\": \"down\",\n   \"falsifier\": \"Containment(#11, #0) does not decrease after 44 steps of ACTION4\",\n   \"confidence\": 0.8,\n   \"why\": \"The brief indicates ACTION4 is used to move #12 and #11, and #11 is adjacent to #0.\" },\n  {\"relation\": \"containment\", \"a\": 11, \"b\": 1, \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"adjacent\", \"side\": \"+x\"},\n   \"predicted\": \"down\",\n   \"falsifier\": \"Containment(#11, #1) does not decrease after 44 steps of ACTION4\",\n   \"confidence\": 0.8,\n   \"why\": \"The brief indicates ACTION4 is used to move #12 and #11, and #11 is adjacent to #1.\" },\n  {\"relation\": \"containment\", \"a\": 11, \"b\": 9, \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"adjacent\", \"side\": \"+x\"},\n   \"predicted\": \"down\",\n   \"falsifier\": \"Containment(#11, #9) does not decrease after 44 steps of ACTION4\",\n   \"confidence\": 0.7,\n   \"why\": \"The brief indicates ACTION4 is used to move #12 and #11, and #11 is adjacent to #9.\" },\n  {\"relation\": \"count_diff\", \"a\": 6, \"b\": 10, \"action\": \"ACTION5\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"The count difference between #6 and #10 does not decrease after 44 steps of ACTION5\",\n   \"confidence\": 0.6,\n   \"why\": \"ACTION5 shrinks #10, and the brief indicates a count difference between #6 and #10.\" },\n  {\"relation\": \"count_diff\", \"a\": 9, \"b\": 10, \"action\": \"ACTION5\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"The count difference between #9 and #10 does not decrease after 44 steps of ACTION5\",\n   \"confidence\": 0.6,\n   \"why\": \"ACTION5 shrinks #10, and the brief indicates a count difference between #9 and #10.\"}\n]}\n```",
+          "latency_s": 39.38,
+          "accepted": [
+            {
+              "relation": "count_diff",
+              "a": 6,
+              "b": 10,
+              "action": "ACTION5",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.6,
+              "falsifier": "The count difference between #6 and #10 does not decrease after 44 steps of ACTION5"
+            },
+            {
+              "relation": "count_diff",
+              "a": 9,
+              "b": 10,
+              "action": "ACTION5",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.6,
+              "falsifier": "The count difference between #9 and #10 does not decrease after 44 steps of ACTION5"
+            }
+          ],
+          "rejected": [
+            {
+              "reason": "precondition member not on screen or is the controlled thing",
+              "item": {
+                "relation": "containment",
+                "a": 11,
+                "b": 0,
+                "action": "ACTION4",
+                "precondition": {
+                  "adjacency": "adjacent",
+                  "side": "+x"
+                },
+                "predicted": "down",
+                "falsifier": "Containment(#11, #0) does not decrease after 44 steps of ACTION4",
+                "confidence": 0.8,
+                "why": "The brief indicates ACTION4 is used to move #12 and #11, and #11 is adjacent to #0."
+              }
+            },
+            {
+              "reason": "precondition member not on screen or is the controlled thing",
+              "item": {
+                "relation": "containment",
+                "a": 11,
+                "b": 1,
+                "action": "ACTION4",
+                "precondition": {
+                  "adjacency": "adjacent",
+                  "side": "+x"
+                },
+                "predicted": "down",
+                "falsifier": "Containment(#11, #1) does not decrease after 44 steps of ACTION4",
+                "confidence": 0.8,
+                "why": "The brief indicates ACTION4 is used to move #12 and #11, and #11 is adjacent to #1."
+              }
+            },
+            {
+              "reason": "precondition member not on screen or is the controlled thing",
+              "item": {
+                "relation": "containment",
+                "a": 11,
+                "b": 9,
+                "action": "ACTION4",
+                "precondition": {
+                  "adjacency": "adjacent",
+                  "side": "+x"
+                },
+                "predicted": "down",
+                "falsifier": "Containment(#11, #9) does not decrease after 44 steps of ACTION4",
+                "confidence": 0.7,
+                "why": "The brief indicates ACTION4 is used to move #12 and #11, and #11 is adjacent to #9."
+              }
+            }
+          ]
+        },
+        {
+          "level_step": 175,
+          "trigger": "falsified_streak",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION3, ACTION4, ACTION5, ACTION6.\n\n=== BRIEF ===\nstep 175 of this level  (level 0)  stamina 23%\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  rivals: 7 pairs proposed, 12 discriminating presses; specific died first x3\n  live: containment(#8,#12) 84->84 with ACTION2 in 2 steps\n  live: distance(#1,#9) 36->17 with ACTION1 in 2 steps\n  live: containment(#8,#12) 84->100 with ACTION2 only when adjacent on side +x of #12 in 3 steps\nTHINGS (12 on screen)\n  #7 colour 5 3129 cells 64x55 at (33, 37)  \u2014 the canvas\n  #9 colour 15 84 cells 12x7 at (32, 28)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION1 moved -y it (100%), ACTION3 moved -x it (100%), ACTION2 moved +y it (100%)\n  #8 colour 2 30 cells 14x9 at (32, 26)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION1 moved -y it (100%), ACTION3 moved -x it (100%), ACTION2 moved +y it (100%)\n  #11 colour 4 15 cells 15x1 at (7, 63)  CONTEXT \u2014 shrank whatever I press (67% of steps)\n  #12 colour 15 100 cells 10x10 at (32, 38)  AFFECT \u2014 ACTION5 grew it +23%\n  static (7): #2 colour 3 359 cells 46x9 at (41, 4); #0 colour 5 156 cells 16x16 at (8, 8); #1 colour 4 68 cells 18x18 at (12, 12); #5 colour 0 50 cells 10x5 at (8, 5); #6 colour 15 50 cells 10x5 at (8, 10); #3 colour 4 25 cells 5x5 at (37, 4) \u2026 +1\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#0, #1, #5, #6} colours [0, 4, 5, 15]\n  {#2, #3, #4} colours [3, 4]\n  {#8, #9} colours [2, 15]\n  {#0,#1,#5,#6} vs {#3,#4}: palette_diff 3; palette_missing 3; palette_missing\u2190 0; part_size_diff 18\n  {#0,#1,#5,#6} vs {#2,#3,#4}: palette_diff 4; palette_missing 3; palette_missing\u2190 1; part_size_diff 18\n  {#0,#1,#5,#6} vs {#8,#9}: palette_diff 4; palette_missing 3; palette_missing\u2190 1; part_size_diff 34 (ACTION1 drives it down)\n  {#5,#6} vs {#3,#4}: palette_diff 3; palette_missing 2; palette_missing\u2190 1\n  {#5,#6} vs {#8,#9}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 34 (ACTION1 drives it down)\n  {#3,#4} vs {#8,#9}: palette_diff 3; palette_missing 1; palette_missing\u2190 2\nKINDS (things that look alike; a view, not a claim)\n  kind {15} x2 (same colours): #9 holds the CONTROL thing \u00b7 #12 changes under my actions\nCONTROL\n  ACTION1 moves #9, #8 by (0, -11)\n  ACTION2 moves #9, #8 by (0, 11)\n  ACTION3 moves #9, #8 by (-11, 0)\n  ACTION4 moves #9, #8 by (11, 0)\n  ACTION5 grew #12\n  blocked from here: ACTION1, ACTION2; blocked elsewhere: ACTION1 at 3 positions, ACTION2 at 3 positions, ACTION3 at 3 positions, ACTION4 at 2 positions\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 91% of 1901 (coverage 86%); changes: forecast 69% of 422 right, actual 80% of 366 foreseen\n  relations: 95% of 58737 (coverage 84%); changes: forecast 61% of 4832 right, actual 62% of 4769 foreseen\n  relations with a precondition 96% of 40717, without 94% of 18020\n  least predictable: ACTION3 (209 of 2309 wrong), ACTION2 (1037 of 13864 wrong)\n  where the vocabulary is short: ACTION2 on containment (645 of 1046 change forecasts wrong), ACTION1 on containment (466 of 1015 change forecasts wrong), ACTION4 on containment (256 of 479 change forecasts wrong)\n  surprised t=175 ACTION4: containment(#9,#12) expected flat (90%), got up 96->100\n  surprised t=175 ACTION4: containment(#12,#9) expected flat (90%), got down 85->84\n  surprised t=175 ACTION4: part_size_diff({#8,#9},{#12}) expected flat (93%), got up 15->16\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#11, each of #0=15, #1=15)   ACTION3 drives it down when the controlled thing is apart on side -y (+40%)\n  containment(#11, each of #2=15, #3=15, #4=15, #5=15, #6=15)   ACTION3 drives it down when the controlled thing is apart on side -y (+27%)\n  containment(#8,#11) = 15   ACTION3 drives it down when the controlled thing is apart on side -y (+38%)\n  containment(#9,#11) = 15   ACTION3 drives it down when the controlled thing is apart on side -y (+38%)\n  distance(#8, each of #0=24, #1=19, #2=22, #3=22, #4=22, #5=24 \u2026 +1)   ACTION1 drives it down (+87% over other actions)   ACTION2 drives it up (+89%)\n  containment(#8, each of #0=30, #1=30, #2=30, #3=30, #4=30, #5=30 \u2026 +1)   ACTION1 drives it down (+40% over other actions)   ACTION2 drives it up (+42%)\n  distance(#9, each of #0=24, #1=19, #2=24, #3=24, #4=24, #6=24 \u2026 +1)   ACTION1 drives it down (+87% over other actions)   ACTION2 drives it up (+89%)\n  containment(#9, each of #0=84, #1=84, #2=84, #3=84, #4=84, #5=84 \u2026 +1)   ACTION1 drives it down (+40% over other actions)   ACTION2 drives it up (+42%)\n  distance(#8,#9) = 2   ACTION2 drives it down (+42% over other actions)   ACTION1 drives it up (+40%)\n  containment(#9,#8) = 30   ACTION2 drives it down (+42% over other actions)   ACTION1 drives it up (+40%)\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  containment(#12,#11) = 15   down x4, ACTION6 drives it\n  distance(#2,#8) = 22   down x3, ACTION1 drives it\n  distance(#3,#8) = 22   down x3, ACTION1 drives it\n  distance(#4,#8) = 22   down x3, ACTION1 drives it\n  distance(#2,#9) = 24   down x3, ACTION1 drives it\nOPEN (53 undecidable between things on screen, 99 involving things off screen)\n  shape_diff(#0,#1) \u2014 not yet decidable\n  shape_diff(#0,#2) \u2014 not yet decidable\n  shape_diff(#0,#3) \u2014 not yet decidable\nRECENT\n  t=168 ACTION2: #8 lost 6 cells that #9 gained; #9 lost 8 cells that #8 gained; containment(#9,#8) 14->30; containment(#8,#12) 84->100; containment(#0,#8) 43->30\n  t=169 ACTION2: #8 lost 8 cells that #9 gained; #9 lost 6 cells that #8 gained; containment(#9,#8) 30->14; containment(#8,#12) 100->84; containment(#0,#8) 30->43\n  t=170 ACTION1: #8 lost 6 cells that #9 gained; #9 lost 8 cells that #8 gained; containment(#9,#8) 14->30; containment(#8,#12) 84->100; containment(#0,#8) 43->30\n  t=171 ACTION5: containment(#0,#11) 19->18; containment(#1,#11) 19->18; containment(#2,#11) 19->18\n  t=172 ACTION2: #8 lost 8 cells that #9 gained; #9 lost 6 cells that #8 gained; containment(#9,#8) 30->14; containment(#8,#12) 100->84; containment(#0,#8) 30->43\n  t=173 ACTION1: #8 lost 6 cells that #9 gained; #9 lost 8 cells that #8 gained; containment(#9,#8) 14->30; containment(#8,#12) 84->100; containment(#0,#8) 43->30\n  t=174 ACTION1: #8 lost 8 cells that #9 gained; #9 lost 6 cells that #8 gained; containment(#9,#8) 30->14; containment(#8,#12) 100->84; containment(#0,#8) 30->43\n  t=175 ACTION4: #8 lost 6 cells that #9 gained; #9 lost 8 cells that #8 gained; containment(#9,#8) 14->30; containment(#8,#12) 84->100; containment(#0,#8) 43->30\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"containment\", \"a\": 8, \"b\": 12, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"zero\",\n   \"falsifier\": \"containment(8,12) does not reach 100 after 3 presses of ACTION2\",\n   \"confidence\": 0.85, \"why\": \"ACTION2 consistently grows #12, suggesting a containment relationship.\"}\n  ,\n  {\"relation\": \"distance\", \"a\": 1, \"b\": 9, \"action\": \"ACTION1\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(1,9) does not fall after 2 presses of ACTION1\",\n   \"confidence\": 0.9, \"why\": \"ACTION1 consistently drives #9 away from #1, indicating a distance relationship.\"}\n  ,\n  {\"relation\": \"containment\", \"a\": 7, \"b\": 8, \"action\": \"ACTION4\",\n   \"precondition\": null, \"predicted\": \"zero\",\n   \"falsifier\": \"containment(7,8) does not reach 100 after 3 presses of ACTION4\",\n   \"confidence\": 0.6, \"why\": \"ACTION4 consistently moves #8, suggesting a containment relationship.\"}\n  ,\n  {\"relation\": \"containment\", \"a\": 8, \"b\": 12, \"action\": \"ACTION2\",\n   \"precondition\": {\"adjacency\": \"adjacent\", \"side\": \"+x\"},\n   \"predicted\": \"zero\",\n   \"falsifier\": \"containment(8,12) does not reach 100 after 3 presses of ACTION2 when adjacent on side +x of #12\",\n   \"confidence\": 0.75, \"why\": \"The hypothesis specifies a particular adjacency condition for ACTION2 to work.\"}\n  ,\n  {\"relation\": \"distance\", \"a\": 8, \"b\": 9, \"action\": \"ACTION1\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(8,9) does not fall after 2 presses of ACTION1\",\n   \"confidence\": 0.8, \"why\": \"ACTION1 consistently drives #8 away from #9, indicating a distance relationship.\"}\n]}\n```",
+          "latency_s": 39.81,
+          "accepted": [],
+          "rejected": [
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "containment",
+                "a": 8,
+                "b": 12,
+                "action": "ACTION2",
+                "precondition": null,
+                "predicted": "zero",
+                "falsifier": "containment(8,12) does not reach 100 after 3 presses of ACTION2",
+                "confidence": 0.85,
+                "why": "ACTION2 consistently grows #12, suggesting a containment relationship."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "distance",
+                "a": 1,
+                "b": 9,
+                "action": "ACTION1",
+                "precondition": null,
+                "predicted": "down",
+                "falsifier": "distance(1,9) does not fall after 2 presses of ACTION1",
+                "confidence": 0.9,
+                "why": "ACTION1 consistently drives #9 away from #1, indicating a distance relationship."
+              }
+            },
+            {
+              "reason": "no such pair in the relation records",
+              "item": {
+                "relation": "containment",
+                "a": 7,
+                "b": 8,
+                "action": "ACTION4",
+                "precondition": null,
+                "predicted": "zero",
+                "falsifier": "containment(7,8) does not reach 100 after 3 presses of ACTION4",
+                "confidence": 0.6,
+                "why": "ACTION4 consistently moves #8, suggesting a containment relationship."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "containment",
+                "a": 8,
+                "b": 12,
+                "action": "ACTION2",
+                "precondition": {
+                  "adjacency": "adjacent",
+                  "side": "+x"
+                },
+                "predicted": "zero",
+                "falsifier": "containment(8,12) does not reach 100 after 3 presses of ACTION2 when adjacent on side +x of #12",
+                "confidence": 0.75,
+                "why": "The hypothesis specifies a particular adjacency condition for ACTION2 to work."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "distance",
+                "a": 8,
+                "b": 9,
+                "action": "ACTION1",
+                "precondition": null,
+                "predicted": "down",
+                "falsifier": "distance(8,9) does not fall after 2 presses of ACTION1",
+                "confidence": 0.8,
+                "why": "ACTION1 consistently drives #8 away from #9, indicating a distance relationship."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "cn04": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 379601058,
+      "levels_completed": 1,
+      "actions": 201,
+      "completion_action_indices": [
+        142
+      ],
+      "prediction": {
+        "steps": 198,
+        "entity": {
+          "hits": 1261,
+          "misses": 339,
+          "undecidable": 0,
+          "abstained": 759,
+          "accuracy": 0.788,
+          "coverage": 0.678,
+          "brier": 0.132
+        },
+        "pair": {
+          "hits": 36283,
+          "misses": 3629,
+          "undecidable": 2273,
+          "abstained": 35977,
+          "accuracy": 0.909,
+          "coverage": 0.526,
+          "brier": 0.057
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              41,
+              2
+            ],
+            "pair": [
+              306,
+              5
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              539,
+              97
+            ],
+            "pair": [
+              19125,
+              1572
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              265,
+              77
+            ],
+            "pair": [
+              7750,
+              1058
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              223,
+              112
+            ],
+            "pair": [
+              2688,
+              652
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              14,
+              11
+            ],
+            "pair": [
+              163,
+              14
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              179,
+              40
+            ],
+            "pair": [
+              6251,
+              328
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            5273,
+            1198
+          ],
+          "palette_diff": [
+            7896,
+            0
+          ],
+          "distance": [
+            5576,
+            895
+          ],
+          "containment": [
+            11491,
+            1451
+          ],
+          "shape_diff": [
+            2234,
+            0
+          ],
+          "palette_missing": [
+            2854,
+            0
+          ],
+          "part_size_diff": [
+            959,
+            85
+          ]
+        },
+        "conditional": [
+          15359,
+          1502
+        ],
+        "unconditional": [
+          20924,
+          2127
+        ],
+        "moving": {
+          "entity": [
+            466,
+            181
+          ],
+          "pair": [
+            1087,
+            1466
+          ]
+        },
+        "moved": {
+          "entity": [
+            466,
+            282
+          ],
+          "pair": [
+            1087,
+            2419
+          ]
+        },
+        "cells": {
+          "ACTION4 count_diff": [
+            38,
+            530
+          ],
+          "ACTION4 containment": [
+            78,
+            612
+          ],
+          "ACTION4 distance": [
+            154,
+            371
+          ],
+          "ACTION6 containment": [
+            19,
+            5
+          ],
+          "ACTION4 part_size_diff": [
+            1,
+            59
+          ],
+          "ACTION3 containment": [
+            54,
+            395
+          ],
+          "ACTION3 distance": [
+            55,
+            235
+          ],
+          "ACTION3 part_size_diff": [
+            0,
+            18
+          ],
+          "ACTION2 distance": [
+            271,
+            139
+          ],
+          "ACTION2 containment": [
+            107,
+            299
+          ],
+          "ACTION2 count_diff": [
+            75,
+            209
+          ],
+          "ACTION5 distance": [
+            7,
+            12
+          ],
+          "ACTION5 containment": [
+            0,
+            2
+          ],
+          "ACTION1 distance": [
+            145,
+            138
+          ],
+          "ACTION1 containment": [
+            74,
+            138
+          ],
+          "ACTION1 count_diff": [
+            0,
+            49
+          ],
+          "ACTION2 part_size_diff": [
+            0,
+            5
+          ],
+          "ACTION1 part_size_diff": [
+            4,
+            3
+          ],
+          "ACTION3 count_diff": [
+            5,
+            410
+          ]
+        }
+      },
+      "llm_stats": {
+        "calls": 3,
+        "returned": 15,
+        "valid": 12,
+        "rejects": {
+          "action not legal (or a bare click)": 3
+        },
+        "latency_s": [
+          29.42,
+          31.84,
+          34.09
+        ]
+      },
+      "llm_trace": [
+        {
+          "level_step": 25,
+          "trigger": "level_start",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6.\n\n=== BRIEF ===\nstep 25 of this level  (level 0)\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  waiting: 1 more bet\n  falsified: distance(#4,#6) 18->24 with ACTION4 in 4 steps\nTHINGS (9 on screen)\n  #0 colour 10 3704 cells 64x64 at (31, 32)  \u2014 the canvas\n  #2 colour 0 135 cells 15x15 at (33, 22)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION3 moved -x it (100%)\n  #1 colour 4 21 cells 21x1 at (37, 0)  CONTEXT \u2014 shrank whatever I press (47% of steps)\n  #3 colour 8 9 cells 3x3 at (30, 12)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION3 moved -x it (100%)\n  #4 colour 8 9 cells 3x3 at (36, 12)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION3 moved -x it (100%)\n  #10 colour 0 11 cells 11x1 at (21, 0)  \u2014 no role yet (8 obs)\n  static (3): #5 colour 14 189 cells 9x21 at (45, 39); #6 colour 8 9 cells 3x3 at (39, 36); #7 colour 8 9 cells 3x3 at (39, 42)\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#1, #10} colours [0, 4]\n  {#2, #3, #4} colours [0, 8]\n  {#1,#10} vs {#2,#4}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 124\n  {#2,#4} vs #3: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 0\n  {#2,#4} vs #6: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\n  {#2,#4} vs #7: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\n  {#2,#4} vs #10: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 125\n  {#2,#4} vs #1: palette_diff 3; palette_missing 2; palette_missing\u2190 1\nKINDS (things that look alike; a view, not a claim)\n  kind {8} x2 (exact): #6 static \u00b7 #7 static\nCONTROL\n  ACTION3 moves #2, #3, #4 by (-3, 0)\n  ACTION4 moves #2, #3, #4 by (3, 0)\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 93% of 56 (coverage 28%); changes: forecast 92% of 24 right, actual 92% of 24 foreseen\n  relations: 93% of 539 (coverage 18%); changes: forecast 32% of 41 right, actual 52% of 25 foreseen\n  least predictable: ACTION4 (44 of 523 wrong)\n  where the vocabulary is short: ACTION4 on containment (18 of 24 change forecasts wrong), ACTION4 on distance (16 of 19 change forecasts wrong), ACTION4 on count_diff (6 of 6 change forecasts wrong)\n  surprised t=21 ACTION4: distance(#4,#5) expected down (100%), got flat 18->18\n  surprised t=21 ACTION4: distance(#4,#6) expected down (83%), got flat 15->15\n  surprised t=25 ACTION4: distance(#4,#5) expected down (86%), got flat 27->27\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#2,#1) = 21   ACTION6 drives it down (+25% over other actions)\n  containment(#1, each of #3=21, #4=21, #6=21, #7=21, #10=11, #10=21)   moves under every action alike\n  containment(#1,#5) = 21   ACTION6 drives it down (+25% over other actions)\n  containment(#2,#10) = 11   moves under every action alike\n  containment(#10, each of #3=11, #4=11, #5=11, #6=11, #7=11)   moves under every action alike\n  distance(#10, each of #4=15, #3=12)   moves under every action alike\n  distance(#2, each of #5=17, #1=22, #6=14, #7=20, #10=22)   moves under every action alike\n  distance(#3,#5) = 27   ACTION4 drives it down (+50% over other actions)   ACTION3 drives it up (+50%)\n  distance(#3,#6) = 24   ACTION4 drives it down (+38% over other actions)   ACTION3 drives it up (+50%)\n  distance(#3,#7) = 30   moves under every action alike\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  containment(#2,#1) = 21   down x2, ACTION6 drives it\n  containment(#5,#1) = 21   down x2, ACTION6 drives it\nOPEN (22 undecidable between things on screen, 153 involving things off screen)\n  shape_diff(#1,#2) \u2014 not yet decidable\n  shape_diff(#1,#3) \u2014 not yet decidable\n  shape_diff(#1,#4) \u2014 not yet decidable\nRECENT\n  t=18 ACTION4: #10 appeared; distance(#4,#5) 24->21; distance(#4,#6) 18->15; count_diff(#1,#2) 0->1\n  t=19 ACTION4: distance(#4,#5) 21->18\n  t=20 ACTION6@(30,8): #1 lost 1 cells that #10 gained; containment(#2,#1) 24->23; containment(#3,#1) 24->23; containment(#4,#1) 24->23\n  t=21 ACTION4: #2 lost 9 cells that #3 gained; #2 lost 9 cells that #4 gained; distance(#2,#10) 18->20\n  t=22 ACTION3: #3 lost 9 cells that #2 gained; #4 lost 9 cells that #2 gained; distance(#2,#10) 20->18\n  t=23 ACTION3: #1 lost 1 cells that #10 gained; distance(#4,#5) 18->21; containment(#2,#1) 23->22; containment(#3,#1) 23->22\n  t=24 ACTION5: #2 lost 9 cells that #4 gained; distance(#1,#4) 21->12; distance(#4,#6) 15->24; distance(#4,#7) 21->30\n  t=25 ACTION4: #1 lost 1 cells that #10 gained; distance(#4,#10) 12->15; containment(#2,#1) 22->21; containment(#3,#1) 22->21\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"distance\",\n   \"a\": 4,\n   \"b\": 5,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#4,#5) does not fall after 1 more bet with ACTION4\",\n   \"confidence\": 0.8,\n   \"why\": \"ACTION4 has consistently driven the distance between #4 and #5 downwards.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 4,\n   \"b\": 6,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#4,#6) does not fall after 1 more bet with ACTION4\",\n   \"confidence\": 0.7,\n   \"why\": \"ACTION4 has consistently driven the distance between #4 and #6 downwards.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 2,\n   \"b\": 1,\n   \"action\": \"ACTION6\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#2,#1) does not decrease after 1 more bet with ACTION6\",\n   \"confidence\": 0.9,\n   \"why\": \"ACTION6 consistently drives the containment between #2 and #1 downwards.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 3,\n   \"b\": 5,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#3,#5) does not fall after 1 more bet with ACTION4\",\n   \"confidence\": 0.6,\n   \"why\": \"ACTION4 has driven the distance between #3 and #5 downwards.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 3,\n   \"b\": 6,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#3,#6) does not fall after 1 more bet with ACTION4\",\n   \"confidence\": 0.5,\n   \"why\": \"ACTION4 has driven the distance between #3 and #6 downwards.\"\n  }\n]}\n```",
+          "latency_s": 29.42,
+          "accepted": [
+            {
+              "relation": "distance",
+              "a": 4,
+              "b": 5,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.8,
+              "falsifier": "distance(#4,#5) does not fall after 1 more bet with ACTION4"
+            },
+            {
+              "relation": "distance",
+              "a": 4,
+              "b": 6,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.7,
+              "falsifier": "distance(#4,#6) does not fall after 1 more bet with ACTION4"
+            },
+            {
+              "relation": "distance",
+              "a": 3,
+              "b": 5,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.6,
+              "falsifier": "distance(#3,#5) does not fall after 1 more bet with ACTION4"
+            },
+            {
+              "relation": "distance",
+              "a": 3,
+              "b": 6,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.5,
+              "falsifier": "distance(#3,#6) does not fall after 1 more bet with ACTION4"
+            }
+          ],
+          "rejected": [
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "containment",
+                "a": 2,
+                "b": 1,
+                "action": "ACTION6",
+                "precondition": null,
+                "predicted": "down",
+                "falsifier": "containment(#2,#1) does not decrease after 1 more bet with ACTION6",
+                "confidence": 0.9,
+                "why": "ACTION6 consistently drives the containment between #2 and #1 downwards."
+              }
+            }
+          ]
+        },
+        {
+          "level_step": 31,
+          "trigger": "falsified_streak",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6.\n\n=== BRIEF ===\nstep 31 of this level  (level 0)\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  falsified: distance(#3,#5) 27->27 with ACTION4 in 3 steps\n  falsified: distance(#3,#6) 24->24 with ACTION4 in 3 steps\n  falsified: distance(#1,#3) 12->12 with ACTION4 in 3 steps\nTHINGS (9 on screen)\n  #0 colour 10 3704 cells 64x64 at (30, 32)  \u2014 the canvas\n  #2 colour 0 135 cells 15x15 at (51, 22)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION3 moved -x it (100%)\n  #1 colour 4 19 cells 19x1 at (38, 0)  \u2014 no role yet (31 obs)\n  #3 colour 8 9 cells 3x3 at (48, 12)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION3 moved -x it (100%)\n  #4 colour 8 9 cells 3x3 at (54, 12)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION3 moved -x it (100%)\n  #10 colour 0 13 cells 13x1 at (22, 0)  \u2014 no role yet (14 obs)\n  static (3): #5 colour 14 189 cells 9x21 at (45, 39); #6 colour 8 9 cells 3x3 at (39, 36); #7 colour 8 9 cells 3x3 at (39, 42)\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#1, #10} colours [0, 4]\n  {#2, #3, #4} colours [0, 8]\n  {#1,#10} vs {#2,#4}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 122\n  {#2,#4} vs #3: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 0\n  {#2,#4} vs #6: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\n  {#2,#4} vs #7: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\n  {#2,#4} vs #10: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 125\n  {#2,#4} vs #1: palette_diff 3; palette_missing 2; palette_missing\u2190 1\nKINDS (things that look alike; a view, not a claim)\n  kind {8} x2 (exact): #6 static \u00b7 #7 static\nCONTROL\n  ACTION3 moves #2, #3, #4 by (-3, 0)\n  ACTION4 moves #2, #3, #4 by (3, 0)\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 93% of 110 (coverage 43%); changes: forecast 96% of 48 right, actual 88% of 52 foreseen\n  relations: 92% of 1437 (coverage 36%); changes: forecast 22% of 93 right, actual 34% of 59 foreseen\n  relations with a precondition 92% of 363, without 92% of 1074\n  least predictable: ACTION4 (120 of 1475 wrong)\n  where the vocabulary is short: ACTION4 on containment (75 of 81 change forecasts wrong), ACTION4 on distance (30 of 40 change forecasts wrong), ACTION4 on count_diff (6 of 6 change forecasts wrong)\n  surprised t=30 ACTION4: containment(#5,#10) expected flat (75%), got up 12->13\n  surprised t=30 ACTION4: part_size_diff({#1,#10},{#2,#4}) expected flat (75%), got down 123->122\n  surprised t=31 ACTION4: distance(#1,#4) expected flat (83%), got up 13->16\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  distance(#1,#4) = 16   ACTION3 drives it up (+30%)\n  distance(#2, each of #10=29, #5=17, #1=22, #6=14, #7=20)   moves under every action alike\n  distance(#10, each of #3=26, #4=32)   moves under every action alike\n  containment(#2,#1) = 19   ACTION6 drives it down (+25% over other actions)\n  containment(#1, each of #3=19, #4=19, #7=19)   ACTION4 drives it down when the controlled thing is apart on side +y (+43%)\n  containment(#1,#5) = 19   ACTION6 drives it down (+25% over other actions)\n  containment(#1,#6) = 19   ACTION4 drives it down when the controlled thing is apart on side -y (+43%)\n  containment(#1, each of #10=13, #10=19)   moves under every action alike\n  containment(#2,#10) = 13   moves under every action alike\n  containment(#10, each of #3=13, #4=13, #5=13, #6=13, #7=13)   moves under every action alike\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  containment(#2,#1) = 19   down x2, ACTION6 drives it\n  containment(#5,#1) = 19   down x2, ACTION6 drives it\nOPEN (22 undecidable between things on screen, 153 involving things off screen)\n  shape_diff(#1,#2) \u2014 not yet decidable\n  shape_diff(#1,#3) \u2014 not yet decidable\n  shape_diff(#1,#4) \u2014 not yet decidable\nRECENT\n  t=24 ACTION5: #2 lost 9 cells that #4 gained; distance(#1,#4) 21->12; distance(#4,#6) 15->24; distance(#4,#7) 21->30\n  t=25 ACTION4: #1 lost 1 cells that #10 gained; distance(#4,#10) 12->15; containment(#2,#1) 22->21; containment(#3,#1) 22->21\n  t=26 ACTION4: distance(#4,#10) 15->18\n  t=27 ACTION4: #1 lost 1 cells that #10 gained; distance(#3,#10) 12->14; distance(#4,#10) 18->20; containment(#2,#1) 21->20\n  t=28 ACTION4: distance(#3,#10) 14->18; distance(#4,#10) 20->24\n  t=29 ACTION4: distance(#2,#10) 22->24; distance(#3,#10) 18->20; distance(#4,#10) 24->26\n  t=30 ACTION4: #1 lost 1 cells that #10 gained; distance(#3,#10) 20->23; distance(#4,#10) 26->29; distance(#2,#10) 24->26\n  t=31 ACTION4: distance(#1,#4) 13->16; distance(#2,#10) 26->29; distance(#3,#10) 23->26\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"distance\",\n   \"a\": 1,\n   \"b\": 4,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#1,#4) does not decrease to 13 after 3 presses of ACTION4\",\n   \"confidence\": 0.8,\n   \"why\": \"ACTION4 consistently moves #2, #3, and #4 to the right, and #1 is close to #4.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 3,\n   \"b\": 10,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#3,#10) does not decrease to 14 after 3 presses of ACTION4\",\n   \"confidence\": 0.75,\n   \"why\": \"ACTION4 consistently moves #2, #3, and #4 to the right, and #10 is close to #3.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 2,\n   \"b\": 10,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#2,#10) does not decrease to 24 after 3 presses of ACTION4\",\n   \"confidence\": 0.7,\n   \"why\": \"ACTION4 consistently moves #2, #3, and #4 to the right, and #10 is close to #2.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 2,\n   \"b\": 1,\n   \"action\": \"ACTION6\",\n   \"precondition\": \"adjacency\",\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#2,#1) does not decrease to 19 after 3 presses of ACTION6\",\n   \"confidence\": 0.9,\n   \"why\": \"ACTION6 consistently drives #2 away from #1.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 1,\n   \"b\": 5,\n   \"action\": \"ACTION6\",\n   \"precondition\": \"adjacency\",\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#1,#5) does not decrease to 19 after 3 presses of ACTION6\",\n   \"confidence\": 0.85,\n   \"why\": \"ACTION6 consistently drives #1 away from #5.\"\n  }\n]}\n```",
+          "latency_s": 31.84,
+          "accepted": [
+            {
+              "relation": "distance",
+              "a": 1,
+              "b": 4,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.8,
+              "falsifier": "distance(#1,#4) does not decrease to 13 after 3 presses of ACTION4"
+            },
+            {
+              "relation": "distance",
+              "a": 3,
+              "b": 10,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.75,
+              "falsifier": "distance(#3,#10) does not decrease to 14 after 3 presses of ACTION4"
+            },
+            {
+              "relation": "distance",
+              "a": 2,
+              "b": 10,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.7,
+              "falsifier": "distance(#2,#10) does not decrease to 24 after 3 presses of ACTION4"
+            }
+          ],
+          "rejected": [
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "containment",
+                "a": 2,
+                "b": 1,
+                "action": "ACTION6",
+                "precondition": "adjacency",
+                "predicted": "down",
+                "falsifier": "containment(#2,#1) does not decrease to 19 after 3 presses of ACTION6",
+                "confidence": 0.9,
+                "why": "ACTION6 consistently drives #2 away from #1."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "containment",
+                "a": 1,
+                "b": 5,
+                "action": "ACTION6",
+                "precondition": "adjacency",
+                "predicted": "down",
+                "falsifier": "containment(#1,#5) does not decrease to 19 after 3 presses of ACTION6",
+                "confidence": 0.85,
+                "why": "ACTION6 consistently drives #1 away from #5."
+              }
+            }
+          ]
+        },
+        {
+          "level_step": 27,
+          "trigger": "level_start",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6.\n\n=== BRIEF ===\nstep 27 of this level  (level 1)  stamina 0%\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION5, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  waiting: 1 more bet\n  falsified: distance(#41,#46) 24->15 with ACTION1 in 8 steps\nMATTERED (from 1 level advance this game, 1 with no expressible coordinate)\n  winning moves: ACTION2 x1\nTHINGS (19 on screen)\n  #40 colour 12 3515 cells 64x64 at (31, 31)  \u2014 the canvas\n  #41 colour 4 24 cells 24x1 at (36, 0)  \u2014 no role yet (26 obs)\n  #42 colour 0 90 cells 9x18 at (26, 11)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION3 moved -x it (100%), ACTION1 moved -y it (100%), ACTION2 moved +y it (80%)\n  #46 colour 8 9 cells 3x3 at (30, 15)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION3 moved -x it (100%), ACTION1 moved -y it (100%), ACTION2 moved +y it (80%)\n  #51 colour 8 9 cells 3x3 at (18, 39)  AFFECT \u2014 ACTION3 shrank it +38%, ACTION2 grew it +28%\n  #48 colour 8 9 cells 3x3 at (27, 21)  CONTROL \u2014 ACTION4 moved +x it (100%), ACTION1 moved -y it (100%)\n  #60 colour 0 8 cells 8x1 at (20, 0)  \u2014 no role yet (3 obs)\n  static (12): #43 colour 8 9 cells 3x3 at (45, 15); #44 colour 14 90 cells 12x21 at (46, 27); #45 colour 8 9 cells 3x3 at (51, 21); #47 colour 8 9 cells 3x3 at (51, 27); #49 colour 8 9 cells 3x3 at (39, 30); #50 colour 11 216 cells 15x18 at (25, 44) \u2026 +6\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#42, #46, #48} colours [0, 8]\n  {#43, #44, #49} colours [8, 14]\n  {#50, #51} colours [8, 11]\n  {#42,#46} vs {#43,#49}: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 0\n  {#43,#49} vs {#50,#51}: palette_diff 1; palette_missing 0; palette_missing\u2190 1; part_size_diff 9\n  {#46,#48} vs {#43,#44,#49}: palette_diff 1; palette_missing 0; palette_missing\u2190 1; part_size_diff 0\n  {#46,#48} vs {#43,#49}: palette_diff 0; palette_missing 0; palette_missing\u2190 0; part_size_diff 0\n  {#46,#48} vs {#50,#51}: palette_diff 1; palette_missing 0; palette_missing\u2190 1; part_size_diff 9\n  {#42,#46} vs {#43,#44,#49}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 0\nKINDS (things that look alike; a view, not a claim)\n  kind {8} x8 (exact): #51 changes under my actions \u00b7 #45 static \u00b7 #47 static \u00b7 #52 static \u00b7 +4 more \u00b7 15 of this kind have vanished, stamina -2% when they did\n  kind {8}x2 x2 (same colours): {#46,#48} holds the CONTROL thing \u2014 drifted from the static one: part_size_diff 0 \u00b7 {#43,#49} static \u00b7 15 of this kind have vanished, stamina -2% when they did\nCONTROL\n  ACTION1 moves #42, #46, #48 by (0, -3)\n  ACTION2 moves #42, #46 by (0, 3)\n  ACTION3 moves #42, #46 by (-3, 0)\n  ACTION4 moves #42, #46, #48 by (3, 0)\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 95% of 143 (coverage 32%); changes: forecast 85% of 34 right, actual 88% of 33 foreseen\n  relations: 98% of 6242 (coverage 28%); changes: forecast 54% of 185 right, actual 63% of 158 foreseen\n  relations with a precondition 97% of 556, without 98% of 5686\n  least predictable: ACTION2 (3 of 18 wrong), ACTION4 (118 of 3425 wrong)\n  where the vocabulary is short: ACTION4 on containment (60 of 62 change forecasts wrong), ACTION4 on distance (39 of 99 change forecasts wrong), ACTION4 on count_diff (16 of 16 change forecasts wrong)\n  surprised t=27 ACTION4: distance(#46,#49) expected down (86%), got flat 15->15\n  surprised t=27 ACTION4: distance(#48,#54) expected down (83%), got flat 30->30\n  surprised t=27 ACTION4: distance(#48,#57) expected down (83%), got flat 35->35\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  distance(#42, each of #43=19, #44=20, #45=25, #47=25)   ACTION4 drives it down (+100% over other actions)   ACTION3 drives it up (+100%)\n  distance(#46, each of #43=15, #44=16, #45=21, #47=21)   ACTION4 drives it down (+100% over other actions)   ACTION3 drives it up (+100%)\n  distance(#48, each of #43=18, #45=24, #47=24, #49=12, #55=30)   ACTION4 drives it down (+100% over other actions)\n  distance(#44,#48) = 19   ACTION4 drives it down (+100% over other actions)\n  distance(#41,#42) = 11   ACTION4 drives it down when the controlled thing is apart on side -x (+100%)\n  distance(#42,#49) = 19   ACTION4 drives it down (+75% over other actions)   ACTION3 drives it up (+100%)\n  distance(#46,#49) = 15   ACTION4 drives it down (+75% over other actions)   ACTION3 drives it up (+100%)\n  distance(#48,#54) = 30   ACTION4 drives it down (+71% over other actions)\n  distance(#57,#48) = 35   ACTION4 drives it down (+71% over other actions)\n  count_diff(#42, each of #43=10, #45=10, #46=10, #47=10, #49=10, #52=10 \u2026 +4)   ACTION4 drives it down (+25% over other actions)   ACTION3 drives it up (+75%)\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  distance(#48,#49) = 12   down x4, ACTION4 drives it\n  distance(#43,#46) = 15   down x4, ACTION4 drives it\n  distance(#44,#46) = 16   down x4, ACTION4 drives it\n  distance(#43,#48) = 18   down x4, ACTION4 drives it\n  distance(#42,#43) = 19   down x4, ACTION4 drives it\nOPEN (87 undecidable between things on screen, 333 involving things off screen)\n  shape_diff(#41,#42) \u2014 not yet decidable\n  shape_diff(#41,#43) \u2014 not yet decidable\n  shape_diff(#41,#44) \u2014 not yet decidable\nRECENT\n  t=20 ACTION1: distance(#41,#48) 27->24; distance(#42,#50) 26->29; distance(#42,#51) 22->25\n  t=21 ACTION1: distance(#42,#50) 29->32; distance(#42,#51) 25->28; distance(#42,#52) 25->28\n  t=22 ACTION4: #48 lost 9 cells that #42 gained; distance(#41,#46) 20->17; distance(#42,#43) 34->31; distance(#42,#44) 35->32\n  t=23 ACTION4: distance(#41,#42) 21->18; distance(#42,#43) 31->28; distance(#42,#44) 32->29\n  t=24 ACTION6@(8,24): nothing changed\n  t=25 ACTION4: #60 appeared; #48 lost 9 cells that #42 gained; distance(#41,#42) 18->15; distance(#42,#43) 28->25; distance(#42,#44) 29->26\n  t=26 ACTION4: distance(#41,#42) 15->12; distance(#42,#43) 25->22; distance(#42,#44) 26->23\n  t=27 ACTION4: distance(#42,#43) 22->19; distance(#42,#44) 23->20; distance(#42,#45) 28->25\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"distance\",\n   \"a\": 41,\n   \"b\": 46,\n   \"action\": \"ACTION1\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(41,46) does not decrease after 1 more bet with ACTION1\",\n   \"confidence\": 0.8,\n   \"why\": \"The agent is currently betting on ACTION1 to move #41 towards #46, and this has been a consistent driver of distance reduction.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 42,\n   \"b\": 43,\n   \"action\": \"ACTION3\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(42,43) does not decrease after 1 more bet with ACTION3\",\n   \"confidence\": 0.7,\n   \"why\": \"ACTION3 consistently moves #42 away from #43, and this is a key observed relationship.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 46,\n   \"b\": 49,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(46,49) does not decrease after 1 more bet with ACTION4\",\n   \"confidence\": 0.6,\n   \"why\": \"ACTION4 has been the strongest lever on this pair, consistently driving the distance down.\"\n  },\n  {\"relation\": \"count_diff\",\n   \"a\": 42,\n   \"b\": 43,\n   \"action\": \"ACTION3\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"count_diff(42,43) does not decrease after 1 more bet with ACTION3\",\n   \"confidence\": 0.5,\n   \"why\": \"The agent is betting on ACTION3 to reduce the count difference between #42 and #43.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 42,\n   \"b\": 44,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(42,44) does not decrease after 1 more bet with ACTION4\",\n   \"confidence\": 0.7,\n   \"why\": \"ACTION4 has been the strongest lever on this pair, consistently driving the distance down.\"\n  }\n]}\n```",
+          "latency_s": 34.09,
+          "accepted": [
+            {
+              "relation": "distance",
+              "a": 41,
+              "b": 46,
+              "action": "ACTION1",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.8,
+              "falsifier": "distance(41,46) does not decrease after 1 more bet with ACTION1"
+            },
+            {
+              "relation": "distance",
+              "a": 42,
+              "b": 43,
+              "action": "ACTION3",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.7,
+              "falsifier": "distance(42,43) does not decrease after 1 more bet with ACTION3"
+            },
+            {
+              "relation": "distance",
+              "a": 46,
+              "b": 49,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.6,
+              "falsifier": "distance(46,49) does not decrease after 1 more bet with ACTION4"
+            },
+            {
+              "relation": "count_diff",
+              "a": 42,
+              "b": 43,
+              "action": "ACTION3",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.5,
+              "falsifier": "count_diff(42,43) does not decrease after 1 more bet with ACTION3"
+            },
+            {
+              "relation": "distance",
+              "a": 42,
+              "b": 44,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.7,
+              "falsifier": "distance(42,44) does not decrease after 1 more bet with ACTION4"
+            }
+          ],
+          "rejected": []
+        }
+      ]
+    },
+    "ka59": {
+      "state": "GameState.GAME_OVER",
+      "seed": 19968251,
+      "levels_completed": 0,
+      "actions": 201,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 198,
+        "entity": {
+          "hits": 1582,
+          "misses": 354,
+          "undecidable": 0,
+          "abstained": 216,
+          "accuracy": 0.817,
+          "coverage": 0.9,
+          "brier": 0.102
+        },
+        "pair": {
+          "hits": 45721,
+          "misses": 4011,
+          "undecidable": 305,
+          "abstained": 7916,
+          "accuracy": 0.919,
+          "coverage": 0.863,
+          "brier": 0.054
+        },
+        "by_action": {
+          "ACTION3": {
+            "entity": [
+              634,
+              135
+            ],
+            "pair": [
+              18242,
+              1364
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              385,
+              83
+            ],
+            "pair": [
+              11185,
+              1040
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              263,
+              63
+            ],
+            "pair": [
+              7696,
+              708
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              223,
+              65
+            ],
+            "pair": [
+              6703,
+              829
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              77,
+              8
+            ],
+            "pair": [
+              1895,
+              70
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            6599,
+            908
+          ],
+          "palette_diff": [
+            10721,
+            0
+          ],
+          "distance": [
+            6968,
+            539
+          ],
+          "containment": [
+            13052,
+            1962
+          ],
+          "shape_diff": [
+            623,
+            0
+          ],
+          "palette_missing": [
+            6428,
+            0
+          ],
+          "part_size_diff": [
+            1330,
+            602
+          ]
+        },
+        "conditional": [
+          33871,
+          2885
+        ],
+        "unconditional": [
+          11850,
+          1126
+        ],
+        "moving": {
+          "entity": [
+            326,
+            209
+          ],
+          "pair": [
+            2605,
+            1871
+          ]
+        },
+        "moved": {
+          "entity": [
+            326,
+            189
+          ],
+          "pair": [
+            2605,
+            2465
+          ]
+        },
+        "cells": {
+          "ACTION3 distance": [
+            197,
+            273
+          ],
+          "ACTION3 containment": [
+            689,
+            625
+          ],
+          "ACTION3 part_size_diff": [
+            106,
+            189
+          ],
+          "ACTION4 containment": [
+            417,
+            540
+          ],
+          "ACTION4 distance": [
+            210,
+            116
+          ],
+          "ACTION4 part_size_diff": [
+            53,
+            141
+          ],
+          "ACTION2 distance": [
+            30,
+            77
+          ],
+          "ACTION2 containment": [
+            381,
+            335
+          ],
+          "ACTION2 part_size_diff": [
+            45,
+            119
+          ],
+          "ACTION3 count_diff": [
+            10,
+            277
+          ],
+          "ACTION4 count_diff": [
+            42,
+            243
+          ],
+          "ACTION1 count_diff": [
+            0,
+            211
+          ],
+          "ACTION1 containment": [
+            314,
+            407
+          ],
+          "ACTION1 distance": [
+            27,
+            73
+          ],
+          "ACTION1 part_size_diff": [
+            32,
+            138
+          ],
+          "ACTION6 containment": [
+            51,
+            55
+          ],
+          "ACTION6 part_size_diff": [
+            1,
+            15
+          ],
+          "ACTION2 count_diff": [
+            0,
+            177
+          ]
+        }
+      },
+      "llm_stats": {
+        "calls": 3,
+        "returned": 15,
+        "valid": 5,
+        "rejects": {
+          "action not legal (or a bare click)": 4,
+          "already holds": 1,
+          "precondition not an object": 5
+        },
+        "latency_s": [
+          31.29,
+          36.37,
+          34.21
+        ]
+      },
+      "llm_trace": [
+        {
+          "level_step": 23,
+          "trigger": "level_start",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION6.\n\n=== BRIEF ===\nstep 23 of this level  (level 0)\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  live: distance(#5,#6) 6->6 with ACTION4 in 2 steps\nTHINGS (11 on screen)\n  #0 colour 2 3249 cells 64x63 at (31, 31)  \u2014 the canvas\n  #1 colour 1 290 cells 18x21 at (16, 31)  AFFECT \u2014 ACTION2 grew it +33%, ACTION1 turned it +33%\n  #9 colour 4 49 cells 49x1 at (24, 63)  CONTEXT \u2014 shrank whatever I press (64% of steps)\n  #8 colour 4 25 cells 5x5 at (13, 34)  \u2014 no role yet (23 obs)\n  #5 colour 14 9 cells 3x3 at (22, 37)  CONTROL \u2014 ACTION2 moved it +33%, ACTION1 moved it +33%\n  #11 colour 0 15 cells 15x1 at (56, 63)  \u2014 no role yet (12 obs)\n  static (5): #3 colour 1 290 cells 15x21 at (46, 31); #2 colour 15 126 cells 6x21 at (36, 31); #4 colour 4 25 cells 5x5 at (46, 28); #6 colour 14 9 cells 3x3 at (28, 31); #7 colour 1 9 cells 3x3 at (31, 31)\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#1, #5, #8} colours [1, 4, 14]\n  {#3, #4} colours [1, 4]\n  {#9, #11} colours [0, 4]\n  {#1,#5,#8} vs {#3,#4}: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 0 (ACTION4 drives it down)\n  {#5,#8} vs {#3,#4}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 0 (ACTION4 drives it down)\n  {#1,#5,#8} vs {#9,#11}: palette_diff 3; palette_missing 2; palette_missing\u2190 1; part_size_diff 24\n  {#5,#8} vs {#9,#11}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 24\n  {#3,#4} vs {#9,#11}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 24\n  {#1,#5,#8} vs #4: palette_diff 2; palette_missing 2; palette_missing\u2190 0; part_size_diff 0 (ACTION4 drives it down)\nCONTROL\n  ACTION2 moves #5 by (0, 3)\n  ACTION4 moves something by (3, 0)\n  ACTION1 turned #1, moved #5\n  blocked from here: ACTION4; blocked elsewhere: ACTION4 at 1 position\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 90% of 92 (coverage 39%); changes: forecast 50% of 18 right, actual 100% of 9 foreseen\n  relations: 96% of 1884 (coverage 33%); changes: forecast 48% of 161 right, actual 99% of 79 foreseen\n  least predictable: ACTION4 (65 of 572 wrong), ACTION3 (28 of 1404 wrong)\n  where the vocabulary is short: ACTION4 on containment (36 of 72 change forecasts wrong), ACTION3 on containment (16 of 48 change forecasts wrong), ACTION4 on distance (13 of 14 change forecasts wrong)\n  surprised t=23 ACTION4: distance(#5,#7) expected down (80%), got flat 9->9\n  surprised t=23 ACTION4: distance(#5,#11) expected down (100%), got flat 34->34\n  surprised t=23 ACTION4: distance(#8,#11) expected flat (80%), got down 44->43\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#1, each of #9=49, #11=15, #11=290)   moves under every action alike\n  containment(#9, each of #2=49, #3=49, #4=49, #6=49, #7=49)   moves under every action alike\n  containment(#5,#9) = 49   moves under every action alike\n  containment(#8, each of #9=49, #11=15, #11=25)   moves under every action alike\n  containment(#11, each of #2=15, #3=15, #4=15, #5=15, #6=15, #7=15 \u2026 +2)   moves under every action alike\n  distance(#8, each of #11=43, #2=22)   moves under every action alike\n  distance(#5,#9) = 26   moves under every action alike\n  distance(#1, each of #11=40, #8=3, #3=30, #4=30, #6=12, #7=15)   moves under every action alike\n  distance(#11,#5) = 34   moves under every action alike\n  distance(#5, each of #2=14, #3=24, #4=24, #6=6, #7=9)   ACTION4 drives it down (+67% over other actions)   ACTION3 drives it up (+20%)\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  nothing\nOPEN (41 undecidable between things on screen, 90 involving things off screen)\n  shape_diff(#1,#2) \u2014 not yet decidable\n  shape_diff(#1,#3) \u2014 not yet decidable\n  shape_diff(#1,#4) \u2014 not yet decidable\nRECENT\n  t=16 ACTION4: #10 vanished; #1 lost 8 cells that #5 gained; #5 lost 6 cells that #1 gained; containment(#2,#8) 13->24; containment(#3,#8) 13->24; containment(#4,#8) 13->24\n  t=17 ACTION4: #1 lost 9 cells that #5 gained; #5 lost 8 cells that #1 gained; distance(#2,#5) 20->16; distance(#3,#5) 30->27; distance(#4,#5) 30->27\n  t=18 ACTION6@(54,63): containment(#1,#9) 53->52; containment(#2,#9) 53->52; containment(#3,#9) 53->52\n  t=19 ACTION4: #1 lost 9 cells that #5 gained; #5 lost 9 cells that #1 gained; distance(#3,#5) 27->24; distance(#4,#5) 27->24; distance(#5,#6) 9->6\n  t=20 ACTION4: #9 lost 1 cells that #11 gained; containment(#1,#9) 52->51; containment(#2,#9) 52->51; containment(#3,#9) 52->51\n  t=21 ACTION1: #1 lost 9 cells that #5 gained; #5 lost 9 cells that #1 gained; distance(#5,#9) 26->29\n  t=22 ACTION2: #9 lost 1 cells that #11 gained; distance(#5,#9) 29->26; containment(#1,#9) 51->50; containment(#2,#9) 51->50\n  t=23 ACTION4: containment(#1,#9) 50->49; containment(#2,#9) 50->49; containment(#3,#9) 50->49\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\n    \"relation\": \"distance\",\n    \"a\": 5,\n    \"b\": 9,\n    \"action\": \"ACTION4\",\n    \"precondition\": null,\n    \"predicted\": \"down\",\n    \"falsifier\": \"distance(5,9) does not decrease after 2 steps of ACTION4\",\n    \"confidence\": 0.85,\n    \"why\": \"ACTION4 consistently moves #5 towards #9, suggesting a downward distance relationship.\"\n  },\n  {\n    \"relation\": \"containment\",\n    \"a\": 1,\n    \"b\": 9,\n    \"action\": \"ACTION4\",\n    \"precondition\": null,\n    \"predicted\": \"zero\",\n    \"falsifier\": \"containment(1,9) does not reach 0 after 2 steps of ACTION4\",\n    \"confidence\": 0.7,\n    \"why\": \"ACTION4\u2019s effect on containment suggests a drive towards zero, potentially related to the canvas.\"\n  },\n  {\n    \"relation\": \"distance\",\n    \"a\": 5,\n    \"b\": 11,\n    \"action\": \"ACTION4\",\n    \"precondition\": null,\n    \"predicted\": \"down\",\n    \"falsifier\": \"distance(5,11) does not decrease after 2 steps of ACTION4\",\n    \"confidence\": 0.65,\n    \"why\": \"ACTION4 has consistently moved #5 towards #11, indicating a downward distance relationship.\"\n  },\n  {\n    \"relation\": \"distance\",\n    \"a\": 8,\n    \"b\": 11,\n    \"action\": \"ACTION4\",\n    \"precondition\": null,\n    \"predicted\": \"down\",\n    \"falsifier\": \"distance(8,11) does not decrease after 2 steps of ACTION4\",\n    \"confidence\": 0.55,\n    \"why\": \"ACTION4 has consistently moved #8 towards #11, indicating a downward distance relationship.\"\n  },\n  {\n    \"relation\": \"containment\",\n    \"a\": 1,\n    \"b\": 5,\n    \"action\": \"ACTION2\",\n    \"precondition\": null,\n    \"predicted\": \"zero\",\n    \"falsifier\": \"containment(1,5) does not reach 0 after 2 steps of ACTION2\",\n    \"confidence\": 0.6,\n    \"why\": \"ACTION2 consistently moves #5, suggesting a drive towards containment.\"\n  }\n]}\n```",
+          "latency_s": 31.29,
+          "accepted": [],
+          "rejected": [
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "distance",
+                "a": 5,
+                "b": 9,
+                "action": "ACTION4",
+                "precondition": null,
+                "predicted": "down",
+                "falsifier": "distance(5,9) does not decrease after 2 steps of ACTION4",
+                "confidence": 0.85,
+                "why": "ACTION4 consistently moves #5 towards #9, suggesting a downward distance relationship."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "containment",
+                "a": 1,
+                "b": 9,
+                "action": "ACTION4",
+                "precondition": null,
+                "predicted": "zero",
+                "falsifier": "containment(1,9) does not reach 0 after 2 steps of ACTION4",
+                "confidence": 0.7,
+                "why": "ACTION4\u2019s effect on containment suggests a drive towards zero, potentially related to the canvas."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "distance",
+                "a": 5,
+                "b": 11,
+                "action": "ACTION4",
+                "precondition": null,
+                "predicted": "down",
+                "falsifier": "distance(5,11) does not decrease after 2 steps of ACTION4",
+                "confidence": 0.65,
+                "why": "ACTION4 has consistently moved #5 towards #11, indicating a downward distance relationship."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "distance",
+                "a": 8,
+                "b": 11,
+                "action": "ACTION4",
+                "precondition": null,
+                "predicted": "down",
+                "falsifier": "distance(8,11) does not decrease after 2 steps of ACTION4",
+                "confidence": 0.55,
+                "why": "ACTION4 has consistently moved #8 towards #11, indicating a downward distance relationship."
+              }
+            },
+            {
+              "reason": "already holds",
+              "item": {
+                "relation": "containment",
+                "a": 1,
+                "b": 5,
+                "action": "ACTION2",
+                "precondition": null,
+                "predicted": "zero",
+                "falsifier": "containment(1,5) does not reach 0 after 2 steps of ACTION2",
+                "confidence": 0.6,
+                "why": "ACTION2 consistently moves #5, suggesting a drive towards containment."
+              }
+            }
+          ]
+        },
+        {
+          "level_step": 61,
+          "trigger": "falsified_streak",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION4, ACTION6.\n\n=== BRIEF ===\nstep 61 of this level  (level 0)\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  rivals: 1 pair proposed, 0 discriminating presses\n  live: distance(#1,#11) 33->33 with ACTION3 only when adjacent on side +y of #1 in 2 steps\n  falsified: distance(#1,#11) 33->33 with ACTION3 in 3 steps\n  falsified: distance(#5,#11) 36->34 with ACTION4 in 6 steps\nTHINGS (11 on screen)\n  #0 colour 2 3249 cells 64x63 at (31, 31)  \u2014 the canvas\n  #1 colour 1 290 cells 18x21 at (17, 30)  \u2014 no role yet (61 obs)\n  #9 colour 4 25 cells 25x1 at (12, 63)  CONTEXT \u2014 shrank whatever I press (59% of steps)\n  #8 colour 4 25 cells 5x5 at (13, 34)  \u2014 no role yet (61 obs)\n  #5 colour 14 9 cells 3x3 at (10, 40)  CONTROL \u2014 ACTION3 moved -x it (100%), ACTION2 moved +y it (100%), ACTION4 moved +x it (100%)\n  #11 colour 0 39 cells 39x1 at (44, 63)  \u2014 no role yet (50 obs)\n  static (5): #3 colour 1 290 cells 15x21 at (46, 31); #2 colour 15 126 cells 6x21 at (36, 31); #4 colour 4 25 cells 5x5 at (46, 28); #6 colour 14 9 cells 3x3 at (28, 31); #7 colour 1 9 cells 3x3 at (31, 31)\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#1, #5, #8} colours [1, 4, 14]\n  {#3, #4} colours [1, 4]\n  {#9, #11} colours [0, 4]\n  {#1,#5,#8} vs {#3,#4}: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 0\n  {#5,#8} vs {#3,#4}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 0\n  {#1,#5,#8} vs {#9,#11}: palette_diff 3; palette_missing 2; palette_missing\u2190 1; part_size_diff 0\n  {#5,#8} vs {#9,#11}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 0\n  {#3,#4} vs {#9,#11}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 0\n  {#1,#5,#8} vs #4: palette_diff 2; palette_missing 2; palette_missing\u2190 0; part_size_diff 0\nCONTROL\n  ACTION2 moves #5 by (0, 3)\n  ACTION3 moves #5 by (3, 0)\n  ACTION4 moves #5 by (3, 0)\n  ACTION1 moved #5\n  blocked elsewhere: ACTION2 at 4 positions, ACTION3 at 7 positions, ACTION4 at 4 positions\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 84% of 485 (coverage 74%); changes: forecast 60% of 114 right, actual 67% of 101 foreseen\n  relations: 95% of 12310 (coverage 71%); changes: forecast 60% of 1017 right, actual 79% of 771 foreseen\n  relations with a precondition 95% of 6504, without 96% of 5806\n  least predictable: ACTION4 (245 of 3978 wrong), ACTION3 (346 of 7401 wrong)\n  where the vocabulary is short: ACTION3 on containment (150 of 396 change forecasts wrong), ACTION4 on containment (141 of 265 change forecasts wrong), ACTION3 on distance (99 of 154 change forecasts wrong)\n  surprised t=61 ACTION2: part_size_diff({#1,#5,#8},{#7}) expected flat (75%), got down 282->281\n  surprised t=61 ACTION2: part_size_diff({#5,#8},{#3,#4}) expected flat (75%), got down 1->0\n  surprised t=61 ACTION2: part_size_diff({#5,#8},{#4}) expected flat (75%), got down 1->0\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#1, each of #2=290, #3=290, #4=290, #5=290, #6=290, #7=290 \u2026 +5)   moves under every action alike\n  distance(#1, each of #5=10, #11=33, #3=29, #4=29, #6=11, #7=14)   moves under every action alike\n  containment(#8, each of #2=25, #3=25, #4=25, #5=9, #6=25, #7=25)   moves under every action alike\n  containment(#9, each of #2=25, #4=25, #5=25, #6=25, #7=25, #8=25 \u2026 +2)   moves under every action alike\n  containment(#9,#3) = 25   ACTION4 drives it down when the controlled thing is apart on side -x (+23%)\n  containment(#5,#8) = 25   moves under every action alike\n  distance(#9,#5) = 23   ACTION2 drives it down (+56% over other actions)\n  containment(#11, each of #2=39, #3=39, #4=39, #5=39, #6=39, #7=39 \u2026 +3)   moves under every action alike\n  distance(#5,#8) = 6   ACTION3 drives it down when the controlled thing is apart on side +x (+50%)\n  distance(#1,#9) = 33   ACTION2 drives it up (+22%)\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  nothing\nOPEN (41 undecidable between things on screen, 90 involving things off screen)\n  shape_diff(#1,#2) \u2014 not yet decidable\n  shape_diff(#1,#3) \u2014 not yet decidable\n  shape_diff(#1,#4) \u2014 not yet decidable\nRECENT\n  t=54 ACTION2: containment(#1,#9) 30->29; containment(#2,#9) 30->29; containment(#3,#9) 30->29\n  t=55 ACTION4: #1 lost 9 cells that #5 gained; #5 lost 9 cells that #1 gained; distance(#2,#5) 26->22; distance(#3,#5) 36->33; distance(#4,#5) 36->33\n  t=56 ACTION4: #9 lost 1 cells that #11 gained; distance(#3,#5) 33->30; distance(#4,#5) 33->30; distance(#5,#6) 15->12\n  t=57 ACTION3: distance(#3,#5) 30->33; distance(#4,#5) 30->33; distance(#5,#6) 12->15\n  t=58 ACTION1: #10 appeared; #1 lost 6 cells that #5 gained; #8 lost 3 cells that #5 gained; containment(#2,#8) 25->13; containment(#3,#8) 25->13; containment(#4,#8) 25->13\n  t=59 ACTION3: #10 vanished; #1 lost 8 cells that #5 gained; #5 lost 6 cells that #1 gained; containment(#2,#8) 13->24; containment(#3,#8) 13->24; containment(#4,#8) 13->24\n  t=60 ACTION3: nothing changed\n  t=61 ACTION2: #1 lost 9 cells that #5 gained; #5 lost 8 cells that #1 gained; distance(#1,#5) 7->10; distance(#5,#8) 3->6; distance(#5,#9) 26->23\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"distance\",\n   \"a\": 1,\n   \"b\": 11,\n   \"action\": \"ACTION3\",\n   \"precondition\": \"distance(#1,#11) 33->33 with ACTION3 only when adjacent on side +y of #1 in 2 steps\",\n   \"predicted\": \"zero\",\n   \"falsifier\": \"distance(#1,#11) 33->33 with ACTION3 in 3 steps\",\n   \"confidence\": 0.95,\n   \"why\": \"The brief explicitly states that ACTION3 moves #1 towards #11 on the +y axis, and the current observation confirms this movement.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 5,\n   \"b\": 8,\n   \"action\": \"ACTION3\",\n   \"precondition\": \"ACTION3 moves #5 by (3, 0)\",\n   \"predicted\": \"zero\",\n   \"falsifier\": \"containment(#5,#8) does not reach 0 after 3 presses of ACTION3\",\n   \"confidence\": 0.8,\n   \"why\": \"ACTION3 consistently moves #5 towards #8, suggesting a containment relationship.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 9,\n   \"b\": 5,\n   \"action\": \"ACTION2\",\n   \"precondition\": \"distance(#9,#5) = 23   ACTION2 drives it down (+56% over other actions)\",\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#9,#5) does not decrease after 3 presses of ACTION2\",\n   \"confidence\": 0.75,\n   \"why\": \"The brief indicates that ACTION2 consistently pulls #9 towards #5.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 1,\n   \"b\": 9,\n   \"action\": \"ACTION4\",\n   \"precondition\": \"containment(#9,#3) = 25   ACTION4 drives it down when the controlled thing is apart on side -x (+23%)\",\n   \"predicted\": \"down\",\n   \"falsifier\": \"containment(#9,#3) does not decrease after 3 presses of ACTION4\",\n   \"confidence\": 0.65,\n   \"why\": \"The brief suggests that ACTION4 drives #9 away from #3.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 5,\n   \"b\": 8,\n   \"action\": \"ACTION3\",\n   \"precondition\": \"distance(#5,#8) = 6   ACTION3 drives it down when the controlled thing is apart on side +x (+50%)\",\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#5,#8) does not decrease after 3 presses of ACTION3\",\n   \"confidence\": 0.85,\n   \"why\": \"The brief indicates that ACTION3 consistently moves #5 towards #8.\"\n  }\n]}\n```",
+          "latency_s": 36.37,
+          "accepted": [],
+          "rejected": [
+            {
+              "reason": "precondition not an object",
+              "item": {
+                "relation": "distance",
+                "a": 1,
+                "b": 11,
+                "action": "ACTION3",
+                "precondition": "distance(#1,#11) 33->33 with ACTION3 only when adjacent on side +y of #1 in 2 steps",
+                "predicted": "zero",
+                "falsifier": "distance(#1,#11) 33->33 with ACTION3 in 3 steps",
+                "confidence": 0.95,
+                "why": "The brief explicitly states that ACTION3 moves #1 towards #11 on the +y axis, and the current observation confirms this movement."
+              }
+            },
+            {
+              "reason": "precondition not an object",
+              "item": {
+                "relation": "containment",
+                "a": 5,
+                "b": 8,
+                "action": "ACTION3",
+                "precondition": "ACTION3 moves #5 by (3, 0)",
+                "predicted": "zero",
+                "falsifier": "containment(#5,#8) does not reach 0 after 3 presses of ACTION3",
+                "confidence": 0.8,
+                "why": "ACTION3 consistently moves #5 towards #8, suggesting a containment relationship."
+              }
+            },
+            {
+              "reason": "precondition not an object",
+              "item": {
+                "relation": "distance",
+                "a": 9,
+                "b": 5,
+                "action": "ACTION2",
+                "precondition": "distance(#9,#5) = 23   ACTION2 drives it down (+56% over other actions)",
+                "predicted": "down",
+                "falsifier": "distance(#9,#5) does not decrease after 3 presses of ACTION2",
+                "confidence": 0.75,
+                "why": "The brief indicates that ACTION2 consistently pulls #9 towards #5."
+              }
+            },
+            {
+              "reason": "precondition not an object",
+              "item": {
+                "relation": "containment",
+                "a": 1,
+                "b": 9,
+                "action": "ACTION4",
+                "precondition": "containment(#9,#3) = 25   ACTION4 drives it down when the controlled thing is apart on side -x (+23%)",
+                "predicted": "down",
+                "falsifier": "containment(#9,#3) does not decrease after 3 presses of ACTION4",
+                "confidence": 0.65,
+                "why": "The brief suggests that ACTION4 drives #9 away from #3."
+              }
+            },
+            {
+              "reason": "precondition not an object",
+              "item": {
+                "relation": "distance",
+                "a": 5,
+                "b": 8,
+                "action": "ACTION3",
+                "precondition": "distance(#5,#8) = 6   ACTION3 drives it down when the controlled thing is apart on side +x (+50%)",
+                "predicted": "down",
+                "falsifier": "distance(#5,#8) does not decrease after 3 presses of ACTION3",
+                "confidence": 0.85,
+                "why": "The brief indicates that ACTION3 consistently moves #5 towards #8."
+              }
+            }
+          ]
+        },
+        {
+          "level_step": 174,
+          "trigger": "falsified_streak",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION4, ACTION6.\n\n=== BRIEF ===\nstep 174 of this level  (level 0)  stamina 25%\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4, ACTION6  (ACTION6 takes an x,y)\nHYPOTHESIS\n  rivals: 8 pairs proposed, 7 discriminating presses; general died first x3, specific died first x3\n  falsified: distance(#5,#7) 18->21 with ACTION4 in 3 steps\n  falsified: containment(#8,#5) 8->9 with ACTION4 only when adjacent on side +y of #8 in 3 steps\n  falsified: containment(#8,#5) 8->9 with ACTION4 in 3 steps\nTHINGS (11 on screen)\n  #0 colour 2 3249 cells 64x63 at (31, 31)  \u2014 the canvas\n  #1 colour 1 290 cells 18x21 at (16, 31)  CONTEXT \u2014 turned whatever I press (74% of steps)\n  #8 colour 4 25 cells 5x5 at (13, 34)  CONTEXT \u2014 shrank whatever I press (36% of steps)\n  #5 colour 14 9 cells 3x3 at (19, 37)  CONTROL \u2014 ACTION3 moved -x it (100%), ACTION2 moved +y it (100%), ACTION4 moved +x it (100%), ACTION1 moved -y it (100%)\n  #9 colour 4 16 cells 16x1 at (8, 63)  CONTEXT \u2014 shrank whatever I press (63% of steps)\n  #11 colour 0 48 cells 48x1 at (40, 63)  CONTEXT \u2014 grew whatever I press (62% of steps)\n  static (5): #3 colour 1 290 cells 15x21 at (46, 31); #2 colour 15 126 cells 6x21 at (36, 31); #4 colour 4 25 cells 5x5 at (46, 28); #6 colour 14 9 cells 3x3 at (28, 31); #7 colour 1 9 cells 3x3 at (31, 31)\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#1, #5, #8} colours [1, 4, 14]\n  {#3, #4} colours [1, 4]\n  {#9, #11} colours [0, 4]\n  {#1,#5,#8} vs {#3,#4}: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 0\n  {#5,#8} vs {#3,#4}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 0\n  {#1,#5,#8} vs {#9,#11}: palette_diff 3; palette_missing 2; palette_missing\u2190 1; part_size_diff 9\n  {#5,#8} vs {#9,#11}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 9\n  {#3,#4} vs {#9,#11}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 9 (ACTION2 drives it down)\n  {#1,#5,#8} vs #4: palette_diff 2; palette_missing 2; palette_missing\u2190 0; part_size_diff 0\nCONTROL\n  ACTION1 moves #5 by (0, -3)\n  ACTION2 moves #5 by (0, 3)\n  ACTION3 moves #5 by (3, 0)\n  ACTION4 moves #5 by (3, 0)\n  blocked elsewhere: ACTION1 at 2 positions, ACTION2 at 7 positions, ACTION3 at 23 positions, ACTION4 at 4 positions\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 82% of 1677 (coverage 89%); changes: forecast 61% of 458 right, actual 63% of 440 foreseen\n  relations: 92% of 43208 (coverage 85%); changes: forecast 59% of 3900 right, actual 53% of 4290 foreseen\n  relations with a precondition 93% of 31369, without 91% of 11839\n  least predictable: ACTION1 (792 of 7025 wrong), ACTION4 (955 of 10509 wrong)\n  where the vocabulary is short: ACTION3 on containment (511 of 1159 change forecasts wrong), ACTION4 on containment (472 of 811 change forecasts wrong), ACTION1 on containment (374 of 653 change forecasts wrong)\n  surprised t=174 ACTION4: part_size_diff({#1,#5,#8},{#7}) expected flat (88%), got down 282->281\n  surprised t=174 ACTION4: part_size_diff({#5,#8},{#3,#4}) expected up (80%), got down 1->0\n  surprised t=174 ACTION4: part_size_diff({#5,#8},{#4}) expected up (80%), got down 1->0\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#1, each of #2=290, #3=290, #4=290, #5=290, #7=290, #9=290 \u2026 +1)   ACTION3 drives it down when the controlled thing is adjacent on side +y (+25%)\n  containment(#1,#6) = 290   ACTION2 drives it down when the controlled thing is adjacent on side -x (+31%)\n  containment(#1, each of #8=290, #9=16, #11=48)   moves under every action alike\n  distance(#5, each of #2=16, #3=27, #4=27, #7=12)   ACTION4 drives it down (+90% over other actions)   ACTION3 drives it up (+54%)\n  distance(#8,#2) = 22   moves under every action alike\n  containment(#8, each of #2=25, #3=25, #4=25, #5=25, #5=9, #6=25 \u2026 +2)   ACTION4 drives it down when the controlled thing is adjacent on side +y (+64%)\n  containment(#9, each of #2=16, #5=16, #7=16, #11=48)   moves under every action alike\n  containment(#9,#3) = 16   ACTION2 drives it down when the controlled thing is apart on side -y (+33%)\n  containment(#9,#4) = 16   ACTION2 drives it down when the controlled thing is apart on side -y (+24%)\n  distance(#5,#6) = 9   ACTION4 drives it down (+87% over other actions)   ACTION3 drives it up (+51%)\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  distance(#5,#6) = 9   down x4, ACTION4 drives it\n  distance(#5,#7) = 12   down x4, ACTION4 drives it\n  distance(#2,#5) = 16   down x4, ACTION4 drives it\n  distance(#3,#5) = 27   down x4, ACTION4 drives it\n  distance(#4,#5) = 27   down x4, ACTION4 drives it\nOPEN (41 undecidable between things on screen, 189 involving things off screen)\n  shape_diff(#1,#2) \u2014 not yet decidable\n  shape_diff(#1,#3) \u2014 not yet decidable\n  shape_diff(#1,#4) \u2014 not yet decidable\nRECENT\n  t=167 ACTION3: #10 vanished; #1 lost 8 cells that #5 gained; #5 lost 6 cells that #1 gained; containment(#2,#8) 13->24; containment(#3,#8) 13->24; containment(#4,#8) 13->24\n  t=168 ACTION4: #10 appeared; #1 lost 6 cells that #5 gained; #5 lost 8 cells that #1 gained; containment(#2,#8) 24->13; containment(#3,#8) 24->13; containment(#4,#8) 24->13\n  t=169 ACTION3: #10 vanished; #1 lost 8 cells that #5 gained; #5 lost 6 cells that #1 gained; containment(#2,#8) 13->24; containment(#3,#8) 13->24; containment(#4,#8) 13->24\n  t=170 ACTION4: #10 appeared; #1 lost 6 cells that #5 gained; #5 lost 8 cells that #1 gained; containment(#2,#8) 24->13; containment(#3,#8) 24->13; containment(#4,#8) 24->13\n  t=171 ACTION3: #10 vanished; #1 lost 8 cells that #5 gained; #5 lost 6 cells that #1 gained; containment(#2,#8) 13->24; containment(#3,#8) 13->24; containment(#4,#8) 13->24\n  t=172 ACTION4: #10 appeared; #1 lost 6 cells that #5 gained; #5 lost 8 cells that #1 gained; containment(#2,#8) 24->13; containment(#3,#8) 24->13; containment(#4,#8) 24->13\n  t=173 ACTION4: #10 vanished; #1 lost 8 cells that #5 gained; #5 lost 6 cells that #1 gained; containment(#2,#8) 13->24; containment(#3,#8) 13->24; containment(#4,#8) 13->24\n  t=174 ACTION4: #1 lost 9 cells that #5 gained; #5 lost 8 cells that #1 gained; distance(#2,#5) 20->16; distance(#3,#5) 30->27; distance(#4,#5) 30->27\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"containment\",\n   \"a\": 8,\n   \"b\": 5,\n   \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"adjacent\", \"side\": \"+y\", \"member\": 8},\n   \"predicted\": \"zero\",\n   \"falsifier\": \"containment(8,5) does not reach 9 after 3 presses of ACTION4\",\n   \"confidence\": 0.8,\n   \"why\": \"ACTION4 consistently shrinks #8 when adjacent to #5.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 8,\n   \"b\": 5,\n   \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"adjacent\", \"side\": \"+y\", \"member\": 8},\n   \"predicted\": \"zero\",\n   \"falsifier\": \"containment(8,5) does not reach 9 after 3 presses of ACTION4\",\n   \"confidence\": 0.8,\n   \"why\": \"ACTION4 consistently shrinks #8 when adjacent to #5.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 5,\n   \"b\": 7,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,7) does not fall after 3 presses of ACTION4\",\n   \"confidence\": 0.7,\n   \"why\": \"ACTION4 consistently drives #5 away from #7.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 5,\n   \"b\": 7,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,7) does not fall after 3 presses of ACTION4\",\n   \"confidence\": 0.7,\n   \"why\": \"ACTION4 consistently drives #5 away from #7.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 8,\n   \"b\": 5,\n   \"action\": \"ACTION4\",\n   \"precondition\": {\"adjacency\": \"adjacent\", \"side\": \"+y\", \"member\": 8},\n   \"predicted\": \"zero\",\n   \"falsifier\": \"containment(8,5) does not reach 9 after 3 presses of ACTION4\",\n   \"confidence\": 0.8,\n   \"why\": \"ACTION4 consistently shrinks #8 when adjacent to #5.\"\n  }\n]}\n```",
+          "latency_s": 34.21,
+          "accepted": [
+            {
+              "relation": "containment",
+              "a": 8,
+              "b": 5,
+              "action": "ACTION4",
+              "precondition": [
+                "adjacent:+y",
+                8
+              ],
+              "predicted": "zero",
+              "confidence": 0.8,
+              "falsifier": "containment(8,5) does not reach 9 after 3 presses of ACTION4"
+            },
+            {
+              "relation": "containment",
+              "a": 8,
+              "b": 5,
+              "action": "ACTION4",
+              "precondition": [
+                "adjacent:+y",
+                8
+              ],
+              "predicted": "zero",
+              "confidence": 0.8,
+              "falsifier": "containment(8,5) does not reach 9 after 3 presses of ACTION4"
+            },
+            {
+              "relation": "distance",
+              "a": 5,
+              "b": 7,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.7,
+              "falsifier": "distance(5,7) does not fall after 3 presses of ACTION4"
+            },
+            {
+              "relation": "distance",
+              "a": 5,
+              "b": 7,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.7,
+              "falsifier": "distance(5,7) does not fall after 3 presses of ACTION4"
+            },
+            {
+              "relation": "containment",
+              "a": 8,
+              "b": 5,
+              "action": "ACTION4",
+              "precondition": [
+                "adjacent:+y",
+                8
+              ],
+              "predicted": "zero",
+              "confidence": 0.8,
+              "falsifier": "containment(8,5) does not reach 9 after 3 presses of ACTION4"
+            }
+          ],
+          "rejected": []
+        }
+      ]
+    },
+    "tu93": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 81347925,
+      "levels_completed": 0,
+      "actions": 201,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 194,
+        "entity": {
+          "hits": 11939,
+          "misses": 128,
+          "undecidable": 0,
+          "abstained": 1020,
+          "accuracy": 0.989,
+          "coverage": 0.922,
+          "brier": 0.009
+        },
+        "pair": {
+          "hits": 2318472,
+          "misses": 13359,
+          "undecidable": 3142,
+          "abstained": 215092,
+          "accuracy": 0.994,
+          "coverage": 0.916,
+          "brier": 0.005
+        },
+        "by_action": {
+          "ACTION4": {
+            "entity": [
+              3751,
+              47
+            ],
+            "pair": [
+              736094,
+              5657
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              1676,
+              21
+            ],
+            "pair": [
+              306126,
+              886
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              1875,
+              21
+            ],
+            "pair": [
+              368223,
+              1191
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              4637,
+              39
+            ],
+            "pair": [
+              908029,
+              5625
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            379884,
+            6351
+          ],
+          "palette_diff": [
+            403110,
+            0
+          ],
+          "distance": [
+            379553,
+            6682
+          ],
+          "containment": [
+            772470,
+            0
+          ],
+          "shape_diff": [
+            343728,
+            0
+          ],
+          "palette_missing": [
+            33750,
+            0
+          ],
+          "part_size_diff": [
+            5977,
+            326
+          ]
+        },
+        "conditional": [
+          1390921,
+          8175
+        ],
+        "unconditional": [
+          927551,
+          5184
+        ],
+        "moving": {
+          "entity": [
+            312,
+            8
+          ],
+          "pair": [
+            24036,
+            1447
+          ]
+        },
+        "moved": {
+          "entity": [
+            312,
+            127
+          ],
+          "pair": [
+            24036,
+            12015
+          ]
+        },
+        "cells": {
+          "ACTION4 containment": [
+            6458,
+            0
+          ],
+          "ACTION4 distance": [
+            357,
+            2336
+          ],
+          "ACTION1 containment": [
+            3093,
+            0
+          ],
+          "ACTION1 distance": [
+            186,
+            1145
+          ],
+          "ACTION4 part_size_diff": [
+            854,
+            160
+          ],
+          "ACTION2 distance": [
+            309,
+            2349
+          ],
+          "ACTION2 containment": [
+            7837,
+            0
+          ],
+          "ACTION3 distance": [
+            143,
+            852
+          ],
+          "ACTION3 containment": [
+            2902,
+            0
+          ],
+          "ACTION3 part_size_diff": [
+            460,
+            34
+          ],
+          "ACTION2 part_size_diff": [
+            1056,
+            86
+          ],
+          "ACTION4 count_diff": [
+            0,
+            3161
+          ],
+          "ACTION1 part_size_diff": [
+            381,
+            46
+          ],
+          "ACTION2 count_diff": [
+            0,
+            3190
+          ]
+        }
+      },
+      "llm_stats": {
+        "calls": 2,
+        "returned": 10,
+        "valid": 6,
+        "rejects": {
+          "prediction not checkable (down|zero)": 1,
+          "action not legal (or a bare click)": 3
+        },
+        "latency_s": [
+          269.61,
+          421.17
+        ]
+      },
+      "llm_trace": [
+        {
+          "level_step": 22,
+          "trigger": "level_start",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION2, ACTION3, ACTION4.\n\n=== BRIEF ===\nstep 22 of this level  (level 0)\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4\nHYPOTHESIS\n  waiting: 1 more bet\n  falsified: distance(#64,#67) 17->17 with ACTION4 in 3 steps\nTHINGS (68 on screen)\n  #0 colour 5 3429 cells 64x63 at (32, 31)  \u2014 the canvas\n  #66 colour 6 36 cells 36x1 at (18, 63)  CONTEXT \u2014 shrank whatever I press (100% of steps)\n  #3 colour 0 9 cells 3x3 at (22, 16)  \u2014 no role yet (22 obs)\n  #13 colour 0 9 cells 3x3 at (22, 22)  CONTROL \u2014 ACTION2 moved it +90%\n  #1 colour 9 8 cells 3x3 at (16, 16)  CONTROL \u2014 ACTION2 moved it +73%\n  #67 colour 0 28 cells 28x1 at (50, 63)  \u2014 no role yet (17 obs)\n  static (62): #11 colour 5 27 cells 9x3 at (34, 19); #2 colour 2 9 cells 3x3 at (19, 16); #4 colour 0 9 cells 3x3 at (28, 16); #5 colour 2 9 cells 3x3 at (31, 16); #6 colour 0 9 cells 3x3 at (34, 16); #7 colour 2 9 cells 3x3 at (37, 16) \u2026 +56\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#1, #3, #13} colours [0, 9]\n  {#66, #67} colours [0, 6]\n  {#1,#13} vs {#66,#67}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 10 (ACTION3 drives it down)\n  {#1,#13} vs #3: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 0\n  {#1,#13} vs #4: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\n  {#1,#13} vs #6: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\n  {#1,#13} vs #8: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\n  {#1,#13} vs #14: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 9\nKINDS (things that look alike; a view, not a claim)\n  kind {2} x32 (exact): #2 static \u00b7 #5 static \u00b7 #7 static \u00b7 #9 static \u00b7 +28 more\n  kind {0} x27 (exact): #4 static \u00b7 #6 static \u00b7 #8 static \u00b7 #14 static \u00b7 +23 more\n  kind {5} x2 (same colours): #11 static \u00b7 #43 static\nCONTROL\n  ACTION2 moved #13, moved #1\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 99% of 607 (coverage 43%); changes: forecast 100% of 13 right, actual 76% of 17 foreseen\n  relations: 100% of 90596 (coverage 34%); changes: forecast 96% of 758 right, actual 90% of 808 foreseen\n  least predictable: ACTION3 (2 of 134 wrong), ACTION4 (112 of 78324 wrong)\n  where the vocabulary is short: ACTION4 on distance (110 of 124 change forecasts wrong), ACTION1 on distance (4 of 4 change forecasts wrong)\n  surprised t=21 ACTION4: distance(#63,#66) expected flat (89%), got up 18->19\n  surprised t=22 ACTION3: #3 expected unchanged (80%), got moved +x\n  surprised t=22 ACTION3: #1 expected unchanged (80%), got moved -x\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  distance(#1, each of #4=12, #5=15, #6=18, #7=21, #8=24, #9=6 \u2026 +19)   ACTION4 drives it down (+20% over other actions)   ACTION3 drives it up (+50%)\n  distance(#1, each of #22=12, #30=18, #53=27, #58=30)   ACTION4 drives it down (+20% over other actions)   ACTION3 drives it up (+30%)\n  containment(#66, each of #1=36, #2=36, #3=36, #4=36, #5=36, #6=36 \u2026 +61)   moves under every action alike\n  distance(#3, each of #4=6, #5=9, #6=12, #7=15, #8=18, #9=3 \u2026 +23)   ACTION3 drives it down (+50% over other actions)   ACTION4 drives it up (+20%)\n  containment(#1,#67) = 28   moves under every action alike\n  containment(#67, each of #2=28, #3=28, #4=28, #5=28, #6=28, #7=28 \u2026 +58)   moves under every action alike\n  distance(#67, each of #33=30, #43=30, #46=30, #48=24, #60=30, #32=34 \u2026 +15)   moves under every action alike\n  distance(#66, each of #53=26, #63=20, #65=28, #58=28, #54=28, #64=22 \u2026 +3)   moves under every action alike\n  distance(#67, each of #25=35, #36=29, #51=23, #64=17)   ACTION4 drives it down (+29% over other actions)\n  distance(#1, each of #2=3, #21=9, #25=12, #26=12, #27=12, #32=18 \u2026 +28)   moves under every action alike\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  nothing\nOPEN (258 undecidable between things on screen, 0 involving things off screen)\n  shape_diff(#1,#2) \u2014 not yet decidable\n  shape_diff(#1,#3) \u2014 not yet decidable\n  shape_diff(#1,#4) \u2014 not yet decidable\nRECENT\n  t=15 ACTION3: containment(#1,#66) 46->45; containment(#2,#66) 46->45; containment(#3,#66) 46->45\n  t=16 ACTION1: containment(#1,#66) 45->44; containment(#2,#66) 45->44; containment(#3,#66) 45->44\n  t=17 ACTION1: #66 lost 2 cells that #67 gained; containment(#1,#66) 44->42; containment(#2,#66) 44->42; containment(#3,#66) 44->42\n  t=18 ACTION4: #1 lost 8 cells that #3 gained; #3 lost 8 cells that #1 gained; distance(#1,#4) 12->6; distance(#1,#5) 15->9; distance(#1,#6) 18->12\n  t=19 ACTION4: containment(#1,#66) 41->40; containment(#2,#66) 41->40; containment(#3,#66) 41->40\n  t=20 ACTION4: #66 lost 2 cells that #67 gained; containment(#1,#66) 40->38; containment(#2,#66) 40->38; containment(#3,#66) 40->38\n  t=21 ACTION4: #66 lost 1 cells that #67 gained; containment(#1,#66) 38->37; containment(#2,#66) 38->37; containment(#3,#66) 38->37\n  t=22 ACTION3: #1 lost 8 cells that #3 gained; #3 lost 8 cells that #1 gained; distance(#1,#4) 6->12; distance(#1,#5) 9->15; distance(#1,#6) 12->18\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\n    \"relation\": \"distance\",\n    \"a\": 67,\n    \"b\": 64,\n    \"action\": \"ACTION4\",\n    \"precondition\": null,\n    \"predicted\": \"down\",\n    \"falsifier\": \"distance(67,64) does not fall after 3 presses of ACTION4\",\n    \"confidence\": 0.85,\n    \"why\": \"ACTION4 has consistently driven the distance between these two entities down.\"\n  },\n  {\n    \"relation\": \"containment\",\n    \"a\": 66,\n    \"b\": 1,\n    \"action\": \"ACTION2\",\n    \"precondition\": null,\n    \"predicted\": \"zero\",\n    \"falsifier\": \"containment(66,1) does not reach 0 after 3 presses of ACTION2\",\n    \"confidence\": 0.6,\n    \"why\": \"ACTION2 has repeatedly moved #1 into #66, suggesting a potential convergence.\"\n  },\n  {\n    \"relation\": \"containment\",\n    \"a\": 66,\n    \"b\": 67,\n    \"action\": \"ACTION2\",\n    \"precondition\": null,\n    \"predicted\": \"zero\",\n    \"falsifier\": \"containment(66,67) does not reach 0 after 3 presses of ACTION2\",\n    \"confidence\": 0.6,\n    \"why\": \"ACTION2 has repeatedly moved #67 into #66, suggesting a potential convergence.\"\n  },\n  {\n    \"relation\": \"distance\",\n    \"a\": 3,\n    \"b\": 66,\n    \"action\": \"ACTION3\",\n    \"precondition\": null,\n    \"predicted\": \"up\",\n    \"falsifier\": \"distance(3,66) does not increase after 3 presses of ACTION3\",\n    \"confidence\": 0.7,\n    \"why\": \"ACTION3 has consistently pushed #3 away from #66.\"\n  },\n  {\n    \"relation\": \"distance\",\n    \"a\": 67,\n    \"b\": 64,\n    \"action\": \"ACTION4\",\n    \"precondition\": null,\n    \"predicted\": \"down\",\n    \"falsifier\": \"distance(67,64) does not fall after 3 presses of ACTION4\",\n    \"confidence\": 0.85,\n    \"why\": \"ACTION4 has consistently driven the distance between these two entities down.\"\n  }\n]}\n```",
+          "latency_s": 269.61,
+          "accepted": [
+            {
+              "relation": "distance",
+              "a": 64,
+              "b": 67,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.85,
+              "falsifier": "distance(67,64) does not fall after 3 presses of ACTION4"
+            },
+            {
+              "relation": "containment",
+              "a": 66,
+              "b": 1,
+              "action": "ACTION2",
+              "precondition": null,
+              "predicted": "zero",
+              "confidence": 0.6,
+              "falsifier": "containment(66,1) does not reach 0 after 3 presses of ACTION2"
+            },
+            {
+              "relation": "containment",
+              "a": 66,
+              "b": 67,
+              "action": "ACTION2",
+              "precondition": null,
+              "predicted": "zero",
+              "confidence": 0.6,
+              "falsifier": "containment(66,67) does not reach 0 after 3 presses of ACTION2"
+            },
+            {
+              "relation": "distance",
+              "a": 64,
+              "b": 67,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.85,
+              "falsifier": "distance(67,64) does not fall after 3 presses of ACTION4"
+            }
+          ],
+          "rejected": [
+            {
+              "reason": "prediction not checkable (down|zero)",
+              "item": {
+                "relation": "distance",
+                "a": 3,
+                "b": 66,
+                "action": "ACTION3",
+                "precondition": null,
+                "predicted": "up",
+                "falsifier": "distance(3,66) does not increase after 3 presses of ACTION3",
+                "confidence": 0.7,
+                "why": "ACTION3 has consistently pushed #3 away from #66."
+              }
+            }
+          ]
+        },
+        {
+          "level_step": 59,
+          "trigger": "falsified_streak",
+          "model": "gemma3:4b",
+          "prompt_version": "P002",
+          "prompt": "You are proposing falsifiable hypotheses for an agent playing an unknown grid game.\nBelow is the agent's brief: everything it currently believes, built only from what it has\nobserved. Entities are #ids; relations are residuals (0 = holds); a 'lever' is an action\nthat moves a residual more than the others do. Legal actions now: ACTION1, ACTION3, ACTION4.\n\n=== BRIEF ===\nstep 59 of this level  (level 0)  stamina 80%\nACTIONS available: ACTION1, ACTION2, ACTION3, ACTION4\nHYPOTHESIS\n  falsified: distance(#1,#36) 6->6 with ACTION2 in 3 steps\n  falsified: distance(#1,#22) 6->9 with ACTION4 in 3 steps\n  live: distance(#1,#37) 18->9 with ACTION2 in 3 steps\nTHINGS (68 on screen)\n  #0 colour 5 3429 cells 64x63 at (32, 31)  \u2014 the canvas\n  #3 colour 0 9 cells 3x3 at (16, 16)  \u2014 no role yet (59 obs)\n  #13 colour 0 9 cells 3x3 at (22, 16)  \u2014 no role yet (59 obs)\n  #27 colour 0 9 cells 3x3 at (28, 28)  \u2014 no role yet (59 obs)\n  #1 colour 9 8 cells 3x3 at (22, 28)  CONTROL \u2014 ACTION2 moved +y it (100%), ACTION4 moved +x it (80%)\n  #66 colour 6 51 cells 51x1 at (25, 63)  CONTEXT \u2014 shrank whatever I press (98% of steps)\n  #67 colour 0 13 cells 13x1 at (57, 63)  CONTEXT \u2014 grew whatever I press (100% of steps)\n  static (61): #11 colour 5 27 cells 9x3 at (34, 19); #2 colour 2 9 cells 3x3 at (19, 16); #4 colour 0 9 cells 3x3 at (28, 16); #5 colour 2 9 cells 3x3 at (31, 16); #6 colour 0 9 cells 3x3 at (34, 16); #7 colour 2 9 cells 3x3 at (37, 16) \u2026 +55\nGROUPS (things that persistently sit inside one another or trade cells \u2014 a view, not a claim)\n  {#1, #3, #13, #25, #27} colours [0, 9]\n  {#66, #67} colours [0, 6]\n  {#1,#13} vs {#66,#67}: palette_diff 2; palette_missing 1; palette_missing\u2190 1; part_size_diff 23\n  {#1,#13} vs #3: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 0\n  {#1,#13} vs #4: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 27\n  {#1,#13} vs #6: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 27\n  {#1,#13} vs #8: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 27\n  {#1,#13} vs #14: palette_diff 1; palette_missing 1; palette_missing\u2190 0; part_size_diff 27\nKINDS (things that look alike; a view, not a claim)\n  kind {2} x32 (exact): #2 static \u00b7 #5 static \u00b7 #7 static \u00b7 #9 static \u00b7 +28 more\n  kind {0} x25 (exact): #4 static \u00b7 #6 static \u00b7 #8 static \u00b7 #14 static \u00b7 +21 more\n  kind {5} x2 (same colours): #11 static \u00b7 #43 static\nCONTROL\n  ACTION2 moves #1 by (-1, 7)\n  blocked from here: ACTION2\nPREDICTED (one-step forecasts from the tallies; accuracy among forecasts made, coverage of what could have been forecast)\n  things: 99% of 2909 (coverage 74%); changes: forecast 96% of 72 right, actual 76% of 91 foreseen\n  relations: 99% of 540049 (coverage 72%); changes: forecast 94% of 5351 right, actual 62% of 8071 foreseen\n  relations with a precondition 98% of 59567, without 99% of 480482\n  least predictable: ACTION4 (2618 of 224325 wrong), ACTION2 (499 of 172574 wrong)\n  where the vocabulary is short: ACTION4 on count_diff (2117 of 2117 change forecasts wrong), ACTION2 on distance (488 of 544 change forecasts wrong), ACTION4 on distance (441 of 483 change forecasts wrong)\n  surprised t=59 ACTION3: distance(#62,#67) expected flat (100%), got down 24->23\n  surprised t=59 ACTION3: distance(#64,#67) expected flat (100%), got down 18->17\n  surprised t=59 ACTION3: part_size_diff({#1,#13},{#66,#67}) expected up (80%), got down 24->23\nRELATIONS (residual, 0 = holds; moved on this level, newest first)\n  containment(#66, each of #1=51, #2=51, #3=51, #4=51, #5=51, #6=51 \u2026 +61)   moves under every action alike\n  distance(#66,#65) = 21   ACTION2 drives it up (+26%)\n  containment(#1,#67) = 13   moves under every action alike\n  containment(#67, each of #2=13, #3=13, #4=13, #5=13, #6=13, #7=13 \u2026 +58)   moves under every action alike\n  distance(#67, each of #32=41, #47=35)   ACTION4 drives it down (+23% over other actions)\n  distance(#67, each of #34=35, #49=29, #62=23)   ACTION1 drives it down (+35% over other actions)\n  distance(#67, each of #36=29, #45=41, #51=23, #56=23, #59=41, #61=35 \u2026 +1)   moves under every action alike\n  distance(#67, each of #42=41, #55=35)   ACTION4 drives it down (+26% over other actions)\n  distance(#67,#44) = 35   ACTION1 drives it down (+30% over other actions)\n  distance(#1,#67) = 35   ACTION2 drives it down (+20% over other actions)\nFALLING (down >= 2 times in the last 5 steps AND some action drives it)\n  distance(#62,#67) = 23   down x3, ACTION1 drives it\n  distance(#49,#67) = 29   down x3, ACTION1 drives it\n  distance(#34,#67) = 35   down x3, ACTION1 drives it\n  distance(#44,#67) = 35   down x3, ACTION1 drives it\n  distance(#47,#67) = 35   down x3, ACTION4 drives it\nOPEN (258 undecidable between things on screen, 0 involving things off screen)\n  shape_diff(#1,#2) \u2014 not yet decidable\n  shape_diff(#1,#3) \u2014 not yet decidable\n  shape_diff(#1,#4) \u2014 not yet decidable\nRECENT\n  t=52 ACTION4: containment(#1,#66) 61->60; containment(#2,#66) 61->60; containment(#3,#66) 61->60\n  t=53 ACTION4: containment(#1,#66) 60->59; containment(#2,#66) 60->59; containment(#3,#66) 60->59\n  t=54 ACTION2: #1 lost 8 cells that #13 gained; #13 lost 8 cells that #1 gained; distance(#1,#21) 9->3; distance(#1,#25) 12->6; distance(#1,#26) 12->6\n  t=55 ACTION4: #67 appeared; containment(#1,#66) 58->56; containment(#2,#66) 58->56; containment(#3,#66) 58->56\n  t=56 ACTION4: #66 lost 1 cells that #67 gained; containment(#1,#66) 56->55; containment(#2,#66) 56->55; containment(#3,#66) 56->55\n  t=57 ACTION2: #1 lost 8 cells that #25 gained; #25 lost 8 cells that #1 gained; distance(#1,#2) 6->12; distance(#1,#3) 6->12; distance(#1,#4) 6->12\n  t=58 ACTION2: #66 lost 2 cells that #67 gained; containment(#1,#66) 54->52; containment(#2,#66) 54->52; containment(#3,#66) 54->52\n  t=59 ACTION3: #66 lost 1 cells that #67 gained; containment(#1,#66) 52->51; containment(#2,#66) 52->51; containment(#3,#66) 52->51\n=== END ===\n\nReply with JSON only, in exactly this shape:\n{\"hypotheses\": [\n  {\"relation\": \"<one of: containment, count_diff, distance, palette_diff, palette_missing, part_size_diff, shape_diff>\",\n   \"a\": <entity id (a bare integer, e.g. 5 -- not \"#5\"), or a list of such ids for a group>,\n   \"b\": <entity id, or a list of ids for a group -- required, never null>,\n   \"action\": \"ACTION1\"..\"ACTION5\" or \"ACTION7\",\n   \"precondition\": null or {\"adjacency\": \"adjacent\"|\"apart\", \"side\": \"-x\"|\"+x\"|\"-y\"|\"+y\"|null, \"member\": <entity id the controlled thing must be next to>},\n   \"predicted\": \"down\" (the residual falls) or \"zero\" (the residual reaches 0),\n   \"falsifier\": \"<the observation that would make you abandon this>\",\n   \"confidence\": <0.0-1.0>,\n   \"why\": \"<one sentence>\"}\n]}\nExample (ids are bare integers, never \"#5\"; both a and b are required):\n{\"hypotheses\": [\n  {\"relation\": \"distance\", \"a\": 5, \"b\": 9, \"action\": \"ACTION2\",\n   \"precondition\": null, \"predicted\": \"down\",\n   \"falsifier\": \"distance(5,9) does not fall after 3 presses of ACTION2\",\n   \"confidence\": 0.7, \"why\": \"ACTION2 has been the strongest lever on this pair.\"}\n]}\nRules: name only entities that are on screen in the brief; a hypothesis is a bet that\nthe action drives the named relation's residual toward 0; state what would falsify it;\nat most 5 hypotheses; prefer bets that would explain how a level is cleared.",
+          "raw_reply": "```json\n{\"hypotheses\": [\n  {\"relation\": \"distance\",\n   \"a\": 1,\n   \"b\": 36,\n   \"action\": \"ACTION2\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#1,#36) 6->6 with ACTION2 in 3 steps\",\n   \"confidence\": 0.8,\n   \"why\": \"The agent is repeatedly moving #1 towards #36 with ACTION2, suggesting a direct influence.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 1,\n   \"b\": 22,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#1,#22) 6->9 with ACTION4 in 3 steps\",\n   \"confidence\": 0.6,\n   \"why\": \"The agent is repeatedly moving #1 towards #22 with ACTION4, suggesting a direct influence.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 66,\n   \"b\": 1,\n   \"action\": \"ACTION2\",\n   \"precondition\": null,\n   \"predicted\": \"zero\",\n   \"falsifier\": \"distance(#66,#1) does not reach 0 after 3 steps with ACTION2\",\n   \"confidence\": 0.9,\n   \"why\": \"The agent is repeatedly pushing #66 into #1, suggesting a direct influence.\"\n  },\n  {\"relation\": \"containment\",\n   \"a\": 67,\n   \"b\": 1,\n   \"action\": \"ACTION4\",\n   \"precondition\": null,\n   \"predicted\": \"zero\",\n   \"falsifier\": \"distance(#67,#1) does not reach 0 after 3 steps with ACTION4\",\n   \"confidence\": 0.9,\n   \"why\": \"The agent is repeatedly pushing #67 into #1, suggesting a direct influence.\"\n  },\n  {\"relation\": \"distance\",\n   \"a\": 1,\n   \"b\": 37,\n   \"action\": \"ACTION2\",\n   \"precondition\": null,\n   \"predicted\": \"down\",\n   \"falsifier\": \"distance(#1,#37) 18->9 with ACTION2 in 3 steps\",\n   \"confidence\": 0.7,\n   \"why\": \"The agent is repeatedly moving #1 towards #37 with ACTION2, suggesting a direct influence.\"\n  }\n]}\n```",
+          "latency_s": 421.17,
+          "accepted": [
+            {
+              "relation": "distance",
+              "a": 1,
+              "b": 22,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "down",
+              "confidence": 0.6,
+              "falsifier": "distance(#1,#22) 6->9 with ACTION4 in 3 steps"
+            },
+            {
+              "relation": "containment",
+              "a": 67,
+              "b": 1,
+              "action": "ACTION4",
+              "precondition": null,
+              "predicted": "zero",
+              "confidence": 0.9,
+              "falsifier": "distance(#67,#1) does not reach 0 after 3 steps with ACTION4"
+            }
+          ],
+          "rejected": [
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "distance",
+                "a": 1,
+                "b": 36,
+                "action": "ACTION2",
+                "precondition": null,
+                "predicted": "down",
+                "falsifier": "distance(#1,#36) 6->6 with ACTION2 in 3 steps",
+                "confidence": 0.8,
+                "why": "The agent is repeatedly moving #1 towards #36 with ACTION2, suggesting a direct influence."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "containment",
+                "a": 66,
+                "b": 1,
+                "action": "ACTION2",
+                "precondition": null,
+                "predicted": "zero",
+                "falsifier": "distance(#66,#1) does not reach 0 after 3 steps with ACTION2",
+                "confidence": 0.9,
+                "why": "The agent is repeatedly pushing #66 into #1, suggesting a direct influence."
+              }
+            },
+            {
+              "reason": "action not legal (or a bare click)",
+              "item": {
+                "relation": "distance",
+                "a": 1,
+                "b": 37,
+                "action": "ACTION2",
+                "precondition": null,
+                "predicted": "down",
+                "falsifier": "distance(#1,#37) 18->9 with ACTION2 in 3 steps",
+                "confidence": 0.7,
+                "why": "The agent is repeatedly moving #1 towards #37 with ACTION2, suggesting a direct influence."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "scored": [
+    {
+      "game_id": "tu93-0768757b",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 201,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        201,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        19,
+        16,
+        34,
+        42,
+        123,
+        80,
+        14,
+        23,
+        111
+      ],
+      "message": null
+    },
+    {
+      "game_id": "ar25-0c556536",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 201,
+      "resets": 2,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        201,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        32,
+        50,
+        75,
+        37,
+        89,
+        159,
+        233,
+        73
+      ],
+      "message": null
+    },
+    {
+      "game_id": "cn04-2fe56bfb",
+      "score": 0.19860949735974534,
+      "levels_completed": 1,
+      "actions": 201,
+      "resets": 1,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        4.170799444554652,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        142,
+        59,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        29,
+        54,
+        85,
+        300,
+        208,
+        113
+      ],
+      "message": null
+    },
+    {
+      "game_id": "ka59-38d34dbb",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 201,
+      "resets": 1,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        201,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        28,
+        109,
+        51,
+        51,
+        33,
+        132,
+        326
+      ],
+      "message": null
+    },
+    {
+      "game_id": "cd82-fb555c5d",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 201,
+      "resets": 1,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        201,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        55,
+        8,
+        41,
+        21,
+        23,
+        23
+      ],
+      "message": null
+    }
+  ],
+  "notes": null
+}

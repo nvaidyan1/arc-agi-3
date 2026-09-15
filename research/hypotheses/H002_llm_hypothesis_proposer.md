@@ -1,6 +1,6 @@
 # H002: An intermittent LLM as hypothesis scientist, not controller
 
-Status: IN PROGRESS — first real aggregate_score comparison: LLM arm mean 2.4x baseline (0.0547->0.1325), wins 4/5 seeds, p=0.25 (n=5, not significant, consistent direction) -- worth a larger n
+Status: IN PROGRESS — replay-ablation harness built; Stage 1 (reproducibility) confirmed 5/5 on real recorded runs; Stage 2 (counterfactual replay) not yet run
 Research question: RQ5 (compute-efficient reasoning) / RQ3 (active testing)
 Date opened: 2026-09-14
 Origin: council verdict step (c'); reviewer C §7, §8, §11, §28, §32 steps 3–4,
@@ -345,3 +345,76 @@ exceeding the usual "latest 5" retention — see `docs/plan.md` standing
 rules for why: a matched-pair comparison needs both arms reproducible
 from the committed record, and pruning either half would make this
 result irreproducible from the repo alone.
+- 2026-09-14 **n=10 extension** (seeds 6-10 added to both arms, same
+  games/steps, via `play_local.py`):
+
+  | seed | baseline | llm | diff |
+  |---|---|---|---|
+  | 6 | 0.0650 | 0.0650 | 0.0000 |
+  | 7 | 0.1011 | 0.2469 | +0.1458 |
+  | 8 | 0.0000 | 0.0397 | +0.0397 |
+  | 9 | 0.0470 | 0.0470 | 0.0000 |
+  | 10 | 0.0364 | 0.0000 | -0.0364 |
+
+  Full n=10: mean baseline 0.0523 -> llm 0.1061 (2.0x); **median 0.0413 ->
+  0.0448 — essentially unchanged.** 6 wins / 2 losses / 2 ties. Exact sign
+  test p=0.125 (n=10; was 0.25 at n=5 — moved toward significance but not
+  there). Exact Wilcoxon signed-rank (weights by magnitude) p=**0.193** —
+  *less* significant than the sign test, because the losses (seeds 4, 10:
+  -0.046, -0.036) are moderate while most of the wins are small; the mean
+  is carried almost entirely by two standout runs (seeds 5 and 7: +0.32,
+  +0.15 respectively).
+
+**Inference.** Doubling n did not resolve this, and the specific way it
+didn't is informative: a real, uniform effect should tighten the sign
+test *and* the Wilcoxon together as n grows; instead the mean/median
+divergence widened and the more sensitive test moved the *wrong* way.
+That is the signature of a couple of good outlier runs sitting on top of
+a flat or near-flat typical case, not a shift in the typical case itself.
+**Not continuing to chase this via larger n** — the marginal information
+per additional 40-minute sweep looks low, and reviewer C's own point 15
+(policy integration / validation / credit assignment as more likely
+bottlenecks than raw model reasoning) is a better next lever than a
+bigger sample on the same comparison. Next: the replay-ablation
+experiment (second review §14) using the traces already recorded from
+these ten runs — no new sweeps required, and it separates generation
+quality from integration quality, which a score comparison alone cannot.
+- 2026-09-14/15 **replay-ablation harness** (`scripts/replay_ablation.py`,
+  second review §14). Small addition on purpose: `ScriptedClient`
+  (`agent/proposer_llm.py`) already replays a list of canned replies in
+  order, and `LLMProposer.trace` (previous entry) already saves every
+  call's exact raw reply into every sweep summary — this script is the
+  plumbing joining the two, nothing more. Reads a saved sweep summary's
+  `llm_trace` for one game, feeds the recorded replies through
+  `ScriptedClient` instead of a live model, re-runs the same game/seed
+  fully offline (no Ollama), and checks the outcome against what was
+  originally recorded.
+
+  Bundled in the same pass, prompted by re-reading reviewer C's bottleneck
+  ranking (§15): `Proposer.log` (`agent/hypothesis.py`) now tags each
+  closed hypothesis with its `source`, and `play_local.py`'s sweep summary
+  carries the full log as `hypothesis_log`. Needed to check bottleneck #4
+  ("exploration policy": is action budget spent reaching a hypothesis
+  rather than the hypothesis being wrong) separately for LLM- vs
+  enumerator-sourced bets — `closed_by_source`/`llm_stats` have status
+  counts but not the per-hypothesis `spent`/`unmet` figures that question
+  needs. Not yet analysed on real data (none of the twenty existing sweep
+  summaries carry it — this capture is only live from here forward); the
+  next LLM sweep will have it for free. 251 tests.
+
+  **Stage 1 (reproducibility) run against five real recorded games**
+  (ar25 seeds 1/3/5, cd82 from two different seeds; 3-4 calls each):
+  **5 of 5 exact matches** on `levels_completed`, `actions`, `final_state`,
+  and call count — every replay reached the identical outcome to the
+  original live run, with zero model calls made. Confirms the pipeline
+  is genuinely deterministic downstream of the model's output, which
+  `recap.py`'s rerun-vs-replay docstring only asserted before this.
+
+**Inference.** Stage 1 passing on every game tried is itself informative,
+not just a sanity check cleared: it means any future counterfactual
+replay (feed a hand-authored oracle reply, or only the `held` hypotheses,
+through the same harness) can be trusted to isolate the effect of *what
+the model said*, with no confound from hidden nondeterminism elsewhere in
+the pipeline. **Not yet done**: Stage 2 — an actual counterfactual replay
+(e.g. cd82's oracle two-factor rule) to separate generation quality from
+integration quality, which is the point of building this at all.
