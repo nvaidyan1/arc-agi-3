@@ -611,20 +611,15 @@ day, it does not skip it.**
    is goal selection), B (the model class — one offset per action — is
    insufficient), C (position is not the state). Offline over the cd82
    traces; live only if ambiguous. `research/hypotheses/H009_planner_factorial.md`.
-   The level-boundary-reads-state build moves to week 2 (no claim to
-   test yet).
+   The original item 6 here (the level boundary reading state) had no
+   claim to test yet and moved to the week 2 list below, unbuilt.
    **Done 2026-09-15, reading B.** E0: 8 orbit positions, motion 32/32
    deterministic in (position, action), not in the action alone. E2: a
    −x target reachable from every position in ≤ 3. E1: the learned map
    is four 11-cell axis moves; 0 of 1,244 plans honoured at the first
    step (59% would arrive if followed blindly, but the router drops
    each after one mismatch). The transition model's *class* is the
-   defect; fix = a position-graph model for the CONTROL thing, week 2. `BoundarySupervisor.on_advance`
-   records, beside the falling residuals, every variable's value at the
-   advance and its last change in the window — "what state transition
-   preceded success" (review §8). Consumer: the proposer's ranking prior,
-   weighted like `mattered`, never a rule. Free on the recordings first
-   (which values held at each recorded advance?), live second.
+   defect; fix = a position-graph model for the CONTROL thing, week 2.
 7. **Ladder, and the decision (H008 P3).** A: current. B: + H007 (state
    condition kind, enumerator + routing). C: + state-conditioned tallies
    in the predictor. Touched set cd82, m0r0, sk48, g50t, cn04 + controls sp80,
@@ -653,7 +648,16 @@ discriminating press, generalised). The LLM schema gains a latent-variable
 slot — the review's "latent-state scientist" (§11), which H002 cannot be
 until the slot exists. A learned residual memory `h_t` only if the
 explicit state's k-step accuracy plateaus with unexplained aliasing left
-(review second note §10–11, Level B).
+(review second note §10–11, Level B). **The level boundary reads state**
+(original Day-6 item, no claim to test yet): `BoundarySupervisor.on_advance`
+records, beside the falling residuals, every variable's value at the
+advance and its last change in the window — "what state transition
+preceded success" (review §8). Consumer: the proposer's ranking prior,
+weighted like `mattered`, never a rule. Free on the recordings first
+(which values held at each recorded advance?), live second. A **pooled,
+cross-seed Z1 admission** for `latent_rollout.py` (H008's own finding:
+wa30/sc25/sk48/su15 gained nothing under a per-seed-only admission
+despite wa30 being H006-confirmed at the pooled level).
 
 **Standing rules, unchanged.** Commit/push only when asked, per batch.
 Never edit `agent/` while a sweep runs. Same seeds for both arms. Test on
