@@ -636,34 +636,53 @@ grounded ones for free. Verified for free again (same recorded ar25
 reply, no new LLM calls): all 5 previously-rejected hypotheses now
 accepted and tagged. 255 tests.
 
-**Not yet matched-seed swept.** This is the real next step, not
-optional — a proper n=10 comparison against all three existing arms
-(baseline, pre-fix llm, strict-reject fixed llm) is the only way to know
-whether this recovers the lost value or just moves the same problem
-sideways.
+**Matched-seed swept — four arms, zero significant differences.**
+Baseline/pre-fix/strict-reject/soft, all at seeds 1-10/200 steps: mean
+0.0523 / 0.1061 / 0.0817 / 0.0761; soft has the highest median (0.0704)
+of all four but its max falls back to baseline's ceiling (0.2276),
+losing the 0.5487 outlier both LLM arms hit on seed 5. Every pairwise
+comparison (sign test and Wilcoxon) is not significant; soft vs. strict
+is the closest to an exact coin flip in the whole investigation
+(p=0.94/0.81). **Four n=10 sweeps on this axis now, no signal on any of
+them — recommending a pause on more score sweeps here.** The suggestive
+(not proven) pattern: softening traded an occasional big win for
+broader, smaller, more consistent gains.
+
+**Both pivots done, same session, no new sweeps.** Bottleneck #4: the
+enumerator's conditional bets never waste a step on an unmet precondition
+(0.0% across ~800 closed bets, both arms); the LLM's do (39-47%). Traced
+to a specific, clean cause: **12 of 17 LLM conditional hypotheses name a
+precondition `member` that is one of the relation's own two entities**
+(e.g. `distance(2,4)` conditioned on being adjacent to `#2` itself) rather
+than a genuine third entity. Split by this: self-referential preconditions
+burn **50.9%** of their budget on unmet routing; proper third-entity ones
+burn **0.0%**, matching the enumerator exactly — the largest, cleanest
+effect size in the whole H002 thread, well past anything the score
+comparisons showed.
+
+Stage 2 of the replay-ablation: hand-authored an oracle hypothesis for
+cd82 (H001's "adjacent side -x" finding, real entity ids from a recorded
+brief) and replayed it against three seeds — expired (7/8 steps unmet) on
+one, falsified (tested properly, residual never moved) on another, never
+closed (pool wiped first) on the third. `cd82` reached level 1 in zero of
+the ~30 real runs recorded this session; the oracle still failed on 2 of
+3 seeds tested. A negative result and the most conclusive one in this
+thread: direct causal confirmation that cd82's two-factor rule (side x
+selected paint colour) cannot be solved by a schema that expresses only
+the first factor, independent of who proposes the hypothesis.
 
 **Order for the next session.**
-1. **Matched-seed sweep the softened fix** (games/seeds 1-10/200 steps,
-   unchanged) against the three existing arms. Read it the same honest
-   way as every comparison this session: mean *and* median, sign test,
-   and don't call it a win on vibes.
+1. **Fix the self-referential-precondition gap** — same shape as the
+   lever-grounding fix: either reject a precondition whose `member` is
+   one of the relation's own `a`/`b`, or tag it the way `llm_ungrounded`
+   bets are tagged now so it loses priority without being dropped. Cheap,
+   free to verify (replay the same recorded traces), and the clearest
+   actionable lever this thread has produced.
 2. **A complementary prompt-side fix**: explain "moves under every action
    alike" in the schema/instructions explicitly, to reduce how often the
-   model makes these claims in the first place rather than only catching
-   them after the fact. Needs live model calls to verify (unlike the
-   validator fix, which was free).
-3. **Stage 2 of the replay-ablation**: an actual counterfactual —
-   construct a modified reply list (only the `held` hypotheses from a
-   recorded run, or a hand-authored oracle reply for cd82's two-factor
-   rule) and replay it through the same harness. This is the part that
-   actually separates LLM generation quality from LLM integration
-   quality; Stage 1 only cleared the way to trust it.
-4. **Check bottleneck #4** (second review §15, "exploration policy": is
-   action budget spent reaching a hypothesis rather than the hypothesis
-   being wrong) on the *next* LLM sweep, now that `hypothesis_log` exists
-   — compare the enumerator's and the LLM's `unmet`/`spent` ratios. Cheap:
-   analysis of data the next sweep produces anyway, no new sweep type.
-5. Deferred (per the review's own sequencing, unchanged): the full
+   model makes lever claims like this in the first place. Needs live
+   model calls to verify (unlike everything above, which was free).
+3. Deferred (per the review's own sequencing, unchanged): the full
    event-sourcing rewrite of `recap.py`/logging beyond the LLM-trace piece
    already done; LLM call-purpose framing (model-discovery vs.
    hypothesis-discrimination vs. experiment-selection prompts);

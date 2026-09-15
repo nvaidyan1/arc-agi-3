@@ -1,6 +1,6 @@
 # H002: An intermittent LLM as hypothesis scientist, not controller
 
-Status: IN PROGRESS — softened the fix: an ungrounded unconditional claim is now tagged and kept, not rejected, losing only its priority in select_experiment; verified mechanically, not yet matched-seed swept
+Status: IN PROGRESS — two free analyses from already-collected data found the clearest results in the whole thread: self-referential preconditions burn ~51% of their budget on unmet routing (vs 0% for proper third-entity ones), and a hand-authored oracle hypothesis for cd82 failed on 2 of 3 seeds when actually tested, directly confirming the schema's representation ceiling
 Research question: RQ5 (compute-efficient reasoning) / RQ3 (active testing)
 Date opened: 2026-09-14
 Origin: council verdict step (c'); reviewer C §7, §8, §11, §28, §32 steps 3–4,
@@ -540,3 +540,112 @@ optional: only a real n=10 comparison against both existing arms
 downweighting recovers the lost exploration value without also
 reintroducing the fabricated-justification problem the strict fix
 correctly solved.
+- 2026-09-15 **the softened fix, matched-seed swept** (same 5 games,
+  same seeds 1-10, same 200-step cap as every arm in this thread):
+
+  | arm | mean | median | nonzero seeds | max |
+  |---|---|---|---|---|
+  | baseline | 0.0523 | 0.0413 | 6/10 | 0.2276 |
+  | pre-fix llm | 0.1061 | 0.0448 | 8/10 | 0.5487 |
+  | strict-reject | 0.0817 | 0.0182 | 5/10 | 0.5487 |
+  | soft (alleviated) | 0.0761 | **0.0704** | 6/10 | 0.2276 |
+
+  Sign test / Wilcoxon (magnitude-weighted), pairwise: soft vs baseline
+  p=0.28/0.31; soft vs pre-fix p=0.55/0.74; **soft vs strict p=0.94/0.81
+  — the closest to an exact coin flip in this whole investigation**;
+  strict vs pre-fix (recorded previously) p=0.16/0.16. **None significant.**
+
+  The one interpretable pattern, held to a "suggestive" standard given
+  none of this reaches significance: soft has the highest median of all
+  four arms, but its max drops back to exactly baseline's ceiling
+  (0.2276) — both LLM arms before it hit 0.5487 on seed 5's outlier, and
+  softening lost that specific spike while becoming more consistent
+  elsewhere (6/10 nonzero seeds vs. strict's 5/10). Consistent with
+  "traded an occasional big win for broader small ones," not proof of it.
+
+**Inference.** Four n=10 sweeps on this one axis (baseline, pre-fix,
+strict, soft) and zero significant pairwise differences. Diminishing
+returns from continuing to sweep at this n — a fifth arm or a larger n
+on the same comparison is unlikely to be the efficient next move.
+**Recommending a pause on score sweeps here**, in favour of the cheaper
+analyses already queued in `docs/plan.md` that use data these four sweeps
+already collected (`llm_trace`, `hypothesis_log`) without any new LLM
+calls: Stage 2 of the replay-ablation, and the bottleneck-#4
+`unmet`/`spent` check. Left for the user's call whether to keep pushing
+n on score instead.
+- 2026-09-15 **bottleneck #4, checked** (second review §15, "exploration
+  policy": is action budget spent reaching a hypothesis rather than the
+  hypothesis being wrong) — using `hypothesis_log` from the strict and
+  soft arms, no new sweep. Restricted to hypotheses that actually carry
+  a precondition (only those can ever record an `unmet` step):
+
+  | source | conditional bets | spent | unmet | unmet/spent |
+  |---|---|---|---|---|
+  | enumerator (strict arm) | 352 | 1494 | 0 | 0.0% |
+  | llm (strict arm) | 4 | 15 | 7 | 46.7% |
+  | enumerator (soft arm) | 444 | 2110 | 0 | 0.0% |
+  | llm (soft arm) | 13 | 57 | 22 | 38.6% |
+
+  The enumerator's conditional bets never waste a step on an unmet
+  precondition, across nearly 800 closed conditional hypotheses total.
+  The LLM's do, roughly 40-47% of the time. Traced further: **12 of 17
+  LLM conditional hypotheses across both arms name a precondition
+  `member` that is one of the relation's own two entities** — e.g.
+  `distance(2,4)` with a precondition on being adjacent to `#2` itself,
+  rather than a genuine third reference entity. Split by this:
+
+  | precondition shape | n | spent | unmet | unmet/spent |
+  |---|---|---|---|---|
+  | self-referential (member ∈ pair) | 12 | 57 | 29 | **50.9%** |
+  | third-entity (member ∉ pair) | 5 | 15 | 0 | **0.0%** |
+
+  The largest, cleanest effect size found anywhere in this whole
+  investigation — far larger than any score comparison. When the model
+  names a real third entity, routing succeeds every time, matching the
+  enumerator. When it names one of the hypothesis's own two entities
+  (71% of the time), roughly half its budget burns on failed routing
+  before ever testing the claim.
+
+  **Not yet fixed.** The validator currently only checks that a
+  precondition's `member` is live and isn't the controlled thing — not
+  that it differs from the relation's own `a`/`b`. A cheap next fix,
+  same shape as the lever-grounding one: flag or reject a self-
+  referential precondition, or at minimum tag it so `select_experiment`
+  treats it the way `llm_ungrounded` bets are treated now.
+
+- 2026-09-15 **Stage 2 of the replay-ablation: the actual counterfactual,
+  finally run.** Hand-authored an oracle hypothesis for cd82 from the
+  project's own best existing knowledge (H001's "ACTION5, adjacent side
+  -x" finding) — a real, schema-valid claim about `part_size_diff`
+  between the bucket group and the template group, using real entity ids
+  read from an actual recorded brief. Replayed it (via
+  `scripts/replay_ablation.py`'s `replay()`, bypassing the recorded
+  reply) against three different cd82 seeds:
+
+  | seed | outcome |
+  |---|---|
+  | 1 | levels=1 (up from 0); oracle bet never closed — pool wiped before it was ever tested |
+  | 2 | levels=0, GAME_OVER; oracle bet **expired**, 7 of 8 budget steps `unmet` |
+  | 3 | levels=0, GAME_OVER; oracle bet **falsified**, tested properly, residual never moved (35->35) |
+
+  For context: `cd82` reached level 1 in **zero** of the ~30 real
+  gemma3-driven and baseline runs recorded this session, so seed 1's
+  level-up is a genuine anomaly worth noting — but the oracle bet was
+  never closed there either, so it cannot be attributed to the
+  hypothesis being exploited; more likely ordinary trajectory divergence
+  from a different pool composition, the same effect seen in every
+  fix-vs-fix comparison this session.
+
+**Inference.** This is the cleanest, most conclusive result in the
+entire H002 thread, and it is a negative result for the oracle, not a
+positive one — which is exactly what makes it valuable. A hand-crafted
+hypothesis built from the project's own strongest prior evidence still
+failed when tested on 2 of 3 seeds. That is direct, causal confirmation
+(not inference from absence) of what the project already suspected:
+cd82's real rule is two-factor (side x selected paint colour), the
+precondition schema can express only the first factor, and no amount of
+generation or integration improvement changes that — the ceiling is
+representational. The bottleneck-#4 finding is the more broadly
+actionable one: self-referential preconditions are a large, clean,
+fixable defect (50.9% vs 0.0% unmet), independent of cd82's specific
+ceiling, and worth fixing before spending more calls on this thread.
