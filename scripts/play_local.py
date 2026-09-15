@@ -256,6 +256,11 @@ def main() -> None:
             "levels_completed": final.levels_completed,
             "actions": agent.action_counter,
             "completion_action_indices": completions,
+            # Prediction error per layer (agent/predictor.py, H003): the
+            # world-model metric, kept beside the score so the two can be
+            # compared across arms.
+            "prediction": (agent.predictor.game.summary()
+                           if getattr(agent, "predictor", None) is not None else None),
         }
         print(f"  → state={final.state}, levels_completed={final.levels_completed}, "
               f"actions={agent.action_counter}"

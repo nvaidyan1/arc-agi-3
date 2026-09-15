@@ -473,6 +473,58 @@ falsifiable and UNASSIGNED is a real answer.
       bounding-box extent, not size. cd82's bucket and ls20's sprite both
       read `control 100%` with a four-way map. See `history.md` 2026-09-14.
 
+## START HERE (handoff, 2026-09-14 evening)
+
+**State.** `main` at `49fcd3e` is pushed. Uncommitted in the tree: the LLM
+proposer scaffold (`agent/proposer_llm.py`, hypothesis pool +
+`select_experiment` in `my_agent.py`, `source/confidence/falsifier` on
+`Hypothesis`, `research/hypotheses/H002`, tests; 215 pass). Nothing runs in
+the background. `ARC_PROPOSER` and `ARC_LLM_PROPOSER` are OFF by default.
+Score at default: median 0.0145 (unchanged since `5855c9d`). No model runtime
+on this machine (no Ollama, no `openai`, no keys).
+
+**The oversight to avoid.** Reviewer C (`reviewer_c_09_14_2026.MD`, §12,
+§32 steps 3–4; second note "Experiments 1–4") said: build a **predictive
+transition model** and **genuinely competing hypotheses** *before* attaching
+a language model. The LLM interface got built first anyway (it is fine to
+keep — it is inert without a model). Do not attach a model until 3a and 3b
+below exist; the LLM's proposals must be verified against predictions, not
+only residual direction.
+
+**Order for the next session.**
+1. **3a. Predictive transition model** (write `H003` first). From evidence
+   already held — `Belief.effects[action]` (kind + direction per entity,
+   with determinism) and `PairRecord.by_action[_given]` (residual direction
+   per action, per condition) — `predict(action, condition) -> {entity:
+   expected kind, pair: expected residual direction, confidence}`. Every
+   step compare to what happened; log **prediction error per layer**
+   (entity motion / relation direction) as the world-model metric between
+   representation validity and behavioural utility. Small; no simulator.
+2. **3b. Competing transition hypotheses** (`H004`). The enumerator
+   proposes rule pairs about the *same* action whose predictions differ —
+   "ACTION5 changes the block from any side" vs "only from side −x" — and
+   `select_experiment` prefers the state where they diverge, so one press
+   falsifies one. The current pool heuristic (action shared by most bets)
+   is not this.
+3. **Ollama locally** (user approved): `brew install ollama`, pull
+   `qwen3.5:4b` or `gemma3:4b` (~3 GB). Agent already targets
+   `http://127.0.0.1:11434/v1` (`ARC_LLM_BASE_URL/MODEL`). Same client the
+   Kaggle path uses (vLLM on `127.0.0.1:8000/v1`).
+4. **E-H002-1**: five cold briefs → model → valid-schema rate; does anyone
+   state cd82's two-factor rule (side × selected swatch)? Then E-H002-2 on
+   the touched games, n=30, calls per level counted.
+
+**Open case.** cd82: paint effect is two-factor (side × selected paint
+colour) and the level needs *arrangement*, which has no gradient by rule.
+Three enumerator-side attempts (exploration floor, adjacency, side) each
+sharpened the diagnosis, none moved 16 → 2 of 30. Not to be chased again
+through the enumerator; it is the LLM proposer's first test case.
+
+**Standing rules that bit this session.** Commit/push only when asked, per
+batch. Never edit `agent/` while a sweep runs. Retention: latest 5 sweep
+summaries. Test on the games a change touches, not the full sweep, when
+the touched set is known.
+
 ## NEXT: relations as residuals, gated by a probe (council verdict 2026-09-14)
 
 Reframed twice on 2026-09-14. First after dumping cd82's full belief and
@@ -595,7 +647,7 @@ verdict, in force for everything below:
             proposer behind the same `Hypothesis` type — development-time
             only, since the competition notebook has no internet and no
             `anthropic` SDK is installed here.
-      - [ ] **(c') the LLM proposer** — brief in, `Hypothesis` out.
+      - [~] **(c') the LLM proposer** — interface, schema validation, call policy, hypothesis pool and experiment selector built and tested with a scripted client (H002); no model attached yet — needs Ollama (~4B model) or a remote endpoint. Brief in, `Hypothesis` out.
             **Offline path on Kaggle, verified 2026-09-14 from the official
             template and entrants' notebooks:** no internet at evaluation;
             weights come from **Kaggle Models attached to the notebook**

@@ -83,6 +83,9 @@ SHRANK = "shrank"
 APPEARED = "appeared"
 VANISHED = "vanished"
 MOTION_KINDS = (MOVED, TURNED)
+# The outcome key for "nothing happened to it" — the complement of every
+# entry in `Belief.effects`, so that a forecast can name it and be scored.
+UNCHANGED = ("unchanged",)
 
 CONTROL = "control"
 AFFECT = "affect"
@@ -475,6 +478,11 @@ class WorldBelief:
 
     def __init__(self) -> None:
         self._beliefs: dict[int, Belief] = {}
+        # What happened to each entity on the most recent step, keyed the
+        # way `Belief.effects` is keyed (effect tuple, `(kind,)`, or
+        # UNCHANGED) — the ground truth a forecast is scored against.
+        # Recording only; nothing here reads it.
+        self.last_effects: dict[int, tuple] = {}
 
     def update(self, tracked: dict, action: str, changed_cells) -> None:
         """Fold one step into every entity on screen this frame.
@@ -492,6 +500,7 @@ class WorldBelief:
         change" observations every step was quietly diluting the rates of
         everything that had merely moved out of the tracker's reach.
         """
+        self.last_effects = {}
         if not action or action == "RESET":
             return
         touched = set(changed_cells or ())
@@ -499,6 +508,7 @@ class WorldBelief:
             if belief.live and rid not in tracked:
                 belief.observe(action, VANISHED)
                 belief.live = False
+                self.last_effects[rid] = (VANISHED,)
         for rid, (colour, cells) in tracked.items():
             belief = self._beliefs.get(rid)
             first_seen = belief is None
@@ -511,6 +521,8 @@ class WorldBelief:
             hit = bool(touched & (cells | belief.last_cells))
             kind, effect = _kind(belief, cells, hit, first_seen)
             belief.observe(action, kind, effect)
+            self.last_effects[rid] = (UNCHANGED if kind is None
+                                      else effect if effect is not None else (kind,))
             belief.last_size = len(cells)
             belief.last_cells = cells
             belief.live = True

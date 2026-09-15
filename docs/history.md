@@ -2303,3 +2303,201 @@ condition (another entity's state), or accept cd82 as the open case the
 enumerator cannot express and move to the LLM proposer, which can *state*
 a two-factor rule from a brief that now shows side-conditional levers and
 the swatch strip as a thing ACTION6 turns.
+
+## 2026-09-14 — The LLM proposer's interface, built before the LLM (H002)
+
+**Motivation.** Reviewer C's staging: prove the experimental machinery with
+a scripted stand-in, then attach a model behind the same interface. The
+council's (c'). No model runtime exists on this machine (no `openai`
+package, no Ollama, no keys), which made the order the only one available
+anyway.
+
+**Built.** `agent/proposer_llm.py`. A prompt that wraps the brief and a
+strict JSON schema — relation, pair (ids or id lists for groups), action,
+optional precondition (adjacency, side, member), predicted `down|zero`, a
+**falsifier**, a confidence. `parse_hypotheses` accepts only what the
+agent can check — entities on screen, a pair the relation engine has,
+a legal non-click action, a stated falsifier, a residual that is decidable
+and not already 0 — and counts every rejection by reason (the valid-schema
+rate is H002's first metric). Two clients behind `complete(prompt)`: a
+scripted one, and an OpenAI-compatible POST with the standard library only,
+which is what Ollama and vLLM serve and what the Kaggle path runs. The
+proposer is called at most 3 times per level — at level start once the
+brief has 20 steps of content, then only when the pool is empty and 4 bets
+have died since — and a failed call counts toward the cap. Hypotheses now
+carry `source`, `confidence`, `falsifier`; the brief shows the falsifier
+and the pool. `select_experiment` picks, among live bets whose
+preconditions hold, the action that tests the most of them at once — one
+step discriminating several — ties by confidence. Default OFF
+(`ARC_LLM_PROPOSER`). 214 tests; smoke: an unreachable server degrades to
+the enumerator with three warnings per level, not one per step.
+
+**Not yet done.** E-H002-1 — five cold briefs to a real model, valid-schema
+rate, and whether anyone proposes cd82's two-factor rule — needs a runtime:
+Ollama with a ~4B model locally (Qwen 3.5 4B / Gemma 3 4B, ~3 GB, the size
+the Kaggle path can attach), or a remote OpenAI-compatible endpoint for
+development only. User's call.
+
+## 2026-09-14 — 3a: the predictive transition model (H003)
+
+**Hypothesis.** The tallies already held — `Belief.effects[action]`,
+`PairRecord.by_action[_given]` — forecast the next frame in the vocabulary
+(effect per entity, residual direction per pair), and scoring that forecast
+every step gives a world-model metric between "the representation is valid"
+(the probe) and "the agent scores" (the sweep): prediction error per layer.
+
+**Built.** `agent/predictor.py`: forecast before each learned step from the
+pre-action state, scored after; abstains below 4 tries and reports coverage
+beside accuracy; ledgers per layer, action and relation; Brier; movement
+precision and recall, because the headline number is trivial (sp80: 99% of
+43,000 pair forecasts, nearly all "flat" on pairs nothing moves); an
+(action × relation) table of wrong non-trivial forecasts. Consumers:
+PREDICTED in the brief, `observed[game].prediction` in the sweep summary.
+Policy untouched — action stream byte-identical to HEAD on cd82 and sp80,
+seed 3. 228 tests.
+
+**Observation — E-H003-1, touched 8 × 10 seeds × 400 steps, default.**
+Entity layer 71–97% at 86–96% coverage; on the navigational games change
+precision/recall 79–95%. Pair layer on changes: sp80 91/92, ls20 84/73,
+cd82 69/73, cn04 48/35, m0r0 52/40, tr87 49/44. Conditional tallies beat
+unconditional by 1–3 points, most on cd82. The wrong forecasts concentrate
+in `containment`/`distance` × movement actions on every game (cd82: 7–10k
+per action); cd82's ACTION5 cells are wrong 62–98% but ten times fewer.
+
+**Inference.** The effect vocabulary describes a d-pad well (prediction 1).
+The error does localise (prediction 2), but to *geometry*: a direction
+tally cannot forecast a residual that depends on where the controlled thing
+stands, and that dwarfs the paint rule. Position is the world model's
+largest missing factor; adding it (offset × displacement, the move map the
+router already holds) is the obvious next primitive and waits for a
+consumer. The precondition vocabulary adds information, not noise
+(prediction 3, weakly). The forecast is now the vocabulary in which two
+rival bets can disagree — H004.
+
+## 2026-09-14 — 3b: competing transition hypotheses (H004)
+
+**Hypothesis.** A general rule and an exclusive conditional rule about the
+same action, proposed together and pressed where their forecasts diverge,
+turn one step into a falsification of one of them — sharper than tallying
+a precondition's rate and waiting.
+
+**Built.** `Hypothesis.forecast`/`exclusive`/`strikes` (a fall without the
+precondition is a strike, two falsify; a hold is support; met-only steps
+still judge rise-twice/stall-past-patience). `Proposer.rival`: a
+conditional bet's rival is the general rule; a general bet's rival is the
+exclusive rule under whichever precondition's DOWN rate clears
+`LEVER_MIN_LIFT` over the action's overall rate. `select_experiment`
+prefers an action two live bets forecast differently; `_arm_riders` reads
+every pool bet's precondition at the moment its action is taken, so one
+frame scores the whole rider set. A bet dropped for an illegal action (not
+a verdict) unlinks its rival without counting a death. 239 tests.
+
+**Observation — mechanism, cd82 seed 8, 400 steps.** 30 rival pairs
+proposed, 46 discriminating presses, 6 general-died-first, 3
+specific-died-first: the discrimination is not rare.
+
+**Observation — E-H004-1, touched 8 × 30 seeds, read against E-7a's
+recorded numbers (unpaired, E-7a's seed list not preserved).** cd82 flat
+(2->1/30, as expected — not the arrangement fix). m0r0 6->**11**/30. ar25
+15->13/30. sp80 25->24/30. cn04 5->4/30. sk48/ls20/tr87 unchanged.
+Touched-8 median score **0.110 -> 0.075**.
+
+**Inference.** The mechanism fires as designed and is measurably active.
+The behavioural read is mixed: m0r0's reach count rose sharply while the
+touched-8 median score fell — reach and score disagree in direction, which
+score being quadratic in speed can explain (a rival press can still win,
+slower). Not strong enough without seed pairing to call H004's third
+falsifier met, but not the clean hold predicted either. **Not promoted**;
+`ARC_PROPOSER` stays default OFF. Needs a seed-paired re-run before either
+verdict is final.
+
+## 2026-09-14 — Ollama locally: a broken model, then E-H002-1 (H002)
+
+**Motivation.** `plan.md`'s next step, pre-approved: attach a real model
+behind the LLM proposer's interface and run E-H002-1 (five briefs, valid-
+schema rate, does anyone state cd82's two-factor rule).
+
+**Observation — `qwen3.5:4b` unusable.** Installed via Homebrew Ollama,
+pulled cleanly, but every call returned empty. Diagnosis: it is a
+"thinking" model; this Ollama build's `think:false` does nothing; the
+reasoning phase does not terminate in bounded time (2,100+ tokens and
+still generating after 3+ minutes on one probe; the user's own plain "hi"
+hung 5 minutes). Any `max_tokens` cap just truncates mid-thought with
+empty `content` — not a context-window or prompt-shape problem. Switched
+to `gemma3:4b` (no thinking capability): 5-30s per call, clean stops.
+
+**Observation — E-H002-1, five games, seed 8, 400 steps each.** 15 calls,
+63 hypotheses returned, **17 valid (27% valid-schema rate)**, wide per-game
+spread (cd82 48%, tu93 83%, cn04/ka59/ar25 0%). Dominant rejection:
+"entity not on screen" (18 of 46 rejects, 39%) — not yet root-caused.
+On tu93 all 5 valid hypotheses were pulled into the pool and **tested and
+falsified by the same deterministic verifier the enumerator uses** — the
+pipeline engages a real model's output end to end. On cd82, 12 valid
+hypotheses were generated but only 2 ever got tested, losing out to the
+enumerator's own bets for pool slots. No hypothesis, on any game, named a
+precondition on another entity's state (cd82's real rule needs "which
+swatch is selected") — the schema's precondition shape
+(`{adjacency, side, member}`) has no slot for it, so this cannot appear
+regardless of what the model infers.
+
+**Inference.** Reframed per the user's steer: the interesting question is
+not "does it solve cd82" but "does the LLM propose hypotheses outside the
+enumerator's class, and does the deterministic machinery use them" — tu93
+answers yes, mechanically. Two concrete next levers, neither model-related:
+prioritise model-sourced bets in `select_experiment` so valid ones actually
+get tested (cd82's gap), and extend the precondition schema to name
+another entity's state if the swatch-selection factor is worth chasing
+further. Full detail in `research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-14 — H002 follow-through: the entity-id bug and the pool-priority gap
+
+**Hypothesis.** The E-H002-1 rejections and the cd82 "12 valid, 2 tested"
+gap both have fixable root causes rather than being inherent model or
+design limits.
+
+**Observation.** The dominant rejection ("entity not on screen", 39% of
+all rejects) is not hallucination: raw replies show the model writing ids
+as `"#5"` (mirroring the brief's own display) instead of the schema's bare
+int, and sometimes `"b": null`. The pool gap has (at least) two distinct
+possible causes — losing a selection contest, or being silently evicted
+when an entity leaves the screen — and nothing distinguished them.
+
+**Built.** Lenient id parsing (`"#5"`/`"5"`/`5` all accepted, still checked
+against `live`) plus one worked example in the schema prompt
+(`agent/proposer_llm.py`). `select_experiment` tiebreaks toward an
+untested LLM bet, scoped after the structural criteria and before
+confidence (the two sources' confidence numbers are not the same scale).
+`Proposer.evict()` / `evicted_by_source` (`agent/hypothesis.py`,
+`my_agent.py`) makes the eviction-vs-selection-loss question measurable
+going forward. 242 tests.
+
+**Verified live**, cd82 and tu93 re-run against gemma3:4b: cd82 produced
+zero entity-id rejections this run, and both its valid LLM hypotheses got
+real verdicts with evictions landing on enumerator bets instead — the
+reverse of the original run (12 valid, 2 closed). Not a clean paired
+before/after (the priority fix changes the trajectory), so read as
+directional confirmation, not a measured effect size.
+
+**Inference.** Full detail and the exact numbers in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`. A real seed-paired
+E-H002-1 re-run is the next step before drawing a size on the effect.
+
+## 2026-09-14 — E-H002-1 seed-paired rerun: the fixes measurably worked
+
+**Hypothesis.** The entity-id and pool-priority fixes (previous entry)
+should raise the valid-schema rate and close cd82's "generated but never
+tested" gap on an actual seed-paired rerun, not just the single-run smoke
+check already done.
+
+**Observation.** Same 5 games, same seed 8, both fixes in place: valid-
+schema rate 27% -> **39%** (17/63 -> 22/56); `entity not on screen`
+(previously 18 of 46 rejects) fell to 1 of 34; cd82 went from 12 valid
+bets with only 2 ever tested to 3 valid bets with **all 3** tested (2
+falsified, 1 **HELD** — the first LLM-sourced hypothesis ever confirmed
+correct in this project). A second, distinct formatting bug surfaced on
+ka59: `"precondition": "adjacency", "side": "+y"` as sibling keys instead
+of a nested object (5 of 34 rejects) — not yet fixed.
+
+**Inference.** Real, reproducible improvement in the predicted direction
+on every metric, not just the earlier single-run smoke check. Full detail
+in `research/hypotheses/H002_llm_hypothesis_proposer.md`.

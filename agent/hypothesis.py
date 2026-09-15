@@ -43,6 +43,10 @@ LIVE, HELD, FALSIFIED, EXPIRED = "live", "held", "falsified", "expired"
 # 2026-09-14: a boolean verifier collapses "the hypothesis is wrong" into
 # "its precondition was not met", and those are different layers).
 SUPPORTED, UNMET, INCONCLUSIVE, AGAINST = "supported", "precondition_unmet", "inconclusive", "against"
+# What a bet forecasts for its residual if its action is taken now: DOWN,
+# or — for an exclusive bet whose precondition is unmet — NOT_DOWN. Two
+# rivals about the same action diverge exactly when one says each (H004).
+NOT_DOWN = "not_down"
 
 
 @dataclass
@@ -59,6 +63,22 @@ class Hypothesis:
     precondition: tuple | None = None
     outcomes: list = field(default_factory=list)   # per step: SUPPORTED / AGAINST / UNMET / INCONCLUSIVE
     pending_met: bool = True                       # set by the policy at decision time
+    # Where the bet came from and what it says about itself. The enumerator
+    # fills lift and leaves the rest; a language model must state a
+    # falsifier and a confidence or the hypothesis is rejected at parse.
+    source: str = "enumerator"
+    confidence: float = 0.5
+    falsifier: str = ""
+    predicted: str = "down"
+    # H004: the rival reading of the same tally, and which reading this
+    # is. An exclusive bet says the action moves the residual ONLY under
+    # its precondition, so a step taken without it is evidence — a fall
+    # there is a strike, a hold is support. A non-exclusive conditional
+    # bet (H001) says nothing about those steps and files them as UNMET.
+    exclusive: bool = False
+    rival: "Hypothesis | None" = field(default=None, repr=False, compare=False)
+    mets: list = field(default_factory=list)       # per step: was the precondition met
+    strikes: int = 0                               # exclusive: falls seen without the precondition
 
     @property
     def spent(self) -> int:
@@ -68,41 +88,65 @@ class Hypothesis:
     def current(self) -> int | None:
         return self.history[-1] if self.history else self.start
 
+    def forecast(self, met: bool) -> str | None:
+        """What this bet says its residual will do if its action is taken
+        now: DOWN; NOT_DOWN for an exclusive bet without its precondition;
+        None when it makes no claim (a non-exclusive bet, unmet)."""
+        if met or self.precondition is None:
+            return _relations.DOWN
+        return NOT_DOWN if self.exclusive else None
+
     def observe(self, residual: int | None, met: bool = True) -> str:
         """Fold in the residual seen after one step taken under this
         hypothesis, and return the status it now has.
 
-        `met`: did the precondition hold when the action was taken? A step
-        with it unmet costs budget and is recorded as PRECONDITION_UNMET;
-        it is not evidence about the residual and cannot falsify."""
+        `met`: did the precondition hold when the action was taken? For a
+        non-exclusive bet a step with it unmet costs budget and is recorded
+        as PRECONDITION_UNMET; it is not evidence about the residual and
+        cannot falsify. For an exclusive bet that step tests the ONLY: a
+        fall is a strike (two falsify), a hold is support. Rising twice
+        and stalling past patience are judged on met steps alone."""
         if self.status != LIVE:
             return self.status
-        if not met:
+        self.mets.append(met)
+        if not met and not self.exclusive:
             self.history.append(None)
             self.outcomes.append(UNMET)
-            if self.spent >= self.budget:
-                self.status = EXPIRED
-            return self.status
+            return self._expire()
         self.history.append(residual)
-        values = [self.start] + [v for v in self.history]
         if residual is None:
             # The pair became undecidable (something left the screen). Not
             # evidence either way; it costs a step of budget and that is all.
             self.outcomes.append(INCONCLUSIVE)
-        elif residual == 0:
+            return self._expire()
+        defined = [v for v in [self.start] + self.history if v is not None]
+        fell = len(defined) >= 2 and defined[-1] < defined[-2]
+        if not met:
+            if fell:
+                self.outcomes.append(AGAINST)
+                self.strikes += 1
+                if self.strikes >= 2:
+                    self.status = FALSIFIED      # it moved without the precondition, twice
+                    return self.status
+            else:
+                self.outcomes.append(SUPPORTED)
+            return self._expire()
+        if residual == 0:
             self.outcomes.append(SUPPORTED)
             self.status = HELD
             return self.status
-        else:
-            defined = [v for v in values if v is not None]
-            self.outcomes.append(SUPPORTED if len(defined) >= 2 and defined[-1] < defined[-2] else AGAINST)
-            if len(defined) >= 3 and defined[-1] > defined[-2] > defined[-3]:
-                self.status = FALSIFIED          # rose twice running
-                return self.status
-            if (len(defined) > HYPOTHESIS_PATIENCE
-                    and min(defined[-HYPOTHESIS_PATIENCE:]) >= defined[-HYPOTHESIS_PATIENCE - 1]):
-                self.status = FALSIFIED          # no fall within patience
-                return self.status
+        self.outcomes.append(SUPPORTED if fell else AGAINST)
+        met_defined = [self.start] + [v for v, m in zip(self.history, self.mets) if m and v is not None]
+        if len(met_defined) >= 3 and met_defined[-1] > met_defined[-2] > met_defined[-3]:
+            self.status = FALSIFIED          # rose twice running
+            return self.status
+        if (len(met_defined) > HYPOTHESIS_PATIENCE
+                and min(met_defined[-HYPOTHESIS_PATIENCE:]) >= met_defined[-HYPOTHESIS_PATIENCE - 1]):
+            self.status = FALSIFIED          # no fall within patience
+            return self.status
+        return self._expire()
+
+    def _expire(self) -> str:
         if self.spent >= self.budget:
             self.status = EXPIRED
         return self.status
@@ -114,10 +158,11 @@ class Hypothesis:
     def describe(self) -> str:
         rel, a, b = self.key
         name = lambda k: ("{" + ",".join(f"#{m}" for m in k) + "}") if isinstance(k, tuple) else f"#{k}"  # noqa: E731
-        cond = (f" when {self.precondition[0].replace(':', ' on side ')} of #{self.precondition[1]}"
+        cond = (f" {'only ' if self.exclusive else ''}when {self.precondition[0].replace(':', ' on side ')} of #{self.precondition[1]}"
                 if self.precondition else "")
+        basis = f"lever +{self.lift:.0%}" if self.source == "enumerator" else f"{self.source}, confidence {self.confidence:.0%}"
         return (f"drive {rel}({name(a)},{name(b)}) {self.start}->0 with {self.action}{cond} "
-                f"(lever +{self.lift:.0%}), step {self.spent}/{self.budget}, now {self.current}")
+                f"({basis}), step {self.spent}/{self.budget}, now {self.current}")
 
 
 class Proposer:
@@ -126,7 +171,22 @@ class Proposer:
 
     def __init__(self) -> None:
         self._cooldown: dict[tuple, int] = {}   # key -> step it may be proposed again
-        self.log: list[tuple] = []              # (key, action, start, end, status, spent)
+        self.log: list[tuple] = []              # (key, action, start, end, status, spent, unmet, precondition, exclusive)
+        self.closed_by_source: dict[str, dict[str, int]] = {}   # "enumerator"/"llm" -> status -> n
+        # H004 accounting: rival pairs proposed, presses taken where two
+        # live bets on the action disagreed, and which of a pair died first.
+        self.rivals = 0
+        self.discriminating = 0
+        self.rival_outcomes: dict[str, int] = {}
+        # A bet the pool drops because its entities left the screen, before
+        # it was ever selected — distinct from `close()`, which only ever
+        # sees a bet that reached a verdict or lost its action's legality.
+        # Added after E-H002-1 (2026-09-14) found 12 valid LLM hypotheses
+        # generated on cd82 and only 2 ever closed, with the gap
+        # unexplained: this answers whether the other 10 lost a selection
+        # contest (measurable via `close`) or simply vanished off-screen
+        # first (this counter) — different problems, different fixes.
+        self.evicted_by_source: dict[str, int] = {}
 
     def clear(self) -> None:
         self.__init__()
@@ -134,14 +194,76 @@ class Proposer:
     def cool(self, key: tuple, step: int) -> None:
         self._cooldown[key] = step + HYPOTHESIS_COOLDOWN
 
+    def evict(self, h: Hypothesis) -> None:
+        """A live bet dropped from the pool because an entity it names is
+        no longer on screen — never tested, never a verdict. See
+        `evicted_by_source`."""
+        self.evicted_by_source[h.source] = self.evicted_by_source.get(h.source, 0) + 1
+
     def close(self, h: Hypothesis, step: int) -> None:
-        self.log.append((h.key, h.action, h.start, h.current, h.status, h.spent, h.unmet))
+        self.log.append((h.key, h.action, h.start, h.current, h.status, h.spent, h.unmet,
+                         h.precondition, h.exclusive))
+        self.closed_by_source[h.source] = self.closed_by_source.get(h.source, {})
+        self.closed_by_source[h.source][h.status] = self.closed_by_source[h.source].get(h.status, 0) + 1
+        if h.rival is not None:
+            # A bet dropped while still LIVE (its action stopped being legal)
+            # did not die: it is unlinked, not counted, and its partner goes
+            # on alone. Only a verdict counts — and only the first of the pair.
+            if h.status == LIVE:
+                h.rival.rival = None
+                h.rival = None
+            elif h.rival.status == LIVE:
+                which = ("specific" if h.precondition is not None else "general") + "_died_first"
+                self.rival_outcomes[which] = self.rival_outcomes.get(which, 0) + 1
         # An expiry spent mostly failing to reach the precondition says
         # nothing about the residual; a short cooldown, not the full one.
         if h.status == FALSIFIED or (h.status == EXPIRED and h.unmet * 2 < max(h.spent, 1)):
             self.cool(h.key, step)
         elif h.status == EXPIRED:
             self._cooldown[h.key] = step + HYPOTHESIS_COOLDOWN // 4
+
+    def rival(self, h: Hypothesis, rec, control: set[int] = frozenset()) -> Hypothesis | None:
+        """The competing reading of the tally `h` was drawn from, or None.
+
+        A conditional bet's rival is the general rule (same action, no
+        precondition), and the conditional bet becomes exclusive: the two
+        now disagree whenever the precondition is unmet, and a press there
+        settles it. A general bet's rival is the exclusive rule under the
+        condition where the action's DOWN rate stands out from its overall
+        rate by LEVER_MIN_LIFT — no such condition, no rival. Nothing is
+        asserted about the game either way: both readings are the same
+        tally, and both die by observations the vocabulary already makes."""
+        if rec is None or h.rival is not None or h.action == "ACTION6":
+            return None
+        rel, a, b = h.key
+        members = [m for side in (a, b) for m in (side if isinstance(side, tuple) else (side,))]
+        if h.precondition is not None:
+            lever = rec.lever(_relations.DOWN)
+            lift = lever[1] if lever is not None and lever[0] == h.action else 0.0
+            other = Hypothesis(key=h.key, action=h.action, lift=lift, start=h.start,
+                               source=h.source, confidence=h.confidence)
+            h.exclusive = True
+        else:
+            tally = rec.by_action.get(h.action, {})
+            n = sum(tally.values())
+            overall = tally.get(_relations.DOWN, 0) / n if n else 0.0
+            best = None
+            for cond, actions in rec.by_action_given.items():
+                t = actions.get(h.action)
+                if t is None or sum(t.values()) < _relations.LEVER_MIN_TRIES:
+                    continue
+                rate = t[_relations.DOWN] / sum(t.values())
+                if rate - overall >= _relations.LEVER_MIN_LIFT and (best is None or rate > best[1]):
+                    best = (cond, rate)
+            targets = [m for m in members if m not in control]
+            if best is None or not targets:
+                return None
+            other = Hypothesis(key=h.key, action=h.action, lift=best[1] - overall, start=h.start,
+                               precondition=(best[0], targets[0]), exclusive=True,
+                               source=h.source, confidence=h.confidence)
+        h.rival, other.rival = other, h
+        self.rivals += 1
+        return other
 
     def propose(self, engine, live, legal: set[str], step: int,
                 exclude: set[int] = frozenset(), prior=None, typer=None,

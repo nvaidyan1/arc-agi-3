@@ -72,6 +72,8 @@ import hypothesis
 import kinds
 import navigation
 import perception
+import predictor
+import proposer_llm
 import relations
 import supervisor
 from attention import ClickTargeting, InterestMap
@@ -86,7 +88,13 @@ from constants import (
     STAMINA_MIN_SIZE,
     USE_BELIEF_TARGET,
     USE_PER_LEVEL_ROUTE_GATE,
+    HYPOTHESIS_POOL,
     HYPOTHESIS_PROBE_TRIES,
+    LLM_API_KEY,
+    LLM_BASE_URL,
+    LLM_MAX_CALLS_PER_LEVEL,
+    LLM_MODEL,
+    USE_LLM_PROPOSER,
     USE_PROPOSER,
     USE_SHIFT_FALLBACK,
     VANISH_WEIGHT,
@@ -158,6 +166,20 @@ class MyAgent(Agent):
         self.hypothesis: hypothesis.Hypothesis | None = None
         self._level_step = 0
         self._level_tries: dict[str, int] = {}   # per action, this level
+        # Live bets waiting to be tested (enumerated and, when enabled,
+        # proposed by the model); `select_experiment` picks among them.
+        self.pool: list[hypothesis.Hypothesis] = []
+        # The predictive transition model (agent/predictor.py, H003): a
+        # one-step forecast from the tallies before every learned step,
+        # scored after it. The policy does not read it; the brief, the
+        # sweep summary and the rival hypotheses do.
+        self.predictor = predictor.Predictor()
+        self.llm: proposer_llm.LLMProposer | None = (
+            proposer_llm.LLMProposer(
+                proposer_llm.OpenAICompatibleClient(LLM_BASE_URL, LLM_MODEL, LLM_API_KEY),
+                max_calls_per_level=LLM_MAX_CALLS_PER_LEVEL)
+            if USE_LLM_PROPOSER else None)
+        self._latest_available: list[int] = []
         # What has ever mattered, read at level advances and typed by
         # colour (agent/supervisor.py). A property of the game: survives
         # levels and resets, dies with the game.
@@ -310,6 +332,10 @@ class MyAgent(Agent):
         self.brief.clear()
         self.proposer.clear()
         self.hypothesis = None
+        self.pool = []
+        self.predictor.new_level()
+        if self.llm is not None:
+            self.llm.new_level()
         self._level_step = 0
         self._level_tries = {}
         self.kinds.new_level()
@@ -349,6 +375,7 @@ class MyAgent(Agent):
             return GameAction.RESET
 
         candidates = self._legal_actions(latest_frame)
+        self._latest_available = list(latest_frame.available_actions or [])
         self._observe_frame(latest_frame)
 
         if latest_frame.levels_completed != self._map_level:
@@ -432,6 +459,10 @@ class MyAgent(Agent):
         action = self._last_action
         assert action is not None
         self.interest.decay()
+        # Forecast first: the belief and relation layers still hold the
+        # frame the action was taken on, so this is the prediction as it
+        # could have been made at decision time, from the same tallies.
+        forecast = self.predictor.forecast(self.belief, self.relations, action.name)
 
         changed = perception.diff_cells(prev_frame, latest_frame)
         origin = self.moves.displacement  # before any move updates it
@@ -519,6 +550,7 @@ class MyAgent(Agent):
         self.belief.update(self._tracked_live, action.name, changed)
         self.relations.update(self.regions._tracked, self.regions.live, action.name,
                               skip=self._canvas_ids(), control=self._control_ids())
+        self.predictor.score(forecast, self.belief, self.relations, self._level_step + 1)
         self.supervisor.observe(self.relations.snapshot())
         self._kinds_now = kinds.compute_kinds(self.relations, self.belief, self.regions.live,
                                               background=self._background)
@@ -530,13 +562,23 @@ class MyAgent(Agent):
         # Verify the live hypothesis against what its action just did to
         # its residual. Only steps taken under it count; an epsilon step
         # in between is not its evidence.
+        # ... and every pool bet whose action this was (H004): a rival's
+        # forecast for this press was armed at decision time, so the same
+        # frame scores both readings and one of a divergent pair dies.
         h = self.hypothesis
-        if h is not None and self._decision.get("tier") == "hypothesis":
-            rec = self.relations.record(h.key)
-            status = h.observe(rec.residual if rec is not None else None, met=h.pending_met)
-            if status != hypothesis.LIVE:
-                self.proposer.close(h, self._level_step)
-                self.hypothesis = None
+        if self._decision.get("tier") == "hypothesis":
+            riders = [g for g in self.pool if g.status == hypothesis.LIVE and g.action == action.name]
+            for g in ([h] if h is not None else []) + riders:
+                rec = self.relations.record(g.key)
+                status = g.observe(rec.residual if rec is not None else None, met=g.pending_met)
+                if status != hypothesis.LIVE:
+                    self.proposer.close(g, self._level_step)
+                    if self.llm is not None and status in (hypothesis.FALSIFIED, hypothesis.EXPIRED):
+                        self.llm.falsified_since_call += 1
+                    if g is h:
+                        self.hypothesis = None
+                    else:
+                        self.pool.remove(g)
 
         # Two consumers, two different gates. As a *reward* the residual
         # is only meaningful once we know our own effect — with no move
@@ -722,6 +764,8 @@ class MyAgent(Agent):
             "position": position,
             "n_blocked": n_blocked,
             "all_blocked": not unblocked,
+            # How the last step's forecast fared, per layer (recording only).
+            "prediction": self.predictor.last,
         }
 
         if random.random() < EXPLORATION_EPSILON:
@@ -770,13 +814,7 @@ class MyAgent(Agent):
             probe = self._probe_action(candidates)
             if probe is not None:
                 return probe
-            context = {b.region_id for b in self.belief.by_role(belief.CONTEXT)}
-            h = self.proposer.propose(
-                self.relations, self.regions.live, legal, self._level_step,
-                exclude=context, prior=self.supervisor.prior,
-                typer=lambda key: supervisor.type_of(key, self._colour_of),
-                won=self.supervisor.won, bonus=self._kind_bonus,
-                control=self._control_ids())
+            h = self._next_hypothesis(legal)
             self.hypothesis = h
         if h is None:
             return None
@@ -791,6 +829,7 @@ class MyAgent(Agent):
                                             side=h.precondition[0].partition(":")[2])
                 if step is not None:
                     step.reasoning = f"hypothesis: {h.describe()} — {note}"
+                    self._arm_riders(step.name)
                     self._last_click = None
                     self._last_action = step
                     return step
@@ -808,9 +847,21 @@ class MyAgent(Agent):
         if action is None:
             action = next(a for a in candidates if a.name == h.action)
         action.reasoning = f"hypothesis: {h.describe()}{routed}"
+        self._arm_riders(action.name)
         self._last_click = None
         self._last_action = action
         return action
+
+    def _arm_riders(self, action_name: str) -> None:
+        """Every live pool bet on the action about to be taken reads its
+        precondition now, so `_learn_from` can score it under the state it
+        was pressed in (H004). Counts the press as discriminating when two
+        live bets on the action forecast it differently."""
+        for g in self.pool:
+            if g.status == hypothesis.LIVE and g.action == action_name:
+                g.pending_met = g.precondition is None or self._precondition_met(g)
+        if proposer_llm.diverges(self.pool + [self.hypothesis], action_name, self._precondition_met):
+            self.proposer.discriminating += 1
 
     def _probe_action(self, candidates) -> GameAction | None:
         """A winning move from an earlier level that this level has not yet
@@ -837,6 +888,50 @@ class MyAgent(Agent):
         self._last_click = None
         self._last_action = action
         return action
+
+    def _next_hypothesis(self, legal: set[str]) -> hypothesis.Hypothesis | None:
+        """Refill the pool — the enumerator's best, and the model's proposals
+        when it is time to ask — then pick the bet whose action tests the
+        most live bets at once. Pool entries whose entities have left the
+        screen are dropped rather than tested."""
+        live = self.regions.live
+        kept, dropped = [], []
+        for h in self.pool:
+            members = [m for side in h.key[1:] for m in (side if isinstance(side, tuple) else (side,))]
+            (kept if h.status == hypothesis.LIVE and all(m in live for m in members) else dropped).append(h)
+        self.pool = kept
+        for h in dropped:
+            self.proposer.evict(h)
+        context = {b.region_id for b in self.belief.by_role(belief.CONTEXT)}
+        control = self._control_ids()
+        keys_in_pool = {h.key for h in self.pool}
+        if len(self.pool) < HYPOTHESIS_POOL:
+            e = self.proposer.propose(
+                self.relations, live, legal, self._level_step,
+                exclude=context, prior=self.supervisor.prior,
+                typer=lambda key: supervisor.type_of(key, self._colour_of),
+                won=self.supervisor.won, bonus=self._kind_bonus, control=control)
+            if e is not None and e.key not in keys_in_pool:
+                self.pool.append(e)
+                # Its rival, when the tally supports one and there is room:
+                # a lone exclusive bet would change what an unmet step means
+                # with nothing to discriminate against.
+                if len(self.pool) < HYPOTHESIS_POOL:
+                    r = self.proposer.rival(e, self.relations.record(e.key), control)
+                    if r is not None:
+                        self.pool.append(r)
+        if self.llm is not None and self.llm.should_call(self._level_step, pool_empty=not self.pool):
+            text = self.brief.compose(self, level=self._map_level, available=self._latest_available)
+            proposed = self.llm.propose(text, self.relations, live, legal, control, self._level_step)
+            if self.llm.stats.get("last_error") and not proposed:
+                logger.warning("LLM proposer: %s", self.llm.stats["last_error"])
+            for h in proposed:
+                if h.key not in {g.key for g in self.pool} and len(self.pool) < HYPOTHESIS_POOL:
+                    self.pool.append(h)
+        chosen = proposer_llm.select_experiment(self.pool, legal, self._precondition_met)
+        if chosen is not None:
+            self.pool.remove(chosen)
+        return chosen
 
     def _control_ids(self) -> set[int]:
         return {b.region_id for b in self.belief.by_role(belief.CONTROL)}

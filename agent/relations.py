@@ -254,6 +254,9 @@ class RelationEngine:
         self._unit_colours: dict[tuple, frozenset[int]] = {}
         self._background: int | None = None
         self._control: set[int] = set()
+        # key -> member ids, for every pair and group record observed on
+        # the most recent step. See `update`.
+        self.updated: dict[tuple, tuple] = {}
 
     # ── update ──────────────────────────────────────────────────────────
 
@@ -314,33 +317,39 @@ class RelationEngine:
                 out[("containment", b, a)] = self._containment(b, a)
                 out[("cell_exchange", a, b)] = self._exchange(a, b)
                 out[("cell_exchange", b, a)] = self._exchange(b, a)
-        def condition_for(members) -> str | None:
-            """Where the controlled thing stood relative to the nearest
-            non-control member of this pair before the action:
-            'adjacent:-x' / 'apart:+y' and so on. Adjacency alone was
-            measured to be useless on cd82 — the bucket's every orbit
-            position touches the block — while WHICH SIDE it paints from
-            decides which half changes. None when there is no control
-            thing, or the pair is the control thing itself."""
-            if not control_prev:
-                return None
-            others = [self._prev[m] for m in members if m not in self._control and m in self._prev]
-            if not others:
-                return None
-            c, m = min(((c, m) for c in control_prev for m in others),
-                       key=lambda cm: bbox_gap(cm[0].bbox, cm[1].bbox))
-            gap = bbox_gap(c.bbox, m.bbox)
-            return f"{ADJACENT if gap <= ADJACENT_GAP else APART}:{side_of(c.centroid, m.centroid)}"
+        # The precondition each tally is filed under: where the controlled
+        # thing stood relative to the pair BEFORE the action (`_prev`).
+        condition_for = lambda members: condition_of(  # noqa: E731
+            self._prev, control_prev, self._control, members)
 
+        # Which keys were observed this step, and the member ids behind
+        # them — a group's canonical key can name members that have since
+        # been reborn under new ids. The predictor forecasts only these
+        # (a record nothing updates is not a pair that exists right now)
+        # and treats a key missing from the next step's set as undecidable.
+        self.updated = {}
         for key, value in out.items():
             self.records.setdefault(key, PairRecord()).observe(
                 value, action, condition_for(key[1:]))
+            self.updated[key] = key[1:]
         for key, value in self._group_residuals().items():
             rel, ka, kb = key
             canon = (rel, self._canonical(ka), self._canonical(kb))
+            members = tuple(ka) + tuple(kb)
             self.group_records.setdefault(canon, PairRecord()).observe(
-                value, action, condition_for(tuple(ka) + tuple(kb)))
+                value, action, condition_for(members))
+            self.updated[canon] = members
         return out
+
+    def condition_now(self, members) -> str | None:
+        """The precondition the NEXT action will be tallied under for this
+        pair: where the controlled thing stands relative to its nearest
+        non-control member on the current frame. The same reading `update`
+        files tallies by, one step earlier — so a forecast made from
+        `by_action_given[condition_now(...)]` is compared against the tally
+        the outcome will land in."""
+        control_now = [self._now[c] for c in self._control if c in self._now]
+        return condition_of(self._now, control_now, self._control, members)
 
     def _canonical(self, members: tuple) -> tuple:
         """The member tuple this unit's records live under: itself, or an
@@ -564,6 +573,28 @@ def content(now: dict, g, background: int | None) -> tuple | None:
                                  if background is None or now[r].colours != {background}))
             return inner or None
     return None
+
+
+def condition_of(descs: dict, control: list, exclude, members) -> str | None:
+    """Where the controlled thing stands relative to the nearest
+    non-control member of this pair: 'adjacent:-x' / 'apart:+y' and so on.
+    Adjacency alone was measured to be useless on cd82 — the bucket's every
+    orbit position touches the block — while WHICH SIDE it paints from
+    decides which half changes. None when there is no control thing, or
+    the pair is the control thing itself.
+
+    `descs` is the frame to read (`_prev` when filing a tally, `_now` when
+    forecasting), `control` the controlled things' descriptors on that
+    frame, `exclude` the ids not to treat as members."""
+    if not control:
+        return None
+    others = [descs[m] for m in members if m not in exclude and m in descs]
+    if not others:
+        return None
+    c, m = min(((c, m) for c in control for m in others),
+               key=lambda cm: bbox_gap(cm[0].bbox, cm[1].bbox))
+    gap = bbox_gap(c.bbox, m.bbox)
+    return f"{ADJACENT if gap <= ADJACENT_GAP else APART}:{side_of(c.centroid, m.centroid)}"
 
 
 def side_of(control: tuple[float, float], member: tuple[float, float]) -> str:

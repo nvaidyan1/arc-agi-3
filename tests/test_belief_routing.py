@@ -173,6 +173,9 @@ def test_level_proven_dies_with_the_level_but_action_credit_does_not():
     agent.supervisor = supervisor.BoundarySupervisor()
     agent.kinds = kinds.KindMemory()
     agent._kinds_now = []
+    agent.pool = []; agent.llm = None
+    import predictor
+    agent.predictor = predictor.Predictor()
     agent.moves = MoveModel()
     agent.route = navigation.Route()
     agent.clicks = ClickTargeting()

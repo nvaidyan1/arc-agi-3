@@ -216,6 +216,19 @@ HYPOTHESIS_COOLDOWN = 40
 # winning moves: a blanket floor over every action was measured and lost
 # (see `_probe_action`).
 HYPOTHESIS_PROBE_TRIES = 4
+# The language-model proposer (agent/proposer_llm.py). Default OFF. It is a
+# hypothesis generator behind the same `Hypothesis` type as the enumerator,
+# called at most LLM_MAX_CALLS_PER_LEVEL times per level — never per step —
+# against any OpenAI-compatible server: Ollama locally, vLLM on Kaggle.
+USE_LLM_PROPOSER = os.environ.get("ARC_LLM_PROPOSER", "0") == "1"
+LLM_BASE_URL = os.environ.get("ARC_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+LLM_MODEL = os.environ.get("ARC_LLM_MODEL", "qwen3.5:4b")
+LLM_API_KEY = os.environ.get("ARC_LLM_API_KEY", "local")
+LLM_MAX_CALLS_PER_LEVEL = 3
+# How many live hypotheses the policy keeps in play at once: the enumerator's
+# best plus whatever the model returned. One step can test several of them
+# when they share an action (`select_experiment`).
+HYPOTHESIS_POOL = 6
 
 # ── Environment (what resists me) ───────────────────────────────────────
 # One failed attempt is enough to call a move blocked: these games are

@@ -10,6 +10,8 @@ that a layer below has not earned. The brief only selects and phrases:
 
   THINGS      live entities, role first, static ones compressed
   CONTROL     what each action does, from the move map and belief
+  PREDICTED   how well the tallies forecast the last frames, per layer,
+              and the confident misses — where the vocabulary is short
   RELATIONS   residuals that have moved on this level, most recent first,
               each with the actions that moved it — the levers
   FALLING     residuals a recent action drove down: candidate goals
@@ -123,6 +125,9 @@ class Briefer:
         if km is not None:
             out.extend(km.describe(getattr(agent, "_kinds_now", []), agent.relations))
         out.extend(self._control(agent))
+        pred = getattr(agent, "predictor", None)
+        if pred is not None:
+            out.extend(pred.describe())
         out.extend(self._relations(agent))
         out.extend(self._falling(agent))
         out.extend(self._open(agent))
@@ -138,12 +143,28 @@ class Briefer:
         out = ["HYPOTHESIS"]
         if h is not None:
             out.append(f"  testing: {h.describe()}")
+            if h.falsifier:
+                out.append(f"    falsified if: {h.falsifier}")
+            rival = getattr(h, "rival", None)
+            if rival is not None:
+                out.append(f"    vs rival: {rival.describe()} [{rival.status}]")
+        pool = getattr(agent, "pool", None)
+        if pool:
+            out.append(f"  waiting: {len(pool)} more bet{'s' if len(pool) != 1 else ''}"
+                       + (f", {sum(1 for g in pool if g.source == 'llm')} from the model" if any(g.source == 'llm' for g in pool) else ""))
+        if proposer and getattr(proposer, "rivals", 0):
+            outcomes = ", ".join(f"{k.replace('_', ' ')} x{n}" for k, n in sorted(proposer.rival_outcomes.items()))
+            out.append(f"  rivals: {proposer.rivals} pair{'s' if proposer.rivals != 1 else ''} proposed, "
+                       f"{proposer.discriminating} discriminating press{'es' if proposer.discriminating != 1 else ''}"
+                       + (f"; {outcomes}" if outcomes else ""))
         if proposer and proposer.log:
             name = lambda k: ("{" + ",".join(f"#{m}" for m in k) + "}") if isinstance(k, tuple) else f"#{k}"  # noqa: E731
-            for key, action, start, end, status, spent, unmet in proposer.log[-3:]:
+            for key, action, start, end, status, spent, unmet, precondition, exclusive in proposer.log[-3:]:
                 rel, a, b = key
                 extra = f", {unmet} with the precondition unmet" if unmet else ""
-                out.append(f"  {status}: {rel}({name(a)},{name(b)}) {start}->{end} with {action} in {spent} steps{extra}")
+                cond = (f" {'only ' if exclusive else ''}when {precondition[0].replace(':', ' on side ')} of #{precondition[1]}"
+                        if precondition else "")
+                out.append(f"  {status}: {rel}({name(a)},{name(b)}) {start}->{end} with {action}{cond} in {spent} steps{extra}")
         return out
 
     def _things(self, agent) -> list[str]:
