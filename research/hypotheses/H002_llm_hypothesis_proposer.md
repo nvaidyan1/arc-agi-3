@@ -1,6 +1,6 @@
 # H002: An intermittent LLM as hypothesis scientist, not controller
 
-Status: IN PROGRESS — two free analyses from already-collected data found the clearest results in the whole thread: self-referential preconditions burn ~51% of their budget on unmet routing (vs 0% for proper third-entity ones), and a hand-authored oracle hypothesis for cd82 failed on 2 of 3 seeds when actually tested, directly confirming the schema's representation ceiling
+Status: IN PROGRESS — self-referential-precondition fix shipped (tag not reject, same shape as the lever-grounding fix), verified against the exact recorded runs that found the problem; not yet matched-seed swept. Case-D grounded-only replay ablation run (same generation, filtered integration): leans negative, concentrated entirely on one game, not significant at n=6 nonzero cells
 Research question: RQ5 (compute-efficient reasoning) / RQ3 (active testing)
 Date opened: 2026-09-14
 Origin: council verdict step (c'); reviewer C §7, §8, §11, §28, §32 steps 3–4,
@@ -649,3 +649,107 @@ representational. The bottleneck-#4 finding is the more broadly
 actionable one: self-referential preconditions are a large, clean,
 fixable defect (50.9% vs 0.0% unmet), independent of cd82's specific
 ceiling, and worth fixing before spending more calls on this thread.
+- 2026-09-15 **the self-referential-precondition fix.** Same shape as the
+  lever-grounding fix, same reasoning for why: `parse_hypotheses` tags a
+  precondition whose `member` is one of the relation's own two entities
+  as `source="llm_selfref"` rather than rejecting it — the target may
+  still carry exploration value even though the routing is likely to
+  fail, and outright rejection already leaned toward a small score cost
+  once (the lever-grounding case). The tag's whole mechanism is the same
+  string-comparison trick: `select_experiment`'s untested-LLM priority
+  check (`source == "llm"` exactly) no longer fires for it, so it stops
+  jumping the queue but stays selectable and testable through the
+  ordinary flow. Also caught: `GOOD`'s own baseline test fixture had a
+  self-referential precondition (`member=4` on pair `(3,4)`) that had
+  gone undetected until this exact check existed to catch it — fixed to
+  a genuine third entity. 257 tests.
+
+  **Verified against the exact real runs that found the problem**: replayed
+  the recorded soft-arm ar25 seed 4 run (no new LLM calls). Both
+  previously-mistagged hypotheses (`distance(2,4)` pre=`adjacent:-y` on
+  `#2` itself; `containment(1,9)` pre=`apart:-x` on `#1` itself) now
+  correctly tagged `llm_selfref`. `containment(1,9)` still expired with
+  8 of 8 steps unmet — **the tag does not fix the routing failure
+  itself**, only removes the priority that let it compete for the queue
+  ahead of better-positioned bets. That distinction matters: this fix
+  addresses the *crowding-out* half of bottleneck #4, not the
+  *why-does-routing-fail-here* half, which remains open.
+
+**Inference.** Mechanism confirmed exactly as designed, same verification
+discipline as every fix this session (real recorded data, zero new LLM
+calls). **Not yet matched-seed swept** — given the lever-grounding fix's
+own lesson (mechanism-correct is not the same claim as score-positive),
+this needs the same honest test before any claim about its effect,
+not an assumption that a clean mechanism implies a score improvement.
+
+- 2026-09-15 **Case D, finally run: grounded-only replay ablation, same
+  generation, filtered integration.** A third reviewer-C pass
+  (`docs/expert-reviews/reviewer_c_09_14_2026c.md` §2, §14) proposed the
+  ablation ladder A/B/C/D to separate LLM generation quality from LLM
+  integration quality, and named case D specifically: take the exact
+  hypotheses a real run generated and replay them against a deterministic
+  agent. The four live matched-seed sweeps already run this session
+  (baseline/pre-fix/strict/soft) don't do this cleanly — each arm calls
+  the model fresh, so a filtered hypothesis changes the pool, which
+  changes the trajectory, which changes what the *next* live call even
+  sees; score differences between arms are confounded with new sampling
+  from the very first divergence.
+
+  **Built.** `replay_ablation.replay()` gained a `drop_sources` param:
+  monkeypatches `parse_hypotheses` to strip any hypothesis whose tagged
+  source is in the set, *after* parsing — the raw reply (generation) is
+  untouched, only what reaches the pool (integration) changes.
+  `scripts/replay_ablation_grounded.py` replays every (game, seed) cell
+  from the current soft arm's 10 sweep summaries (seeds 1-10, 5 games —
+  the same 50 cells the four-arm comparison used) twice: once identically
+  (reproducibility check), once with `{"llm_ungrounded", "llm_selfref"}`
+  dropped. No new LLM calls, no new sweep — pure replay of data already
+  on disk.
+
+  **Observation.** Baseline replay reproduced the original recorded
+  outcome in **50/50 cells** (Stage 1's n=5 exact-match finding now holds
+  at n=50). Of the 50 cells, **44 show zero score difference** between
+  baseline and grounded-only — on `cd82`/`ka59`/`tu93` (and 9 of 10
+  `cn04` seeds) dropping ungrounded/self-ref content never changed which
+  level was reached, despite those games carrying most of the ungrounded
+  volume (`tu93` 43 instances, `cd82` 33, vs. `ar25` only 12 across the
+  same 10 seeds). The effect is almost entirely concentrated on
+  **`ar25`** (5 of 6 nonzero cells), plus one small `cn04` cell:
+
+  | game | seed | baseline replay | grounded-only | diff |
+  |---|---|---|---|---|
+  | ar25 | 2 | 0.0000 | 0.1154 | +0.1154 |
+  | ar25 | 3 | 0.6732 | 0.0000 | **-0.6732** |
+  | ar25 | 4 | 0.0000 | 0.2309 | +0.2309 |
+  | cn04 | 8 | 0.1986 | 0.1804 | -0.0182 |
+  | ar25 | 9 | 0.6944 | 0.0000 | **-0.6944** |
+  | ar25 | 10 | 0.5974 | 0.1820 | **-0.4154** |
+
+  Mean over all 50 cells: baseline-replay 0.0761 (matches the soft arm's
+  already-reported mean exactly), grounded-only **0.0470**. Grounded-only
+  wins 2 / losses 4 / ties 44; sign-test over the 6 nonzero cells,
+  p=0.6875 — not significant at this n, but the pattern is the same
+  direction as the strict-reject live sweep (2026-09-15, above): removing
+  ungrounded content costs more often than it helps, and the three worst
+  losses (seeds 3, 9, 10) are exactly the seeds that produced `ar25`'s
+  best scores in the soft arm. Full per-cell data:
+  `research/replay_ablation_grounded_only.json`.
+
+  **Inference.** This is the cleaner version of the strict-reject finding
+  (2026-09-15, "correct, not a score win") with the resampling confound
+  removed: even holding the model's actual output byte-identical, the
+  hypotheses tagged `llm_ungrounded`/`llm_selfref` are not inert noise on
+  `ar25` — removing them from the same fixed trajectory loses real score
+  on 3 of 10 seeds. Combined with the live sweep already agreeing on
+  direction, this is reasonably strong (if not statistically decisive at
+  n=6) evidence that an ungrounded hypothesis's *target* carries real
+  exploration value on this game specifically, independent of whether its
+  stated justification was fabricated — and that the effect the 25-game
+  aggregates keep diluting into insignificance is real but game-specific,
+  the same lesson `docs/plan.md`'s protocol note already states for other
+  changes ("test the affected games, not the aggregate"). Next: read the
+  `ar25` seed 3/9/10 traces directly to see *which* dropped hypothesis
+  the trajectory actually needed — that would turn "the target carries
+  value" from an inference into a traced mechanism, the same way the
+  self-referential-precondition finding was traced rather than left as
+  an aggregate percentage.

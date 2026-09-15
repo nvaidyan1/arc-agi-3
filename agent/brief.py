@@ -31,6 +31,7 @@ from __future__ import annotations
 from collections import deque
 
 import belief as _belief
+import hypothesis as _hypothesis
 import relations as _relations
 
 MAX_THINGS = 12
@@ -163,8 +164,7 @@ class Briefer:
             for key, action, start, end, status, spent, unmet, precondition, exclusive, _source in proposer.log[-3:]:
                 rel, a, b = key
                 extra = f", {unmet} with the precondition unmet" if unmet else ""
-                cond = (f" {'only ' if exclusive else ''}when {precondition[0].replace(':', ' on side ')} of #{precondition[1]}"
-                        if precondition else "")
+                cond = _hypothesis.describe_conditions(precondition, exclusive)
                 out.append(f"  {status}: {rel}({name(a)},{name(b)}) {start}->{end} with {action}{cond} in {spent} steps{extra}")
         return out
 

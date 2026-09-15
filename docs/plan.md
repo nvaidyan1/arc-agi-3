@@ -671,18 +671,86 @@ thread: direct causal confirmation that cd82's two-factor rule (side x
 selected paint colour) cannot be solved by a schema that expresses only
 the first factor, independent of who proposes the hypothesis.
 
+**Self-referential-precondition fix: shipped, verified for free, not yet
+matched-seed swept.** Same shape and same reasoning as the lever-
+grounding fix: `parse_hypotheses` tags (does not reject) a precondition
+whose `member` is one of the relation's own two entities as
+`source="llm_selfref"`, which drops out of `select_experiment`'s
+untested-LLM priority the same way `llm_ungrounded` does. Verified
+against the exact recorded run that found the problem (soft-arm ar25
+seed 4, no new LLM calls): both mistagged hypotheses now correctly
+tagged. One still expired 8-of-8 unmet — **the fix removes the
+crowding-out, not the underlying routing failure**; why routing fails so
+badly when the precondition's target coincides with the tested relation's
+own entity remains open. Also fixed: the test suite's own baseline
+`GOOD` fixture turned out to have a self-referential precondition,
+undetected until this check existed. 257 tests.
+
+**A third reviewer-C pass** (`docs/expert-reviews/reviewer_c_09_14_2026c.md`)
+landed after the above. Its central new content is the ablation ladder
+A/B/C/D (§14): case D, replaying the exact hypotheses a real run
+generated against a deterministic agent, is a cleaner generation-vs-
+integration separation than the four live matched-seed sweeps above,
+which confound the two (a filtered hypothesis changes the pool, which
+changes the trajectory, which changes what the next *live* call even
+sees). Run the same session it landed, no new sweeps: `replay_ablation.
+replay()` gained `drop_sources` (strips hypotheses by tagged source after
+parsing, generation untouched); `scripts/replay_ablation_grounded.py`
+replayed all 50 (game, seed) cells from the soft arm twice — identically,
+then with `llm_ungrounded`/`llm_selfref` dropped. Result: 44/50 cells
+unchanged, effect almost entirely on `ar25` (mean 0.0761 -> 0.0470 over
+all 50, wins 2/losses 4/ties 44, p=0.6875 — not significant at n=6, but
+same direction as the strict-reject sweep, now without that sweep's
+resampling confound). Full table and inference in `docs/history.md`
+(2026-09-15, "A third reviewer-C pass, and Case D actually run") and
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+**H005 opened** (`research/hypotheses/H005_compositional_preconditions.md`)
+after a reframing of the Case-D result was narrowed down to the one piece
+with a direct measured gap behind it (the cd82 oracle proved the
+precondition schema can't express a two-factor rule) rather than the two
+pieces already tried once each under other names (`H003`'s predictor,
+`H004`'s rival hypotheses). **Stage 1 done**: `precondition` now accepts
+either its existing single-pair shape or a tuple of pairs (conjunctive),
+via `hypothesis.conditions_of()`/`describe_conditions()`; enumerator and
+LLM parser untouched; `_precondition_met` conjoins a new
+`_condition_met`; routing goes to the first unmet condition in order.
+261/261 tests pass (257 pre-existing unchanged, 4 new covering the
+conjunction). Full detail in `docs/history.md` (2026-09-15, "H005:
+conjunctive preconditions, Stage 1 built and green") and the H005 doc.
+
 **Order for the next session.**
-1. **Fix the self-referential-precondition gap** — same shape as the
-   lever-grounding fix: either reject a precondition whose `member` is
-   one of the relation's own `a`/`b`, or tag it the way `llm_ungrounded`
-   bets are tagged now so it loses priority without being dropped. Cheap,
-   free to verify (replay the same recorded traces), and the clearest
-   actionable lever this thread has produced.
-2. **A complementary prompt-side fix**: explain "moves under every action
+1. **H005 Stage 3 — the cd82 oracle, two conditions.** Build the
+   smallest two-condition oracle this stage's representation can express
+   and replay it against the same recorded seeds `H001`'s one-condition
+   oracle used (`docs/history.md` 2026-09-15, "Stage 2 of the replay-
+   ablation"). The question: does the agent now test the *complete*
+   hypothesis, not whether it solves cd82 — the second factor ("which
+   swatch is selected") may need a condition *kind* this stage doesn't
+   build (a persistent state check, not adjacency), which would itself
+   be a finding. Free — no new LLM calls, reuses `replay_ablation.py`.
+2. **Trace `ar25` seeds 3, 9, 10 directly** — the Case-D result says the
+   dropped hypotheses' *targets* carry real value on this game
+   specifically, but not *which* one or *why*. Read those three traces to
+   turn "the target carries value" from an inference into a mechanism,
+   the same way the self-referential finding was traced rather than left
+   as an aggregate percentage. Free — no new LLM calls, same recorded data.
+3. **Matched-seed sweep the self-referential fix** — same discipline as
+   every other fix this session: a mechanism verified for free is not
+   the same claim as a score effect, and the lever-grounding fix's own
+   result (mechanism correct, score flat-to-negative) is the reason not
+   to assume this one is different without checking.
+4. **Investigate why routing fails on a self-referential target** — the
+   deeper mechanical question the tag doesn't answer. Is the approach
+   pixel/offset genuinely unstable when the routing target is also one
+   of the two entities the tested action is acting on (a moving-target
+   problem), or is there an actual bug in `_route_to`/`_precondition_met`
+   worth fixing directly? Needs tracing one real case step by step.
+5. **A complementary prompt-side fix**: explain "moves under every action
    alike" in the schema/instructions explicitly, to reduce how often the
    model makes lever claims like this in the first place. Needs live
    model calls to verify (unlike everything above, which was free).
-3. Deferred (per the review's own sequencing, unchanged): the full
+6. Deferred (per the review's own sequencing, unchanged): the full
    event-sourcing rewrite of `recap.py`/logging beyond the LLM-trace piece
    already done; LLM call-purpose framing (model-discovery vs.
    hypothesis-discrimination vs. experiment-selection prompts);

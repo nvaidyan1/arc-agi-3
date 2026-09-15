@@ -822,11 +822,19 @@ class MyAgent(Agent):
         # until then the router carries the controlled thing to the member
         # it must be adjacent to, and those steps are recorded as
         # PRECONDITION_UNMET rather than as evidence against the bet.
+        # H005: a hypothesis may name several conditions (conjunctive —
+        # every one must hold); route toward the first one still unmet,
+        # in the order the proposer listed them. One step can only close
+        # the distance to one target, so a hypothesis with two unmet
+        # conditions spends several steps satisfying them in sequence,
+        # same as it would routing to one and then discovering a second.
         if h.precondition is not None:
-            h.pending_met = self._precondition_met(h)
-            if not h.pending_met:
-                step, note = self._route_to(h.precondition[1], candidates,
-                                            side=h.precondition[0].partition(":")[2])
+            unmet = [(cond, member) for cond, member in hypothesis.conditions_of(h.precondition)
+                     if not self._condition_met(cond, member)]
+            h.pending_met = not unmet
+            if unmet:
+                cond, member = unmet[0]
+                step, note = self._route_to(member, candidates, side=cond.partition(":")[2])
                 if step is not None:
                     step.reasoning = f"hypothesis: {h.describe()} — {note}"
                     self._arm_riders(step.name)
@@ -859,7 +867,7 @@ class MyAgent(Agent):
         live bets on the action forecast it differently."""
         for g in self.pool:
             if g.status == hypothesis.LIVE and g.action == action_name:
-                g.pending_met = g.precondition is None or self._precondition_met(g)
+                g.pending_met = self._precondition_met(g)
         if proposer_llm.diverges(self.pool + [self.hypothesis], action_name, self._precondition_met):
             self.proposer.discriminating += 1
 
@@ -937,9 +945,16 @@ class MyAgent(Agent):
         return {b.region_id for b in self.belief.by_role(belief.CONTROL)}
 
     def _precondition_met(self, h) -> bool:
-        """Is the controlled thing within ADJACENT_GAP of the precondition's
-        member right now? False when either is off screen."""
-        cond, member = h.precondition
+        """Are ALL of the hypothesis's precondition(s) satisfied right now?
+        H005: a hypothesis may name several conditions, read through
+        `hypothesis.conditions_of()`; conjunctive, so one unmet condition
+        makes the whole bet unmet, same as the single-condition case did."""
+        return all(self._condition_met(cond, member)
+                   for cond, member in hypothesis.conditions_of(h.precondition))
+
+    def _condition_met(self, cond: str, member: int) -> bool:
+        """Is the controlled thing within ADJACENT_GAP of `member`, on
+        `cond`'s side if it names one? False when either is off screen."""
         adjacency, _, side = cond.partition(":")
         tracked = self.regions._tracked
         if member not in self.regions.live or member not in tracked:

@@ -149,7 +149,8 @@ def parse_hypotheses(text: str, engine, live, legal: set[str], control: set[int]
         if rel not in RELATION_NAMES:
             rejects.append(Rejection("unknown relation", item)); continue
         a, b = _ids(item.get("a")), _ids(item.get("b"))
-        if a is None or b is None or not (set(a) | set(b)) <= live:
+        pair_members = (set(a) | set(b)) if a is not None and b is not None else set()
+        if a is None or b is None or not pair_members <= live:
             rejects.append(Rejection("entity not on screen", item)); continue
         ka = a[0] if len(a) == 1 else a
         kb = b[0] if len(b) == 1 else b
@@ -164,6 +165,7 @@ def parse_hypotheses(text: str, engine, live, legal: set[str], control: set[int]
             rejects.append(Rejection("action not legal (or a bare click)", item)); continue
         pre = item.get("precondition")
         precondition = None
+        self_referential = False
         if pre is not None:
             if not isinstance(pre, dict):
                 rejects.append(Rejection("precondition not an object", item)); continue
@@ -175,6 +177,22 @@ def parse_hypotheses(text: str, engine, live, legal: set[str], control: set[int]
             if not isinstance(member, int) or member not in live or member in control:
                 rejects.append(Rejection("precondition member not on screen or is the controlled thing", item)); continue
             precondition = (f"{adj}:{side}" if side else adj, member)
+            # Measured live, 2026-09-15 (bottleneck #4, second review §15):
+            # 12 of 17 LLM conditional hypotheses named a `member` that is
+            # one of the relation's own two entities -- e.g. distance(2,4)
+            # conditioned on being adjacent to #2 itself -- rather than a
+            # genuine third reference entity (cd82's real case: adjacent to
+            # the swatch while betting on the paint/block relation). Split
+            # this way, self-referential preconditions burned 50.9% of
+            # their budget on unmet routing; proper third-entity ones burned
+            # 0.0%, matching the enumerator exactly. Not rejected -- the
+            # lever-grounding fix tried outright rejection first and a
+            # matched-seed sweep leaned toward a small score cost, likely
+            # from losing exploration diversity the target still carried
+            # even with a confused precondition. Tagged instead, same
+            # mechanism as `llm_ungrounded`: it keeps its place in the pool
+            # and can still be tested, it just stops jumping the queue.
+            self_referential = member in pair_members
         if item.get("predicted") not in ("down", "zero"):
             rejects.append(Rejection("prediction not checkable (down|zero)", item)); continue
         fals = item.get("falsifier")
@@ -221,7 +239,12 @@ def parse_hypotheses(text: str, engine, live, legal: set[str], control: set[int]
         # tiebreak (which checks `source == "llm"`), so it no longer jumps
         # the queue ahead of a well-evidenced enumerator bet on the
         # strength of a fabricated "why" alone.
-        source = "llm" if not (precondition is None and rec.lever(_relations.DOWN) is None) else "llm_ungrounded"
+        if precondition is None and rec.lever(_relations.DOWN) is None:
+            source = "llm_ungrounded"
+        elif self_referential:
+            source = "llm_selfref"
+        else:
+            source = "llm"
         out.append(_hypothesis.Hypothesis(
             key=key, action=action, lift=conf, start=rec.residual,
             precondition=precondition, confidence=conf,
@@ -356,6 +379,11 @@ class LLMProposer:
         # separate from `rejects` because these are NOT rejections.
         self.stats["ungrounded"] = self.stats.get("ungrounded", 0) + \
             sum(1 for h in hyps if h.source == "llm_ungrounded")
+        # Same idea, for a precondition whose member is one of the
+        # relation's own two entities (bottleneck #4, 2026-09-15) --
+        # measured to burn ~51% of its budget on unmet routing.
+        self.stats["selfref"] = self.stats.get("selfref", 0) + \
+            sum(1 for h in hyps if h.source == "llm_selfref")
         for r in rejects:
             self.stats["rejects"][r.reason] = self.stats["rejects"].get(r.reason, 0) + 1
         entry.update(

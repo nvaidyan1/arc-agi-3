@@ -27,6 +27,16 @@ Two things this proves, in order:
      deterministic. That is the actual generation-vs-integration
      separation; this script is the harness it needs.
 
+`replay()`'s `drop_sources` param is one instance of (2): the model's raw
+replies stay byte-identical (nothing about generation changes), but any
+hypothesis `parse_hypotheses` would tag with a source in `drop_sources`
+(e.g. `llm_ungrounded`) is stripped before it ever reaches the pool. That
+holds generation fixed and only varies integration — a cleaner isolation
+than re-sweeping with the model called fresh, where a filtered call
+changes the pool, which changes the trajectory, which changes what the
+*next* live call even sees (third review,
+`docs/expert-reviews/reviewer_c_09_14_2026c.md` §14, case D).
+
 Usage:
     .venv/bin/python scripts/replay_ablation.py \\
         --from results/sweeps/20260914-225014-98208.json --game ar25
@@ -96,14 +106,39 @@ def load_recorded_replies(summary_path: Path, game: str) -> tuple[dict, list[str
             "original": entry, "n_calls": len(trace)}, replies
 
 
-def replay(game: str, seed: int, max_steps: int, replies: list[str]):
+_ORIGINAL_PARSE_HYPOTHESES = proposer_llm.parse_hypotheses
+
+
+def _filtered_parse_hypotheses(drop_sources: frozenset[str]):
+    """Wrap the real parser to drop hypotheses tagged with a source in
+    `drop_sources` *after* parsing — generation (the raw reply) is
+    untouched; only what gets past parsing into the pool changes."""
+    def _parse(text, engine, live, legal, control=frozenset()):
+        hyps, rejects = _ORIGINAL_PARSE_HYPOTHESES(text, engine, live, legal, control)
+        kept = [h for h in hyps if h.source not in drop_sources]
+        return kept, rejects
+    return _parse
+
+
+def replay(game: str, seed: int, max_steps: int, replies: list[str],
+           drop_sources: frozenset[str] = frozenset()):
     """Re-run `game` at `seed`, LLM proposer on, but with its client
     replaced by a `ScriptedClient` over the recorded replies — no network
-    call is ever made. Returns the agent after `main()` finishes.
+    call is ever made. Returns `(agent, arc)` after `main()` finishes;
+    `arc.get_scorecard()` gives this single game's score.
+
+    `drop_sources`: hypothesis sources (e.g. `{"llm_ungrounded"}`) to
+    strip after parsing, before they reach the pool — see the module
+    docstring's case-D note. Every call sets the module-global parser
+    explicitly (rather than restoring it after), since this script only
+    ever runs one replay at a time in-process, but a caller doing several
+    replays in one process should not assume state carries over silently.
 
     (Env vars are set at module import time, above — see the comment
     there for why setting them here would already be too late.)
     """
+    proposer_llm.parse_hypotheses = (
+        _filtered_parse_hypotheses(drop_sources) if drop_sources else _ORIGINAL_PARSE_HYPOTHESES)
     arc = arc_agi.Arcade(operation_mode=OperationMode.NORMAL)
     Cls = load_my_agent_class()
     Cls.MAX_ACTIONS = max_steps
@@ -118,7 +153,7 @@ def replay(game: str, seed: int, max_steps: int, replies: list[str]):
                           "up the env var (it reads it at import time).")
     agent.llm.client = proposer_llm.ScriptedClient(replies)
     agent.main()
-    return agent
+    return agent, arc
 
 
 def main() -> None:
@@ -133,7 +168,7 @@ def main() -> None:
     print(f"Replaying {args.game} seed={meta['seed']} max_steps={meta['max_steps']}: "
           f"{len(replies)} recorded reply(ies) from {meta['n_calls']} original call(s).")
 
-    agent = replay(args.game, meta["seed"], meta["max_steps"], replies)
+    agent, _arc = replay(args.game, meta["seed"], meta["max_steps"], replies)
 
     final = agent.frames[-1]
     orig = meta["original"]

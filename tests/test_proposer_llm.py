@@ -45,7 +45,10 @@ def reply(*items):
 
 
 GOOD = {"relation": "part_size_diff", "a": 3, "b": 4, "action": "ACTION5",
-        "precondition": {"adjacency": "adjacent", "side": "-x", "member": 4},
+        # member=5, a genuine third entity, not one of the pair (3, 4) --
+        # was `member=4` (self-referential, undetected until the check
+        # this exact case exists to test was added, 2026-09-15).
+        "precondition": {"adjacency": "adjacent", "side": "-x", "member": 5},
         "predicted": "down", "falsifier": "part_size_diff(3,4) does not fall after 3 adjacent presses",
         "confidence": 0.7, "why": "painting changes proportions"}
 
@@ -57,7 +60,7 @@ def test_a_well_formed_hypothesis_becomes_a_hypothesis():
     assert not rejects and len(hyps) == 1
     h = hyps[0]
     assert h.key == ("part_size_diff", 3, 4) and h.action == "ACTION5"
-    assert h.precondition == ("adjacent:-x", 4)
+    assert h.precondition == ("adjacent:-x", 5)
     assert h.source == "llm" and h.confidence == 0.7 and h.start == 30
     assert "adjacent presses" in h.falsifier
 
@@ -115,13 +118,41 @@ def test_an_unconditional_claim_on_a_pair_with_a_real_lever_is_tagged_grounded()
     assert not rejects and len(hyps) == 1 and hyps[0].source == "llm"
 
 
+def test_a_self_referential_precondition_is_tagged_not_rejected():
+    # Bottleneck #4 (second review §15, "exploration policy"), measured
+    # live 2026-09-15: 12 of 17 LLM conditional hypotheses named a
+    # precondition `member` that is one of the relation's own two
+    # entities (e.g. distance(2,4) conditioned on being adjacent to #2
+    # itself) rather than a genuine third reference entity -- and split
+    # this way, those burned 50.9% of their budget on unmet routing vs.
+    # 0.0% for proper third-entity ones. Tagged, not rejected, same
+    # reasoning as `llm_ungrounded`: the target can still carry value
+    # even with a confused precondition, so it keeps its place in the
+    # pool and only loses select_experiment's priority tiebreak.
+    e = Engine(**{'("distance", 1, 2)': rec(20)})
+    item = dict(GOOD, relation="distance", a=1, b=2, precondition={"adjacency": "adjacent", "member": 2})
+    hyps, rejects = pl.parse_hypotheses(reply(item), e, LIVE, LEGAL, control={1})
+    assert not rejects and len(hyps) == 1 and hyps[0].source == "llm_selfref"
+    assert hyps[0].precondition == ("adjacent", 2)     # the claim itself is kept intact
+
+
+def test_a_self_referential_precondition_still_checks_the_group_case():
+    # `a`/`b` can be id lists for a group; self-reference must be checked
+    # against the union of both, not just the bare id.
+    e = Engine(); e.group_records[("part_size_diff", (5, 6), (10, 12))] = rec(30)
+    item = dict(GOOD, relation="part_size_diff", a=[5, 6], b=[10, 12],
+                precondition={"adjacency": "adjacent", "member": 6})
+    hyps, rejects = pl.parse_hypotheses(reply(item), e, {1, 5, 6, 10, 12}, LEGAL, control={1})
+    assert not rejects and hyps[0].source == "llm_selfref"
+
+
 def test_a_conditional_claim_is_always_tagged_grounded_regardless_of_lever():
     # The one case the model IS allowed to say something the tallies alone
     # don't already show -- a genuinely new claim (e.g. cd82's swatch-state
     # factor), not a restatement contradicting the brief's own text. Never
     # downgraded to "llm_ungrounded", whatever the pair's own lever status.
     e = Engine(**{'("distance", 1, 2)': rec(20)})       # still no lever at all
-    item = dict(GOOD, relation="distance", a=1, b=2, precondition={"adjacency": "adjacent", "member": 2})
+    item = dict(GOOD, relation="distance", a=1, b=2, precondition={"adjacency": "adjacent", "member": 3})
     hyps, rejects = pl.parse_hypotheses(reply(item), e, LIVE, LEGAL, control={1})
     assert not rejects and len(hyps) == 1 and hyps[0].source == "llm"
 

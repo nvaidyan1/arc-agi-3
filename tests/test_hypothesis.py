@@ -198,3 +198,59 @@ def test_the_proposer_bets_on_a_conditional_lever_with_its_precondition():
     assert h is not None and h.action == "ACTION5"
     assert h.precondition == ("adjacent:-y", 2)
     assert "when adjacent on side -y of #2" in h.describe()
+
+
+# ── conjunctive preconditions (H005) ─────────────────────────────────────
+# Every proposer above still builds one bare (cond, member) pair -- neither
+# changed. `conditions_of`/`describe_conditions` are the normalization that
+# lets a hand-built hypothesis (research/hypotheses/H005) carry SEVERAL
+# such pairs, conjunctively, without every existing reader needing to know
+# which shape it's looking at.
+
+def test_conditions_of_normalizes_every_precondition_shape():
+    assert hypothesis.conditions_of(None) == ()
+    assert hypothesis.conditions_of(()) == ()
+    assert hypothesis.conditions_of(("adjacent:-x", 2)) == (("adjacent:-x", 2),)
+    multi = (("adjacent:-x", 2), ("adjacent:+y", 5))
+    assert hypothesis.conditions_of(multi) == multi
+
+
+def test_describe_conditions_joins_several_with_and():
+    multi = (("adjacent:-x", 2), ("adjacent:+y", 5))
+    assert (hypothesis.describe_conditions(multi)
+            == " when adjacent on side -x of #2 and adjacent on side +y of #5")
+    assert hypothesis.describe_conditions(multi, exclusive=True).startswith(" only when")
+    assert hypothesis.describe_conditions(None) == ""
+    assert hypothesis.describe_conditions(()) == ""
+
+
+def test_describe_carries_a_conjunctive_precondition():
+    h = make(10)
+    h.precondition = (("adjacent:-x", 2), ("adjacent:+y", 5))
+    assert "adjacent on side -x of #2 and adjacent on side +y of #5" in h.describe()
+
+
+def test_a_conjunctive_precondition_requires_every_condition_met():
+    """`_precondition_met` (agent/my_agent.py) ANDs over `conditions_of` --
+    the mechanism this session's H005 doc calls the smallest extension
+    that carries a two-factor rule end to end. #2 is adjacent to the
+    controlled thing throughout; #5 starts far away, so the conjunction
+    must read False even though one of its two conditions already holds,
+    then True once both do."""
+    import my_agent
+    from types import SimpleNamespace
+    a = object.__new__(my_agent.MyAgent)
+    a.regions = SimpleNamespace(live={1, 2, 5}, _tracked={
+        1: (3, [(0, 0)]),       # the controlled thing
+        2: (1, [(1, 0)]),       # adjacent throughout
+        5: (2, [(100, 100)]),   # far, moved adjacent below
+    })
+    a._control_ids = lambda: {1}
+    h = make(10)
+    h.precondition = (("adjacent", 2), ("adjacent", 5))
+    assert a._condition_met("adjacent", 2) is True
+    assert a._condition_met("adjacent", 5) is False
+    assert a._precondition_met(h) is False
+    a.regions._tracked[5] = (2, [(0, 1)])
+    assert a._condition_met("adjacent", 5) is True
+    assert a._precondition_met(h) is True

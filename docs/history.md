@@ -2752,3 +2752,114 @@ the hypothesis. The bottleneck-#4 finding is the actionable one going
 forward: self-referential preconditions are a large, clean, cheap-to-fix
 defect, independent of cd82's specific ceiling. Full detail in
 `research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-15 — The self-referential-precondition fix
+
+**Hypothesis.** The bottleneck-#4 finding (previous entry: 50.9% vs 0.0%
+unmet for self-referential vs. third-entity preconditions) is directly
+fixable the same way the lever-grounding problem was.
+
+**Built.** `parse_hypotheses` tags a precondition whose `member` is one
+of the relation's own two entities as `source="llm_selfref"` rather than
+rejecting it -- the target may still carry exploration value even with a
+confused precondition, and outright rejection already cost a little
+score once. The tag removes only `select_experiment`'s untested-LLM
+priority, same mechanism as `llm_ungrounded`. Caught along the way:
+`GOOD`, the test suite's own baseline "well-formed" fixture, had a
+self-referential precondition that had gone unnoticed until this exact
+check existed. 257 tests.
+
+**Verified** against the real recorded run that found the problem, no
+new LLM calls: both previously-mistagged hypotheses now correctly tagged
+`llm_selfref`. One of them still expired 8-of-8 unmet -- the fix removes
+the crowding-out, not the underlying routing failure, and that
+distinction is deliberate: this closes the priority half of bottleneck
+#4, not the why-does-routing-fail-here half.
+
+**Inference.** Mechanism confirmed. Not matched-seed swept yet -- given
+the lever-grounding fix's own lesson, that needs to happen before any
+claim about score effect. Full detail in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-15 — A third reviewer-C pass, and Case D actually run
+
+**Hypothesis.** A third external review
+(`docs/expert-reviews/reviewer_c_09_14_2026c.md`) proposed an ablation
+ladder (A: no LLM: B: LLM suggestions recorded but ignored; C: current
+system; D: the exact hypotheses a real run generated, replayed against a
+deterministic agent) to separate LLM generation quality from LLM
+integration quality -- case D specifically, because the four live
+matched-seed sweeps already run this session confound the two: each arm
+re-calls the model, so a filtered hypothesis changes the pool, which
+changes the trajectory, which changes what the *next* live call sees.
+Holding the model's raw output byte-identical and varying only what
+integration does with it should isolate the effect cleanly.
+
+**Built.** `replay_ablation.replay()` gained `drop_sources`: monkeypatches
+`parse_hypotheses` to strip hypotheses by tagged source *after* parsing,
+so generation is untouched and only the pool composition changes.
+`scripts/replay_ablation_grounded.py` replays all 50 (game, seed) cells
+from the current soft arm's 10 sweep summaries twice each -- identically,
+then with `llm_ungrounded`/`llm_selfref` dropped -- with no new LLM calls.
+
+**Observation.** Baseline replay reproduced the original recorded outcome
+in 50/50 cells (Stage 1's exact-match finding, now at n=50 instead of 5).
+44 of 50 cells show zero score difference from dropping ungrounded/
+self-ref content -- including `tu93` and `cd82`, which carry most of the
+ungrounded volume (43 and 33 instances respectively). The effect is
+almost entirely on `ar25` (5 of 6 nonzero cells, one small `cn04` cell):
+mean score 0.0761 -> 0.0470, wins 2 / losses 4 / ties 44, sign-test
+p=0.6875 (not significant at this n), but the three losses (seeds 3, 9,
+10) are exactly the seeds that produced `ar25`'s best scores in the soft
+arm.
+
+**Inference.** A cleaner version of the strict-reject sweep's finding
+("correct, not a score win") with the resampling confound removed: even
+with the model's output held fixed, the ungrounded-tagged hypotheses are
+doing real work on `ar25` specifically, not acting as inert noise. The
+effect the 25-game aggregates keep diluting into insignificance looks
+real but concentrated on one game -- the same lesson already stated for
+other changes in `docs/plan.md`'s protocol note. Full detail, including
+the per-cell table, in `research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-15 — H005: conjunctive preconditions, Stage 1 built and green
+
+**Hypothesis.** A reframing of the Case-D result proposed three
+interventions (richer hypotheses, information-directed experiment
+selection, a predictive model loop); two of those already have a name
+and a result here (`H003`'s predictor already named state-dependent
+geometry, not vocabulary, as its gap; `H004`'s rival hypotheses already
+tried discrimination and got a mixed, unpaired result), so H005 was
+scoped down to the one piece with a direct measured gap behind it: the
+cd82 oracle (`H001`) proved the precondition schema cannot express a
+two-factor rule, independent of proposer quality. Opened as
+`research/hypotheses/H005_compositional_preconditions.md`.
+
+**Built.** `Hypothesis.precondition` keeps its existing single-pair
+shape for every current producer (enumerator, LLM parser -- neither
+touched); `hypothesis.conditions_of()`/`describe_conditions()` normalize
+either a bare pair or a tuple of pairs into a uniform iterable, so
+presence-only checks elsewhere (`forecast`, `rival`, `select_experiment`,
+`diverges`) needed no change at all. `MyAgent._precondition_met` now
+conjoins a new `_condition_met(cond, member)` (the old per-condition
+body) over every pair; `_hypothesis_action`'s routing goes to the first
+still-unmet condition in order. `proposer_llm.py` and the enumerator's
+conditional-lever tallying are untouched.
+
+**Tested.** `_precondition_met`/`_condition_met` had zero prior unit
+coverage (this layer was only ever validated through live/replayed
+games); added a minimal harness (`object.__new__(MyAgent)` +
+`SimpleNamespace`, the same trick `_agent_with` already uses) proving
+the conjunction: one condition met and one far away reads `False`,
+moving the far entity adjacent flips it `True`. Plus normalization/
+describe tests. **261/261 tests pass, all 257 pre-existing ones
+unchanged** -- zero behavioural change for every existing hypothesis.
+
+**Inference.** Stage 1 (representation + tests) is done. Next is Stage
+3, the actual mechanism test: replay a hand-built two-condition cd82
+oracle against the same recorded seeds `H001`'s one-condition oracle
+used, to see whether the agent can now test the *complete* rule -- not
+whether it solves cd82, which may still need a condition *kind* this
+stage doesn't build (adjacency-shaped conjunction, not an "entity is in
+state X" check). Full detail in
+`research/hypotheses/H005_compositional_preconditions.md`.

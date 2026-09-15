@@ -49,6 +49,38 @@ SUPPORTED, UNMET, INCONCLUSIVE, AGAINST = "supported", "precondition_unmet", "in
 NOT_DOWN = "not_down"
 
 
+def conditions_of(precondition) -> tuple:
+    """Normalize `precondition` into a tuple of `(cond, member)` pairs,
+    regardless of which shape produced it.
+
+    H005: every proposer built so far (enumerator, LLM) stores a single
+    pair directly — `precondition = ("adjacent:-y", 7)` — because no
+    hypothesis has ever needed more than one condition. That shape is
+    kept as-is (no proposer changed) rather than forced through a
+    wrapping convention at construction time, so this is the one place
+    that understands both: a bare pair (its first element is the
+    condition string) is one condition; anything else is already a tuple
+    of pairs (H005's conjunctive case — every named condition must hold).
+    `None` and `()` both normalize to no conditions."""
+    if not precondition:
+        return ()
+    if isinstance(precondition[0], str):
+        return (precondition,)
+    return tuple(precondition)
+
+
+def describe_conditions(precondition, exclusive: bool = False) -> str:
+    """The human-readable clause `Hypothesis.describe()` and the brief's
+    hypothesis log both want: "" with none, "only when X of #7" with one,
+    "only when X of #7 and Y of #12" with several (H005, conjunctive)."""
+    conds = conditions_of(precondition)
+    if not conds:
+        return ""
+    only = "only " if exclusive else ""
+    clauses = " and ".join(f"{c.replace(':', ' on side ')} of #{m}" for c, m in conds)
+    return f" {only}when {clauses}"
+
+
 @dataclass
 class Hypothesis:
     key: tuple                  # (relation, a, b)
@@ -58,8 +90,12 @@ class Hypothesis:
     budget: int = HYPOTHESIS_BUDGET
     history: list = field(default_factory=list)
     status: str = LIVE
-    # ("adjacent", member_id): the controlled thing must be within
-    # ADJACENT_GAP of this member before the action counts as a test.
+    # A single ("adjacent", member_id) pair, or (H005) a tuple of such
+    # pairs meaning their conjunction — the controlled thing must be
+    # within ADJACENT_GAP of EVERY named member before the action counts
+    # as a test. Read through `conditions_of()`, never indexed directly:
+    # that is what lets both shapes coexist without every proposer or
+    # consumer needing to know which one produced a given hypothesis.
     precondition: tuple | None = None
     outcomes: list = field(default_factory=list)   # per step: SUPPORTED / AGAINST / UNMET / INCONCLUSIVE
     pending_met: bool = True                       # set by the policy at decision time
@@ -158,8 +194,7 @@ class Hypothesis:
     def describe(self) -> str:
         rel, a, b = self.key
         name = lambda k: ("{" + ",".join(f"#{m}" for m in k) + "}") if isinstance(k, tuple) else f"#{k}"  # noqa: E731
-        cond = (f" {'only ' if self.exclusive else ''}when {self.precondition[0].replace(':', ' on side ')} of #{self.precondition[1]}"
-                if self.precondition else "")
+        cond = describe_conditions(self.precondition, self.exclusive)
         basis = f"lever +{self.lift:.0%}" if self.source == "enumerator" else f"{self.source}, confidence {self.confidence:.0%}"
         return (f"drive {rel}({name(a)},{name(b)}) {self.start}->0 with {self.action}{cond} "
                 f"({basis}), step {self.spent}/{self.budget}, now {self.current}")
