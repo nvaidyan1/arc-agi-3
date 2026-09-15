@@ -224,3 +224,50 @@ def test_ledger_summary_is_json_able():
     s = json.loads(json.dumps(p.game.summary()))
     assert s[ENTITY]["accuracy"] == 1.0 and s["by_action"]["ACTION1"][ENTITY] == [1, 0]
     assert PREDICT_MIN_TRIES == 4
+
+
+# ── k-step rollouts (H008) ───────────────────────────────────────────────
+
+def test_effect_table_and_rollout_read_the_same_tallies():
+    import belief as _belief
+    import predictor as _predictor
+    w = _belief.WorldBelief()
+    b = w._beliefs[7] = _belief.Belief(7, 3)
+    for _ in range(4):
+        b.observe("ACTION1", _belief.MOVED, (_belief.MOVED, 1, 0))
+    for _ in range(4):
+        b.observe("ACTION2", None)                       # unchanged, four times
+    b.observe("ACTION3", _belief.GREW, (_belief.GREW,))  # one try: below the floor
+    table = _predictor.effect_table(w)
+    assert table[7]["ACTION1"] == ((_belief.MOVED, 1, 0), 1.0)
+    assert table[7]["ACTION2"] == (_belief.UNCHANGED, 1.0)
+    assert "ACTION3" not in table[7]
+    assert _predictor.rollout(table[7], ["ACTION1", "ACTION2", "ACTION1"]) == [
+        (_belief.MOVED, 1, 0), _belief.UNCHANGED, (_belief.MOVED, 1, 0)]
+    assert _predictor.rollout(table[7], ["ACTION1", "ACTION3"]) is None
+
+
+def test_rollouts_are_scored_from_the_table_at_the_windows_start():
+    """A 3-step rollout is a hit only if all three per-step effects are
+    right; an entity that leaves the screen inside the window is
+    undecidable; a window is never scored across an attempt boundary."""
+    import belief as _belief
+    import predictor as _predictor
+    p = _predictor.Predictor()
+    row = {"ACTION1": ((_belief.MOVED, 1, 0), 1.0), "ACTION2": (_belief.UNCHANGED, 1.0)}
+    moved, still = (_belief.MOVED, 1, 0), _belief.UNCHANGED
+    steps = [("ACTION1", moved), ("ACTION2", still), ("ACTION1", moved),   # 3 right
+             ("ACTION1", still)]                                           # then one wrong
+    for action, actual in steps:
+        p._windows.append(({7: row}, action, {7: actual}))
+        p._score_rollouts()
+    assert p.game.horizon[1][:2] == [3, 1]
+    assert p.game.horizon[3][:2] == [1, 1]          # steps 1-3 hit, steps 2-4 miss
+    assert p.game.horizon[10][:2] == [0, 0]         # window not yet long enough
+    p._windows.append(({7: row}, "ACTION2", {}))    # #7 gone this step
+    p._score_rollouts()
+    assert p.game.horizon[1][2] == 1                # undecidable
+    p.new_attempt()
+    assert len(p._windows) == 0
+    summary = p.game.summary()["horizon"]
+    assert summary["1"]["hits"] == 3 and summary["3"]["accuracy"] == 0.5

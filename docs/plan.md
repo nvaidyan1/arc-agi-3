@@ -595,9 +595,31 @@ day, it does not skip it.**
    valid" and "score". Deliverable: k-step rows in `prediction` in sweep
    summaries; the brief's PREDICTED shows k=3. Gate (H008 P1): up on the
    aliased games, flat on the 0% controls.
-6. **The level boundary reads state (no hypothesis number yet — a
-   consumer build, not a claim; becomes one in week 2 if it earns a
-   prior).** `BoundarySupervisor.on_advance`
+   **Done 2026-09-15.** Live rollout scoring shipped (`Predictor.
+   horizon`, every sweep summary); offline scorer verified exact against
+   a live sweep. Controls flat (P1's negative half, met); 5 of 10 aliased
+   games gain 2-7 points at k=10 from Z1, 4 gain nothing (a per-seed vs
+   H006's pooled admission gap, not a contradiction). k=10 cleanly
+   separates games with a learned move map (57-90%) from those without
+   (14-66%); cd82 mid-table, matching H009.
+6. **The planner factorial on cd82 — H009** (added 2026-09-15 evening
+   from a reviewer proposal the user relayed, after Day 4 showed the
+   *walk* is what fails). Separate representation, transition model and
+   search: E0 is the bucket's motion a function of (position, action)?
+   E1 learned moves + oracle target + `navigation.plan`; E2 the empirical
+   position graph + oracle target + BFS. Readings: A (all fine, the gap
+   is goal selection), B (the model class — one offset per action — is
+   insufficient), C (position is not the state). Offline over the cd82
+   traces; live only if ambiguous. `research/hypotheses/H009_planner_factorial.md`.
+   The level-boundary-reads-state build moves to week 2 (no claim to
+   test yet).
+   **Done 2026-09-15, reading B.** E0: 8 orbit positions, motion 32/32
+   deterministic in (position, action), not in the action alone. E2: a
+   −x target reachable from every position in ≤ 3. E1: the learned map
+   is four 11-cell axis moves; 0 of 1,244 plans honoured at the first
+   step (59% would arrive if followed blindly, but the router drops
+   each after one mismatch). The transition model's *class* is the
+   defect; fix = a position-graph model for the CONTROL thing, week 2. `BoundarySupervisor.on_advance`
    records, beside the falling residuals, every variable's value at the
    advance and its last change in the window — "what state transition
    preceded success" (review §8). Consumer: the proposer's ranking prior,
@@ -619,7 +641,11 @@ alike" fix; the event-sourcing rewrite. All routing / LLM polish — rank
 (`docs/expert-reviews/UI_instruction.md`) is shelved until the latent
 layer exists — see Shelved ideas.
 
-**Week 2 candidates, only if Day 7's gate passes.** Planning through the
+**Week 2 candidates, only if Day 7's gate passes.** First, from H009: a
+**position-graph transition model** for the CONTROL thing —
+`(position, action) -> position'`, admitted where deterministic (H006's
+rule), searched by `navigation.plan` unchanged — the one defect the
+factorial isolated on cd82. Then planning through the
 model — depth 2–4 rollout ranking, the "local transition simulator" from
 On hold, now with a state to simulate. Information gain as a utility term
 beside progress, with weights that shift with epistemic state (H004's

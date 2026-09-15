@@ -48,6 +48,15 @@ SURPRISES_KEPT = 5
 
 ENTITY, PAIR = "entity", "pair"
 LAYERS = (ENTITY, PAIR)
+# H008: how far the entity forecast can be rolled forward. A k-step
+# prediction is the per-step effect for each of the next k actions,
+# composed from the tallies as they stood at the window's start, and it
+# is a hit only if every step is right — "can the model roll forward k
+# steps without error", the predictive-sufficiency reading reviewer C
+# asked for (2026-09-15, second note §13). No simulator: the tallies do
+# not depend on the imagined state, so this measures exactly how much of
+# the future the tallies alone carry.
+HORIZONS = (1, 3, 10)
 
 
 @dataclass
@@ -57,6 +66,41 @@ class Forecast:
     entities: dict = field(default_factory=dict)   # rid -> (outcome, confidence)
     pairs: dict = field(default_factory=dict)      # key -> (direction, confidence, conditional)
     abstained: dict = field(default_factory=lambda: {ENTITY: 0, PAIR: 0})
+    table: dict = field(default_factory=dict)      # rid -> action -> (effect, confidence), H008
+
+
+def effect_table(belief) -> dict:
+    """Per live entity, per action tried PREDICT_MIN_TRIES times on it, the
+    effect it most often had and how often. The one-step forecast is this
+    table read at one action; a rollout reads it along a sequence."""
+    table: dict = {}
+    for b in belief._beliefs.values():
+        if not b.live:
+            continue
+        row = {}
+        for action, n in b.acted.items():
+            if n < PREDICT_MIN_TRIES:
+                continue
+            counts = dict(b.effects.get(action, {}))
+            unchanged = n - b.changed.get(action, 0)
+            if unchanged:
+                counts[_belief.UNCHANGED] = unchanged
+            best = max(counts, key=counts.get)
+            row[action] = (best, counts[best] / n)
+        if row:
+            table[b.region_id] = row
+    return table
+
+
+def rollout(row: dict, actions) -> list | None:
+    """The predicted effect at each of `actions`, for one entity, from its
+    table row — or None (abstain) when any action is unforecastable."""
+    out = []
+    for a in actions:
+        if a not in row:
+            return None
+        out.append(row[a][0])
+    return out
 
 
 class Ledger:
@@ -90,6 +134,9 @@ class Ledger:
         # on cd82 the misses concentrate in one cell of it.
         self.cells: dict[tuple, list[int]] = {}
         self.steps = 0
+        # H008: k -> [hits, misses, undecidable, abstained] for entity
+        # rollouts over the last k actions.
+        self.horizon: dict[int, list[int]] = {k: [0, 0, 0, 0] for k in HORIZONS}
 
     def record(self, layer: str, hit: bool, confidence: float, action: str,
                relation: str | None = None, conditional: bool | None = None,
@@ -143,6 +190,12 @@ class Ledger:
         out["moving"] = {l: list(v) for l, v in self.moving.items()}
         out["moved"] = {l: list(v) for l, v in self.moved.items()}
         out["cells"] = {f"{a} {r}": list(v) for (a, r), v in self.cells.items()}
+        out["horizon"] = {str(k): {"hits": v[0], "misses": v[1], "undecidable": v[2],
+                                   "abstained": v[3],
+                                   "accuracy": _r(v[0] / (v[0] + v[1])) if v[0] + v[1] else None,
+                                   "coverage": _r((v[0] + v[1]) / (v[0] + v[1] + v[3]))
+                                   if v[0] + v[1] + v[3] else None}
+                          for k, v in self.horizon.items()}
         return out
 
 
@@ -162,30 +215,34 @@ class Predictor:
         self.surprises: deque = deque(maxlen=SURPRISES_KEPT)
         # The most recent step's counts, recording only.
         self.last: dict = {}
+        # H008: the last HORIZONS[-1] scored steps — (table at forecast
+        # time, action, actual effects) — so a k-step rollout made at the
+        # window's start can be scored against what then happened.
+        self._windows: deque = deque(maxlen=max(HORIZONS))
 
     def new_level(self) -> None:
         self.level = Ledger()
         self.surprises.clear()
+        self._windows.clear()
+
+    def new_attempt(self) -> None:
+        """A RESET: the steps before it are not the run-up to what follows."""
+        self._windows.clear()
 
     # ── before ──────────────────────────────────────────────────────────
 
     def forecast(self, belief, engine, action: str) -> Forecast:
         """What `action` will do, from the tallies as they stand. Call
         before the layers fold the resulting frame in."""
-        fc = Forecast(action=action)
+        fc = Forecast(action=action, table=effect_table(belief))
         for b in belief._beliefs.values():
             if not b.live:
                 continue
-            n = b.acted.get(action, 0)
-            if n < PREDICT_MIN_TRIES:
+            row = fc.table.get(b.region_id, {})
+            if action not in row:
                 fc.abstained[ENTITY] += 1
                 continue
-            counts = dict(b.effects.get(action, {}))
-            unchanged = n - b.changed.get(action, 0)
-            if unchanged:
-                counts[_belief.UNCHANGED] = unchanged
-            best = max(counts, key=counts.get)
-            fc.entities[b.region_id] = (best, counts[best] / n)
+            fc.entities[b.region_id] = row[action]
         for key, members in engine.updated.items():
             rel = key[0]
             if rel in _relations.EVIDENCE_ONLY or rel == "distance_drift":
@@ -247,8 +304,34 @@ class Predictor:
             if not hit and conf >= SURPRISE_CONFIDENCE:
                 self.surprises.append((step, fc.action, _name(key), predicted,
                                        f"{actual} {rec.previous}->{rec.residual}", conf))
+        self._windows.append((fc.table, fc.action, dict(actual_effects)))
+        self._score_rollouts()
         self.last = counts
         return counts
+
+    def _score_rollouts(self) -> None:
+        """For each horizon k that the window covers: the rollout made from
+        the table as it stood k steps ago, along the k actions actually
+        taken, against the k effects actually recorded, per entity."""
+        window = list(self._windows)
+        for k in HORIZONS:
+            if len(window) < k:
+                continue
+            table0, actions = window[-k][0], [w[1] for w in window[-k:]]
+            for rid, row in table0.items():
+                actual = [w[2].get(rid) for w in window[-k:]]
+                if any(a is None for a in actual):
+                    self._horizon(k, 2)          # left the screen: undecidable
+                    continue
+                pred = rollout(row, actions)
+                if pred is None:
+                    self._horizon(k, 3)          # abstained
+                    continue
+                self._horizon(k, 0 if pred == actual else 1)
+
+    def _horizon(self, k: int, slot: int) -> None:
+        for ledger in (self.game, self.level):
+            ledger.horizon[k][slot] += 1
 
     def _record(self, layer, hit, conf, action, relation=None, conditional=None,
                 predicted_change=False, actual_change=False) -> None:
@@ -281,6 +364,10 @@ class Predictor:
             out.append(f"  nothing forecast yet (fewer than {PREDICT_MIN_TRIES} tries of an action on any thing)")
             return out
         out.extend(parts)
+        hz = [(k, v) for k, v in led.horizon.items() if v[0] + v[1]]
+        if hz:
+            out.append("  rolled forward: " + ", ".join(
+                f"{k} step{'s' if k > 1 else ''} {v[0] / (v[0] + v[1]):.0%} of {v[0] + v[1]}" for k, v in hz))
         c, u = led.conditional, led.unconditional
         if sum(c) and sum(u):
             out.append(f"  relations with a precondition {c[0] / sum(c):.0%} of {sum(c)}, without {u[0] / sum(u):.0%} of {sum(u)}")

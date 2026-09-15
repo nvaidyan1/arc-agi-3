@@ -15,4 +15,5 @@ chronological record; these are the scientific claims it tests.
 | H005 | Conjunctive preconditions — carrying a two-factor rule intact | IN PROGRESS — mechanism confirmed live on cd82; needs a second condition kind (state, not adjacency) |
 | H006 | The aliasing is state, not noise — a few history-set variables resolve it | TESTED (Days 1–3) — holds for the meter class: `Z1 = actions since reset` confirmed with repeats on 6 games; mechanic remainder unresolved by the history family |
 | H007 | A `state` condition kind — a two-factor rule becomes jointly satisfiable | TESTED (Day 4) — mechanism 3/3 seeds, P1 met 1/3; the walk, not the state, now limits joint satisfiability on cd82 |
-| H008 | State in the tallies raises k-step predictive sufficiency, only where state exists | OPENED — Days 5, 7; needs H007's tallies |
+| H008 | State in the tallies raises k-step predictive sufficiency, only where state exists | TESTED (Day 5) — Z1 gains 2-7pt at k=10 on 5/10 aliased games, 0 on controls; move-map games separate cleanly at k=10 |
+| H009 | cd82's walk fails in the planner's model class, not the representation or the search | TESTED — reading B: position sufficient, walk exists (≤3), 0/1,244 plans honoured; fix = position-graph transition model (week 2) |

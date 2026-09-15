@@ -47,6 +47,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "agent"))
 
 from alias_probe import _action_key, _hash, _load  # noqa: E402
+import predictor as _predictor  # noqa: E402
 
 
 # ── trace ───────────────────────────────────────────────────────────────
@@ -90,6 +91,12 @@ def state_of(agent) -> dict:
         # The score of the forecast made at the previous decision, against
         # this frame: {layer: {hits, misses, undecidable, abstained}}.
         "forecast_score": agent.predictor.last or None,
+        # H008: the effect table the NEXT forecast will be read from, and
+        # what the previous action actually did — enough to score k-step
+        # rollouts offline with the same `predictor.rollout` the agent uses.
+        "effects": {str(rid): {a: [list(e), round(c, 3)] for a, (e, c) in row.items()}
+                    for rid, row in _predictor.effect_table(agent.belief).items()},
+        "last_effects": {str(rid): list(e) for rid, e in agent.belief.last_effects.items()},
     }
 
 

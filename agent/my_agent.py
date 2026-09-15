@@ -305,6 +305,7 @@ class MyAgent(Agent):
         self.moves.reset_position()
         self.clicks.reset_attempt()
         self.route.clear()
+        self.predictor.new_attempt()
         # Tell the tracker, so the next frame is matched against the
         # attempt's starting layout and identities survive the teleport.
         self.regions.expect_home()

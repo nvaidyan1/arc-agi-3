@@ -3080,3 +3080,70 @@ state-conditioned lever until the state varies under exploration (6
 strip clicks in 4,000 steps), which is the information-gain item, week
 2. H007's P1 met on one seed of three; mechanism on three of three.
 Tables in `research/hypotheses/H007_state_condition.md`.
+
+## 2026-09-15 — H009: the planner factorial on cd82 — reading B
+
+**Hypothesis.** (Reviewer proposal relayed by the user.) Separate
+representation, transition model and search before changing any of
+them: is the bucket's motion a function of (position, action)? does a
+walk to the block's −x side exist in the empirical position graph? and
+what does the agent's own planner produce for the same task?
+
+**Built.** `scripts/h009_planner.py`: E0/E2 over the S_t traces; E1 a
+cd82 tap recording, at every decision of ten real runs, the full path
+`_route_to(block, "-x")` would follow (same pixel math, same
+`navigation.plan`, same move and obstacle maps), validated offline
+through the empirical graph.
+
+**Observation.** E0: 8 orbit positions, 32/32 contexts deterministic
+across ten seeds; each action has 5 distinct deltas. E2: a target is
+reachable from every one of 1,779 decisions in ≤ 3 actions. E1: the
+learned map is four 11-cell axis moves; paths returned on 70% of
+decisions; 0 of 1,244 honoured at the first step; followed blindly, 59%
+would still arrive — but the live router drops every plan after one
+mismatched step and re-plans, so the hops never chain.
+
+**Inference.** Reading B, cleanly: position is the state, the condition
+is expressible, BFS finds the walk in the right graph, and the one
+thing that fails is the transition model's *class* — one offset per
+action cannot represent a hop that depends on where you stand. H003
+named state-dependent geometry as the predictor's largest error; this
+is the same fact as a causal test with a concrete fix: a position-graph
+transition model for the CONTROL thing, admitted where deterministic,
+searched by the planner as it is. First item for week 2. Full table in
+`research/hypotheses/H009_planner_factorial.md`.
+
+## 2026-09-15 — H008 Day 5: k-step rollout scoring, live and offline, ten seeds
+
+**Hypothesis.** A rollout of the existing one-step forecast — apply
+predicted entity effects along k actions actually taken, compare to what
+happened — measures how much of the future the tallies carry, and rises
+on the meter games once Z1 (H006) is added while staying flat on the
+0%-aliased controls.
+
+**Built.** `predictor.HORIZONS=(1,3,10)`, `Ledger.horizon`,
+`Predictor._score_rollouts` scoring from `_windows` (cleared on RESET
+and on a level change) in every live sweep summary and the brief.
+`scripts/latent_rollout.py`: the same metric offline from S_t traces,
+verified exact against a live sweep (su15 seed 1, both arms match to the
+integer); a second arm adds Z1, admitted per entity when that entity's
+history in the trace is a deterministic function of it.
+
+**Observation.** Ten seeds, thirteen games. Controls (sp80, ls20, ar25 —
+0% aliased) move 0 points from Z1, as predicted. Five aliased games gain
+2–7 points at k=10 (g50t +6, m0r0 +7, cn04 +7, ka59 +5, cd82 +3, dc22
++2); four gain nothing (wa30, sc25, sk48, su15) despite wa30 being one
+of H006's six pooled-and-confirmed meter games — this scorer admits Z1
+per entity within one seed's trace only, a smaller information budget
+than H006's ten-seed pooled splitter, not a contradiction. k=10 accuracy
+cleanly separates games with a real `learned_moves` map (57–90%) from
+those without (14–66%); cd82 sits mid-table (79%, not 90%+), matching
+H009's finding that its map exists but the dynamics are position-
+dependent.
+
+**Inference.** H006's prediction held exactly: one certain, small,
+free gain (2–7 points on five games), nothing claimed beyond it. The
+gap between this scorer's per-seed Z1 admission and H006's pooled one is
+itself informative — a pooled-across-seeds version is the natural next
+step, not built this week. Full table in
+`research/hypotheses/H008_predictive_sufficiency.md`.
