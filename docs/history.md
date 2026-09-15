@@ -2910,3 +2910,136 @@ real needs a second condition *kind* (a persistent state/attribute
 check), not another adjacency. That is a smaller, more specific next
 step than a bigger sweep of what Stage 1 already built. Full detail in
 `research/hypotheses/H005_compositional_preconditions.md`.
+
+## 2026-09-15 — Perceptual aliasing: the hidden-state question, measured for free
+
+**Hypothesis.** Reviewer C's fourth pass
+(`docs/expert-reviews/reviewer_c_09_15_2026.md`) argues the missing layer
+is a *temporal latent state* and names the test: two histories ending in
+identical frames whose outcomes differ. If the settled frame is a
+sufficient state, a (frame, action) context seen twice yields the same
+next frame twice. The recordings hold ~50,000 settled transitions across
+25 games; this costs nothing and decides whether the premise holds here
+before anything is built on it.
+
+**Built.** `scripts/alias_probe.py`: key each transition by
+(frame_t hash, action_t incl. click coordinate) -> Counter of frame_{t+1};
+a context is *aliased* when seen >= 2 times with >= 2 distinct outcomes.
+A second table re-keys with the previous k actions appended.
+
+**Observation.** 6 recording dirs, 25 games, 50,005 transitions, 4,142
+repeated contexts, **654 aliased (15.8%)** -- and bimodal by game. Twelve
+games at **0.0%** (sp80, ls20, vc33, ft09, tn36, tr87, tu93, r11l, re86,
+s5i5, sb26, lp85): every navigational game where a move map forms is
+Markov in pixels. Ten games at **44-84%** of repeated contexts: g50t 84%,
+m0r0 77%, cn04 59%, sk48 54%, ka59 49%, wa30 48%, cd82 46%, dc22 45%,
+sc25 43%, su15 18%. Appending the previous 1-4 actions thins the aliased
+fraction but does not remove it where contexts still repeat (sc25
+43 -> 38 -> 34 -> 28%; cd82 45 -> 27 -> 16 -> 8%, denominators collapsing
+from 77 to 12). cd82's aliased contexts are almost all on actions *other
+than* ACTION5 -- an identical frame under the same movement action goes
+two different ways.
+
+**Inference.** The review's premise holds on this project's own data for
+a nameable set of games and fails on another, and the split is exactly the
+split the score already shows: the 0% set is where the representation
+works (move maps, router, L1 reach), the 44-84% set is where it does not
+(m0r0 0/10 L1, sk48 0/10, cd82's ceiling). Not yet *hidden state*:
+stochasticity is the other reading and this probe cannot separate them --
+that needs a candidate variable that splits each context's outcomes, which
+is `H006`'s first job. cd82's aliasing on the movement actions is new: the
+paint rule was assumed to be the only unmodelled factor, and the
+controlled thing's own motion is also non-Markov in pixels. Plan for the
+week in `docs/plan.md`, START HERE (2026-09-15 evening).
+
+## 2026-09-15 — H006 Day 1: most of the aliasing is a quantised meter
+
+**Hypothesis.** Reading each aliased context's two outcomes (what
+differed, and the run-up to each branch) should say whether the
+divergence is hidden state or noise, per game, before anything is built.
+
+**Built.** `alias_probe.py --explain GAME`: per aliased context, the cell
+diff between outcomes (count, bbox, colour pairs) and the eight actions
+into each branch. Three scratch probes on top (not committed): a
+meter-vs-mechanic classifier by diff location; a re-key of every context
+by history features with a vacuity control (resolved-with-repeats /
+became-singleton / still aliased); and a direct test of each meter line
+as a function of actions since reset across every attempt and run.
+
+**Observation.** On cd82 every one of the 35 aliased contexts differs
+by exactly one cell on row 63, colours 4/5 — the stamina bar, which
+ticks on some actions and not others from an identical frame. The same
+shape on m0r0 (rows 0 and 63), cn04 (row 0), ka59, wa30, dc22, g50t
+(row 63), sk48 (row 53) and sc25 (columns 62–63, a vertical bar): **568
+of 640 aliased contexts (89%) are meter lines**. Bar length is a perfect
+function of actions-since-reset on cd82 (101/101 n-values), m0r0
+(152/152), ka59 (101/101), wa30 (201/201), g50t (131/131); per level on
+cn04; offset by one cell after RESET on dc22 (the probe's snapshot);
+**not** a function of it on sk48 (up to 8 lengths per n) or sc25. The
+re-key control shows why the earlier "since_reset resolves 100%" read
+was vacuous: it made 32 of cd82's 35 contexts singletons and resolved 3
+with repeats. The mechanic remainder is 72 contexts: su15 (31, all
+ACTION7 — a 3×3 block moves or jumps, two consecutive presses from one
+frame give a no-op then a move, clicks around the block precede), sk48
+(20 — ACTION7 swaps two tile blocks in a direction the frame does not
+show), g50t (8), sc25 (13). Simple features (last click, same-action
+run, presses since click) leave most of them still aliased; none is
+confirmed by repeats.
+
+**Inference.** The reviewer's premise is true in a weaker form than
+stated: the dominant hidden variable in this project's own data is a
+sub-cell resource counter — real, deterministic, history-derived, and
+irrelevant to the goal. It is the exact thing the agent already files as
+CONTEXT, minus the counter that would make its tick predictable (a free,
+real gain for H008's k-step accuracy, and nothing else). cd82 has no
+mechanic aliasing: its frame is sufficient, its second factor is
+visible-persistent, and H007 stands without H006. The genuine hidden-
+state cases are su15 and sk48's ACTION7 and they are thin — two visits
+per context — so Day 3's splitter needs both S_t (Step 2) and more
+repeats: a targeted non-LLM sweep of su15, sk48, g50t, sc25 is the cheap
+prerequisite. Table in `research/hypotheses/H006_latent_state.md`.
+
+## 2026-09-15 — H006 Days 2–3: S_t traces, and the counter confirmed with repeats
+
+**Hypothesis.** Before inventing a latent variable, measure what the
+agent's own state S_t already resolves of the pixel aliasing, then score
+history-derived candidates as splitters with a control against vacuous
+re-keys.
+
+**Built.** `scripts/latent_probe.py` (`trace`: the real agent tapped at
+`_select`, one JSON line per step with S_t; `analyse`: re-key aliased
+contexts by S_t, optionally plus actions-since-reset, and score the
+one-step forecast on them) and `scripts/latent_splitter.py` (candidate
+family: counters since reset/level, moves of the CONTROL thing, per-action
+counts and parities, last click colour / side of the CONTROL thing,
+presses since click, same-action run, last frame-changing action; per
+context resolved / singleton / still, plus a shuffle null). Traces: 13
+games x 10 seeds x 400 steps. The trace's action stream equals the
+`play_local.py` recording of the same seed exactly (su15 seed 1) — a free
+determinism check on every trace from now on.
+
+**Observation.** S_t turns nearly every pixel-aliased context into a
+singleton; what stays aliased with identical agent state is 162 of 1,252
+(sk48 56, m0r0 39, cn04 28, g50t 18, su15 15, cd82 4). Adding
+actions-since-reset zeroes that, but as singletons (the counter is
+monotone within an attempt) — consistent, not confirmed. Forecast
+accuracy on aliased contexts is within a few points of all steps on every
+game. The splitter confirms `n_reset` with cross-attempt repeats, above
+null, zero contradictions on cd82 (82 resolved / 0 still / null 3.8),
+m0r0 (118/0/2.6), dc22 (325/0/4.8), ka59 (52/0/0.2), wa30 (147/0/2.8),
+cn04 (13/0/1.0); g50t 229 resolved with 102 still. On the mechanic games
+the family finds nothing above null (sk48 19 vs 21), weak signal (sc25
+60 vs 31, 87 still) or suggestive only (su15 `n_moved` 10 vs 1.8, 23
+still).
+
+**Inference.** H006's claim holds for the meter class with the full
+discipline (repeats, null, no contradiction): the first admitted latent
+variable is `Z1 = actions since reset`, a sub-cell resource counter the
+frame renders only at cell resolution. It is goal-irrelevant, and the
+forecast barely suffers from it, so its value is one certain, small H008
+gain (the meter's tick becomes predictable), not a route to score. The
+mechanic remainder is not resolved by any candidate in this family; the
+next family would reference the controlled thing's relation to what was
+clicked or moved (S_t now makes that computable) and needs more visits
+per context — deferred to week 2. H007 proceeds on its own evidence.
+Full tables in `research/hypotheses/H006_latent_state.md`.

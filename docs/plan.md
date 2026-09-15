@@ -473,7 +473,159 @@ falsifiable and UNASSIGNED is a real answer.
       bounding-box extent, not size. cd82's bucket and ls20's sprite both
       read `control 100%` with a four-way map. See `history.md` 2026-09-14.
 
-## START HERE (handoff, 2026-09-14 night)
+## START HERE (handoff, 2026-09-15 evening) — the latent-state week
+
+**State.** `main` at `04fdfbb` pushed (H005 Stage 3, README, full sweep
+0.1431). Uncommitted: this section, `scripts/alias_probe.py`,
+`research/hypotheses/H006`–`H008` (+ README rows), the 09-15
+review, one `history.md` entry. 261 tests green. Nothing runs in the
+background. `ARC_PROPOSER` / `ARC_LLM_PROPOSER` still OFF by default.
+
+**What changed the plan.** Reviewer C's fourth pass
+(`docs/expert-reviews/reviewer_c_09_15_2026.md` — long; the gold is §3,
+§5–8, §16 and the second note's §4–6, §12–13) makes one structural claim:
+the layers describe *observations* well and *hidden state* not at all.
+cd82's "which swatch is selected" is a persistent fact set by an earlier
+action and held, not a relation over the current frame — and H005 Stage 3
+proved exactly that by finding adjacency the wrong proxy. Its bottleneck
+ranking: 1 no latent state, 2 hypotheses can't name a state variable,
+3 information-seeking not first-class, 4 one-step transition model,
+5 goal tied to visible residuals … 10 routing. **Stop routing work.**
+Measured before adopting (`scripts/alias_probe.py`; `history.md`
+2026-09-15 "Perceptual aliasing"): identical (frame, action) contexts
+diverge on **0% of repeats in 12 games and 44–84% in 10** — and the 0%
+set is exactly the set the agent can play. The premise holds where it
+matters. Whether the divergence is *state* or *noise* is H006's question; the
+probe cannot tell.
+
+**Three things the review said not to do, adopted.** No LSTM / LMU / JEPA
+this week — build the interface one would plug into. No semantic variable
+names (`selected_color`, `mode`) — a variable is `Z<n>` with a domain, a
+value and evidence, described after the fact. No new perception
+primitive, no more LLM score sweeps.
+
+**One rule added** (the temporal form of the governing principle, review
+second note §6): *don't retain history unless it changes the predictive
+distribution over future observations.* A latent variable is admitted only
+if it splits an aliased context's outcomes.
+
+**The week — three separately-falsifiable claims, one file each, so a
+result can be cited by number: H006 *is there state?* (Days 1–3), H007
+*can a hypothesis name it?* (Day 4), H008 *does it predict?* (Days 5, 7).
+Split rather than bundled because each can fail while the others pass.
+Each day has a deliverable and a gate; a failed gate changes the next
+day, it does not skip it.**
+
+1. **Look, then define (no `agent/` change).** `alias_probe.py --dump`
+   for cd82, m0r0, sk48, g50t; for each aliased context replay the two
+   outcomes through the recap (`SEED=`, `STEPS=`) and say what differed.
+   Classify per game: *state* (something earlier separates the outcomes —
+   an action count, a prior click, which entity last changed) vs
+   *stochastic* (nothing does). Deliverable: a 10-row table in H006.
+   Then the definition, docstring first: `LatentVariable` = id, domain,
+   value | None, set_by, evidence — and `admit()` as the only way in.
+   Gate: if every aliased game reads stochastic, Day 3's history-derived
+   generator is dropped; the visible-persistent kind (Day 4) is built
+   regardless, because cd82 needs it either way.
+   **Done 2026-09-15.** 89% of the aliasing is quantised resource meters
+   (sub-cell counter = actions since reset, exact on 5 games); cd82 has
+   *no* mechanic aliasing; the hidden-state remainder is 72 contexts on
+   su15 / sk48 / g50t / sc25 at ~2 visits each. Gate: history-derived
+   family stays; Day 3 narrows to the 72 and needs a targeted non-LLM
+   sweep of those four games for repeats. Table in H006.
+2. **Trajectory reconstruction, offline.** `probe_relations.replay`
+   already runs regions → tracker → relations from recordings; extend it
+   to run belief and the predictor too, emitting S_t (live entities with
+   roles, residual vector, stamina, displacement) per step. Two reads:
+   (i) re-key the aliased contexts by S_t instead of pixels — how much
+   does the existing vocabulary already resolve? (entity ids and
+   displacement carry attempt history the pixels don't); (ii) H003's
+   one-step forecast scored on the aliased contexts specifically — the
+   baseline row of the predictive-sufficiency table. Deliverable:
+   `scripts/latent_probe.py`, one table per game.
+   **Done 2026-09-15.** Built as a tap on the real agent (not a rerun):
+   action stream identical to the play_local recording of the same seed.
+   S_t leaves 162 of 1,252 pixel-aliased contexts aliased with identical
+   agent state; forecast accuracy on aliased contexts ~ all steps.
+3. **Candidate variables as splitters.** Two generators over the Day-2
+   trajectories, no agent change. (a) *visible-persistent*: an entity
+   whose descriptor takes ≥ 2 values, changes only under some actions
+   (Belief.effects selective) and holds otherwise; value = its descriptor
+   key (`kinds.py`'s equal-descriptor view). (b) *history-derived*: a
+   small enumerated family — last action that changed E; count of A since
+   level start mod 2..4; E ever vanished; steps since E changed. Score
+   each as a splitter: does its value partition every aliased context's
+   outcomes? Rank by contexts resolved. Deliverable: per game, the best
+   candidate and the fraction resolved. Gate (H006 P1): cd82 ≥ 50% by
+   one variable → it is state, and Day 4 knows which kind. H006 closes
+   here, either way.
+   **Done 2026-09-15.** `scripts/latent_splitter.py`. `Z1 = actions since
+   reset` confirmed with repeats, above null, zero contradictions on six
+   meter games (cd82 82/0, dc22 325/0, ...). Mechanic remainder (sk48,
+   sc25, su15, g50t residue): nothing above null. H006: holds for the
+   meter class, undetermined for the rest — verdict in H006. Day 4 (H007)
+   proceeds unchanged; H008 takes the counter as its one certain gain.
+4. **The first consumer: a `state` condition kind — H007** (the 09-14
+   handoff's item 1, reframed). `precondition` gains `("state", member, value)`:
+   met when `member`'s current descriptor key equals `value`.
+   `_condition_met` checks it; when unmet, `_hypothesis_action` satisfies
+   it by *acting*, not moving — the action Belief.effects says sets that
+   entity, None if unknown (the bet expires unmet: correct). Enumerator:
+   tally `by_action_given` under the state condition as adjacency/side
+   are tallied, so a state-conditioned lever can form with no oracle.
+   Then H005 Stage 4 = the cd82 oracle with (adjacent:-x, template) AND
+   (state, swatch, marked), seeds 1–3, against Stage 3; then the
+   enumerator alone — does the lever form? Gate (H007 P1): jointly met on
+   ≥ 3 of 8 steps (Stage 3: 0–1).
+5. **Multi-step prediction — H008.** `Predictor.rollout(S, [a1..ak])` in the
+   vocabulary — apply the forecast's entity effects and residual
+   directions to an imagined S, forecast again. No pixels, no simulator.
+   Score k = 1, 3, 10 offline on the Day-2 harness, per game, with and
+   without the state condition in the tallies. This is the review's
+   predictive-sufficiency table and the metric between "representation
+   valid" and "score". Deliverable: k-step rows in `prediction` in sweep
+   summaries; the brief's PREDICTED shows k=3. Gate (H008 P1): up on the
+   aliased games, flat on the 0% controls.
+6. **The level boundary reads state (no hypothesis number yet — a
+   consumer build, not a claim; becomes one in week 2 if it earns a
+   prior).** `BoundarySupervisor.on_advance`
+   records, beside the falling residuals, every variable's value at the
+   advance and its last change in the window — "what state transition
+   preceded success" (review §8). Consumer: the proposer's ranking prior,
+   weighted like `mattered`, never a rule. Free on the recordings first
+   (which values held at each recorded advance?), live second.
+7. **Ladder, and the decision (H008 P3).** A: current. B: + H007 (state
+   condition kind, enumerator + routing). C: + state-conditioned tallies
+   in the predictor. Touched set cd82, m0r0, sk48, g50t, cn04 + controls sp80,
+   ls20, ar25; n=10 seed-paired, 400 steps. Read in order: k-step
+   accuracy; aliased contexts resolved; unmet-rate and hypothesis
+   outcomes; L1 reach; score last. Gate for week 2: k-step accuracy up on
+   the aliased games with the controls flat.
+
+**Explicitly parked this week** (the 09-14 handoff's items 2–6): tracing
+ar25 seeds 3/9/10; the matched-seed sweep of the self-referential fix;
+why routing fails on self-referential targets; the prompt-side "moves
+alike" fix; the event-sourcing rewrite. All routing / LLM polish — rank
+6–10 on the review's list. The recap UI redesign
+(`docs/expert-reviews/UI_instruction.md`) is shelved until the latent
+layer exists — see Shelved ideas.
+
+**Week 2 candidates, only if Day 7's gate passes.** Planning through the
+model — depth 2–4 rollout ranking, the "local transition simulator" from
+On hold, now with a state to simulate. Information gain as a utility term
+beside progress, with weights that shift with epistemic state (H004's
+discriminating press, generalised). The LLM schema gains a latent-variable
+slot — the review's "latent-state scientist" (§11), which H002 cannot be
+until the slot exists. A learned residual memory `h_t` only if the
+explicit state's k-step accuracy plateaus with unexplained aliasing left
+(review second note §10–11, Level B).
+
+**Standing rules, unchanged.** Commit/push only when asked, per batch.
+Never edit `agent/` while a sweep runs. Same seeds for both arms. Test on
+the touched set, not the full sweep. Retention: latest 5 summaries, a
+matched pair kept together.
+
+## Handoff, 2026-09-14 night (superseded — see START HERE above; its items 2–6 are parked there)
 
 **State.** `main` at `1eeca67` is pushed (two commits: H003+H004+H002 with
 242 tests; the recap GUI 3-column redesign). `ARC_PROPOSER` and
@@ -1220,3 +1372,9 @@ just sequenced behind having an actual object/goal signal:
   instead of `self._last_action`) — raised, deliberately not adopted: it
   would trade plain, readable Python for a metaphor that isn't load-
   bearing. Could revisit if a genuine need for it shows up later.
+- **Recap UI as one cognition story** (`docs/expert-reviews/UI_instruction.md`,
+  2026-09-15) — a left-to-right see → infer → believe → predict → decide →
+  happen → update layout replacing the 3-column dashboard. Shelved until
+  the latent-state layer (`H006`–`H008`) exists: the panel it would centre on
+  (belief → prediction → update) is the thing being built, and a UI
+  redesigned around the old belief would be redone.
