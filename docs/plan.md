@@ -627,6 +627,11 @@ day, it does not skip it.**
    accuracy; aliased contexts resolved; unmet-rate and hypothesis
    outcomes; L1 reach; score last. Gate for week 2: k-step accuracy up on
    the aliased games with the controls flat.
+   **Skipped, 2026-09-15 night, by user direction.** H009 found the
+   actual cd82 bottleneck is the transition model's *class*, which
+   neither arm of this ladder varies — running it would mostly measure
+   noise around a defect it doesn't touch. Superseded by going straight
+   to H009's own fix (H010, below) instead.
 
 **Explicitly parked this week** (the 09-14 handoff's items 2–6): tracing
 ar25 seeds 3/9/10; the matched-seed sweep of the self-referential fix;
@@ -636,11 +641,23 @@ alike" fix; the event-sourcing rewrite. All routing / LLM polish — rank
 (`docs/expert-reviews/UI_instruction.md`) is shelved until the latent
 layer exists — see Shelved ideas.
 
-**Week 2 candidates, only if Day 7's gate passes.** First, from H009: a
-**position-graph transition model** for the CONTROL thing —
-`(position, action) -> position'`, admitted where deterministic (H006's
-rule), searched by `navigation.plan` unchanged — the one defect the
-factorial isolated on cd82. Then planning through the
+**Week 2, started early 2026-09-15 night** (Day 7's ladder skipped —
+see below — in favour of H009's own finding, per user direction).
+**H010, Stage 1 done:** `agent/control.py PositionModel` + `agent/
+navigation.py plan_graph`, 12 new tests (278 total), validated offline
+through the real code against H009's own cd82 data — edges match
+exactly, reachability matches (<=3 actions), and replaying H009's 1,779
+real decisions: honoured at the first step 1,779/1,779 (`plan`: 0/1,244).
+**Stage 2 (live wiring — `.observe()` in `_learn_from`, `_route_to`/
+`_route_for` preferring `plan_graph`) is the next concrete step**; it
+needs a regression design first, since `plan_graph` deliberately does
+not extrapolate to unobserved positions the way `plan`'s offset model
+does — a real behavioural difference on sparsely-covered games, not
+just an improvement, so a parity sweep across the games with an
+existing move map (sp80, ls20, ar25, m0r0, dc22, …) comes before it
+ships. Full detail in `research/hypotheses/H010_position_graph_model.md`.
+
+Originally-scoped week 2 candidates, still open: planning through the
 model — depth 2–4 rollout ranking, the "local transition simulator" from
 On hold, now with a state to simulate. Information gain as a utility term
 beside progress, with weights that shift with epistemic state (H004's

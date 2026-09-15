@@ -150,3 +150,59 @@ def test_stamina_fraction_tracks_depletion():
 
 def test_stamina_fraction_is_none_without_a_stamina_bar():
     assert StaminaDetector().stamina_fraction is None
+
+
+# ── PositionModel (H010) ──────────────────────────────────────────────────
+
+def test_position_model_admits_a_deterministic_transition():
+    from control import PositionModel
+    p = PositionModel()
+    for _ in range(3):
+        p.observe((0, 0), GameAction.ACTION4, (5, 0))
+    assert p.edges == {((0, 0), GameAction.ACTION4): (5, 0)}
+
+
+def test_position_model_refuses_an_edge_that_ever_disagreed_with_itself():
+    """Unlike MoveModel.learned_moves, there is no majority vote: one
+    sighting that disagrees is enough to exclude the edge entirely, even
+    with far more support the other way."""
+    from control import PositionModel
+    p = PositionModel()
+    for _ in range(20):
+        p.observe((0, 0), GameAction.ACTION1, (0, -5))
+    p.observe((0, 0), GameAction.ACTION1, (3, -2))   # one disagreement
+    assert p.edges == {}
+
+
+def test_position_model_needs_enough_sightings():
+    from control import PositionModel
+    from constants import MIN_POSITION_OBSERVATIONS
+    p = PositionModel()
+    for _ in range(MIN_POSITION_OBSERVATIONS - 1):
+        p.observe((0, 0), GameAction.ACTION1, (0, -5))
+    assert p.edges == {}
+    p.observe((0, 0), GameAction.ACTION1, (0, -5))
+    assert p.edges == {((0, 0), GameAction.ACTION1): (0, -5)}
+
+
+def test_position_model_is_keyed_by_position_not_just_action():
+    """The whole point: the same action from two different positions is
+    two different edges, and each is judged on its own evidence."""
+    from control import PositionModel
+    p = PositionModel()
+    for _ in range(2):
+        p.observe((0, 0), GameAction.ACTION4, (5, 0))
+        p.observe((5, 0), GameAction.ACTION4, (5, 5))
+    assert p.edges == {
+        ((0, 0), GameAction.ACTION4): (5, 0),
+        ((5, 0), GameAction.ACTION4): (5, 5),
+    }
+
+
+def test_position_model_clear_forgets_everything():
+    from control import PositionModel
+    p = PositionModel()
+    for _ in range(3):
+        p.observe((0, 0), GameAction.ACTION1, (0, -5))
+    p.clear()
+    assert p.edges == {}

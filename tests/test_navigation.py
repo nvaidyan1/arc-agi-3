@@ -116,3 +116,68 @@ def test_route_clear_resets_everything():
     route.next_action((0, 0), STRIDE_5)
     route.clear()
     assert not route and route.target is None and route.expected_position is None
+
+
+# ── plan_graph (H010: position-keyed transitions) ────────────────────────
+
+ORBIT = {
+    # A 3-position orbit where the same action does different things
+    # depending on where you stand — the shape `plan` (one offset per
+    # action) cannot express, and the reason `plan_graph` exists.
+    ((0, 0), RIGHT): (5, 0),
+    ((5, 0), RIGHT): (5, 5),
+    ((5, 5), RIGHT): (0, 0),
+    ((0, 0), UP): (0, 0),       # a self-loop: UP does nothing from home
+}
+
+
+def test_plan_graph_follows_a_position_dependent_orbit():
+    """RIGHT means three different things depending on where you are;
+    plan_graph must chain them, which no fixed-offset model could."""
+    path = navigation.plan_graph((0, 0), (5, 5), ORBIT, nothing_blocked)
+    assert path == [RIGHT, RIGHT]
+
+
+def test_plan_graph_never_extrapolates_an_unobserved_edge():
+    """Unlike `plan`'s optimistic offset-everywhere assumption, an edge
+    with no evidence must not be inventable by the search — that is the
+    whole point of a position-keyed model (H009: an extrapolated offset
+    was confidently wrong 100% of the time on cd82)."""
+    # No edge exists for RIGHT out of (99, 99): the position is unknown.
+    path = navigation.plan_graph((99, 99), (5, 5), ORBIT, nothing_blocked)
+    assert path is None
+
+
+def test_plan_graph_settles_for_the_closest_reachable_node():
+    partial = {((0, 0), RIGHT): (5, 0)}   # no edge onward from (5, 0)
+    path = navigation.plan_graph((0, 0), (100, 0), partial, nothing_blocked)
+    assert path == [RIGHT]
+
+
+def test_plan_graph_respects_position_keyed_obstacles():
+    def blocked(position, action):
+        return position == (0, 0) and action is RIGHT
+    assert navigation.plan_graph((0, 0), (5, 0), ORBIT, blocked) is None
+
+
+def test_plan_graph_returns_none_without_edges():
+    assert navigation.plan_graph((0, 0), (10, 10), {}, nothing_blocked) is None
+
+
+def test_plan_graph_returns_none_when_already_there():
+    assert navigation.plan_graph((5, 5), (5, 5), ORBIT, nothing_blocked) is None
+
+
+def test_plan_and_plan_graph_agree_when_the_graph_is_action_only():
+    """Sanity check that the shared `_bfs` genuinely unifies the two: a
+    graph built by applying STRIDE_5 everywhere must route identically
+    to `plan` itself, within the region the graph actually covers."""
+    covered = {(x, y) for x in range(0, 16, 5) for y in range(0, 16, 5)}
+    edges = {
+        (pos, act): (pos[0] + dx, pos[1] + dy)
+        for pos in covered for act, (dx, dy) in STRIDE_5.items()
+        if (pos[0] + dx, pos[1] + dy) in covered
+    }
+    a = navigation.plan((0, 0), (10, 10), STRIDE_5, nothing_blocked)
+    b = navigation.plan_graph((0, 0), (10, 10), edges, nothing_blocked)
+    assert a == b

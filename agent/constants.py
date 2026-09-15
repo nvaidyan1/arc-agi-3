@@ -33,6 +33,15 @@ RECENT_DIFF_STEPS = 5
 MIN_MOVE_OBSERVATIONS = 3
 MOVE_MAJORITY = 0.6
 
+# H010: the position-graph transition model's admit rule (agent/control.py
+# PositionModel). Deliberately a lower bar than MOVE_MAJORITY's — this is
+# not "a clear majority", it is H006's admit rule: a (position, action)
+# pair is trusted only once it has been seen enough times to say the
+# outcome is the SAME every time, never merely the most common one. 2 is
+# the threshold this project's own H006/H009 analysis used throughout
+# 2026-09-15 to call a transition deterministic.
+MIN_POSITION_OBSERVATIONS = 2
+
 # Smallest shape worth calling a rotation. Below this a fit means little:
 # a single cell can be "rotated" to anywhere about some pivot, so it would
 # be a free explanation for any change. Set from the measured size

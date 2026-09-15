@@ -39,6 +39,58 @@ def chebyshev(a: tuple[int, int], b: tuple[int, int]) -> int:
     return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
 
 
+def _bfs(
+    start: tuple[int, int],
+    target: tuple[int, int],
+    actions,
+    successor,
+    is_blocked,
+) -> list[GameAction] | None:
+    """The search both `plan` and `plan_graph` share. `successor(position,
+    action) -> position | None` is the one thing that differs between
+    them — a fixed offset per action, or a position-keyed graph lookup —
+    and everything else (frontier order, the closest-reachable fallback,
+    the obstacle check) is identical, so the two callers cannot drift
+    apart in behaviour that has nothing to do with the transition model.
+    """
+    if not actions or start == target:
+        return None
+
+    frontier = deque([start])
+    came_from: dict[tuple[int, int], tuple[tuple[int, int], GameAction]] = {}
+    visited = {start}
+    best, best_dist = start, chebyshev(start, target)
+    expanded = 0
+
+    while frontier and expanded < ROUTE_MAX_NODES:
+        node = frontier.popleft()
+        expanded += 1
+        if node == target:
+            best = node
+            break
+        for action in actions:
+            nxt = successor(node, action)
+            if nxt is None or nxt in visited or is_blocked(node, action):
+                continue
+            visited.add(nxt)
+            came_from[nxt] = (node, action)
+            frontier.append(nxt)
+            dist = chebyshev(nxt, target)
+            if dist < best_dist:
+                best, best_dist = nxt, dist
+
+    if best == start:
+        return None  # nothing reachable got any closer
+
+    path: list[GameAction] = []
+    node = best
+    while node in came_from:
+        node, action = came_from[node]
+        path.append(action)
+    path.reverse()
+    return path
+
+
 def plan(
     start: tuple[int, int],
     target: tuple[int, int],
@@ -66,43 +118,48 @@ def plan(
     closest reachable node found instead of refusing to move. Same
     graceful-degrade stance as every lens: best available answer, or None,
     never a forced one.
+
+    This assumes an action's effect is the SAME OFFSET wherever it is
+    taken — the model `MoveModel.learned_moves` holds. H009 found that
+    assumption false on cd82 (the controlled thing's motion is a function
+    of position AND action, not of the action alone): the offset model
+    is optimistic in the same way an unknown obstacle is, and it can be
+    confidently wrong rather than merely silent about it. `plan_graph`
+    below is the position-keyed alternative for exactly that case.
     """
-    if not moves or start == target:
-        return None
+    def offset_successor(node, action):
+        offset = moves.get(action)
+        return None if offset is None else (node[0] + offset[0], node[1] + offset[1])
 
-    frontier = deque([start])
-    came_from: dict[tuple[int, int], tuple[tuple[int, int], GameAction]] = {}
-    visited = {start}
-    best, best_dist = start, chebyshev(start, target)
-    expanded = 0
+    return _bfs(start, target, moves, offset_successor, is_blocked)
 
-    while frontier and expanded < ROUTE_MAX_NODES:
-        node = frontier.popleft()
-        expanded += 1
-        if node == target:
-            best = node
-            break
-        for action, offset in moves.items():
-            nxt = (node[0] + offset[0], node[1] + offset[1])
-            if nxt in visited or is_blocked(node, action):
-                continue
-            visited.add(nxt)
-            came_from[nxt] = (node, action)
-            frontier.append(nxt)
-            dist = chebyshev(nxt, target)
-            if dist < best_dist:
-                best, best_dist = nxt, dist
 
-    if best == start:
-        return None  # nothing reachable got any closer
+def plan_graph(
+    start: tuple[int, int],
+    target: tuple[int, int],
+    edges: dict[tuple[tuple[int, int], GameAction], tuple[int, int]],
+    is_blocked,
+) -> list[GameAction] | None:
+    """Same contract as `plan`, but the transition model is a graph —
+    `(position, action) -> position'` — rather than one offset per
+    action. `edges` is `PositionModel.edges` (`agent/control.py`, H010):
+    admitted only where the transition has been seen to be deterministic,
+    the same standard `MoveModel.learned_moves` holds for an offset.
 
-    path: list[GameAction] = []
-    node = best
-    while node in came_from:
-        node, action = came_from[node]
-        path.append(action)
-    path.reverse()
-    return path
+    The one behavioural difference from `plan`, and it is deliberate: an
+    edge with no evidence is simply absent, so BFS cannot extrapolate
+    into a position it has never observed a transition from — unlike
+    `plan`'s optimistic offset-everywhere assumption. That is the correct
+    trade for a model class known to be position-dependent: extrapolating
+    an untested offset is exactly the mistake `plan` was making on cd82
+    (H009: 0 of 1,244 planned paths honoured at their first step).
+    """
+    actions = {a for (_pos, a) in edges}
+
+    def graph_successor(node, action):
+        return edges.get((node, action))
+
+    return _bfs(start, target, actions, graph_successor, is_blocked)
 
 
 class Route:

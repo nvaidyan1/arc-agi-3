@@ -3147,3 +3147,45 @@ gap between this scorer's per-seed Z1 admission and H006's pooled one is
 itself informative — a pooled-across-seeds version is the natural next
 step, not built this week. Full table in
 `research/hypotheses/H008_predictive_sufficiency.md`.
+
+## 2026-09-15 — H010 Stage 1: the position-graph model, validated against H009's own data
+
+**Hypothesis.** (User-approved next step, after H009's reading B.) A
+transition model keyed by (position, action), admitted only where
+deterministic, represents cd82's orbit correctly and the existing BFS
+planner can search it with no change to the algorithm — validate this
+offline, through real code, before touching the live router.
+
+**Built.** `agent/control.py`: `PositionModel` (`observe`, `edges` —
+H006's determinism admit rule, not `MoveModel`'s majority vote; `clear`).
+`agent/constants.py`: `MIN_POSITION_OBSERVATIONS = 2`. `agent/
+navigation.py`: `plan`'s BFS extracted into a shared `_bfs(start, target,
+actions, successor, is_blocked)`; `plan`'s public signature and
+behaviour are unchanged (verified by a test that `plan` and `plan_graph`
+agree exactly on the same action-only graph); `plan_graph` is new,
+graph-keyed, and deliberately does not extrapolate to an unobserved
+position — the opposite of `plan`'s optimistic offset-everywhere
+assumption, which is what made it confidently wrong on cd82. 12 new
+tests, 278/278 total pass.
+
+**Run** (`scripts/h010_position_model.py`), through the real classes:
+`PositionModel.edges` built from the cd82 traces matches H009's oracle
+graph exactly (32 edges, 8 positions). `plan_graph` reaches a −x target
+from every off-target position in 1–3 actions — H009's own bound.
+Replaying all 1,779 of H009's real traced decisions: path found on
+1,779/1,779 (vs `plan`'s 1,244/1,779) and **honoured at the first step
+on 1,779/1,779 (vs `plan`'s 0/1,244)**. One bug caught in the validation
+script itself (tried only one of three target cells, understating the
+shortest route) and fixed before trusting the reachability numbers —
+not a defect in `plan_graph`.
+
+**Inference.** Stage 1's three predictions all met cleanly. The building
+block H009 called for is proven against H009's own data through the
+code that would run live, but is not wired in yet. Stage 2 (`.observe`
+calls in `_learn_from`; `_route_to`/`_route_for` preferring `plan_graph`
+over `plan` when it has edges) needs a regression design first:
+`plan_graph`'s no-extrapolation stance is a real behavioural difference
+from `plan` on sparsely-covered positions, not just a strict
+improvement, and needs a parity check across the games with an existing
+move map before it ships. Full detail in
+`research/hypotheses/H010_position_graph_model.md`.
