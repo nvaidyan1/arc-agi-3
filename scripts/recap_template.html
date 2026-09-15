@@ -21,128 +21,130 @@
   .pill{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:99px;
         background:var(--bg);border:1px solid var(--edge);color:var(--dim)}
   .pill b{color:var(--ink);font-weight:600}
-  /* One screen, no page scroll. The page is a column (header, scrub,
-     main, keys); `main` takes the remaining height and every card inside
-     it scrolls internally instead of pushing the page. Panel heights are
-     fixed fractions, so a card whose content grows (Controls learns a
-     fifth action; Belief gains rows) does not shove its neighbours around
-     as you scrub through steps. */
+  
   html,body{height:100%}
   body{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-  main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(260px,380px) 1fr;
+  
+  /* 3-Column Layout */
+  main{flex:1;min-height:0;display:grid;grid-template-columns:280px minmax(350px, 1fr) 320px;
        gap:14px;padding:14px}
   main>*{min-height:0}
+  
   .stack{display:flex;flex-direction:column;gap:14px;min-height:0}
   .stack>.card{min-height:0;overflow:auto}
   .stack>.card.fixed{flex:0 0 auto}
   .stack>.card.fill{flex:1 1 0}
-  .stack>.card.half{flex:0 0 46%}
-  /* Frames are square; cap them by height so the column never overflows,
-     and let width follow. */
+  
   canvas#grid,canvas#mask{width:min(100%,36vh);height:auto;margin:0 auto}
-  @media (max-width:860px){
+  @media (max-width:1100px){
     body{height:auto;overflow:auto}
-    main{grid-template-columns:1fr}
-    .stack>.card{overflow:visible}
-    .stack>.card.half{flex:0 0 auto}
+    main{grid-template-columns:1fr 1fr}
   }
+  @media (max-width:860px){
+    main{grid-template-columns:1fr}
+  }
+  
   .card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
-        padding:12px 14px}
+        padding:12px 14px; display:flex; flex-direction:column;}
   .card h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;
-           color:var(--dim);margin:0 0 10px;font-weight:600}
+           color:var(--dim);margin:0 0 10px;font-weight:600; flex-shrink:0;}
+  
   canvas{width:100%;height:auto;image-rendering:pixelated;border-radius:6px;
          background:#000;display:block}
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:0}
-  .cols>*{min-height:0}
-  @media (max-width:1100px){.cols{grid-template-columns:1fr}}
+  
   table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
   td{padding:3px 0;vertical-align:top}
   td:first-child{color:var(--dim);width:42%;padding-right:10px}
+  
   .tier{display:inline-block;font-family:var(--mono);font-size:12px;font-weight:600;
         padding:3px 10px;border-radius:6px;margin-bottom:10px}
   .t-epsilon{background:#3a2b16;color:var(--warn)}
   .t-weighted{background:#16283a;color:var(--accent)}
   .t-frontier{background:#16321f;color:var(--good)}
-  .t-route_strong,.t-route_weak{background:#2c1f3a;color:#c39bff}
+  .t-hypothesis{background:#3a1a1f;color:var(--bad)}
   .t-none,.t-reset{background:var(--bg);color:var(--dim)}
-  .bar{position:relative;background:var(--bg);border-radius:4px;height:18px;
-       margin:3px 0;overflow:hidden}
-  .bar>span{position:absolute;inset:0 auto 0 0;background:#2b4a7a;border-radius:4px}
-  .bar>label{position:absolute;inset:0;display:flex;justify-content:space-between;
-             padding:0 7px;font-family:var(--mono);font-size:11px;line-height:18px}
-  .bar.pick>span{background:#2f6ad9}
+  
   .keys{font-family:var(--mono);font-size:11px;color:var(--dim);
         padding:8px 16px;border-top:1px solid var(--edge);background:var(--panel)}
   .keys b{color:var(--ink)}
-  .ev{font-family:var(--mono);font-size:11px;color:var(--dim)}
-  .ev b{color:var(--ink)}
+  
   .flag{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 6px;
         border-radius:4px;margin-right:5px}
   .f-up{background:#16321f;color:var(--good)}
   .f-death{background:#3a1a1f;color:var(--bad)}
   .f-vanish{background:#2c1f3a;color:#c39bff}
   .f-block{background:#3a2b16;color:var(--warn)}
+  
   input[type=range]{width:100%;accent-color:var(--accent)}
   .empty{color:var(--dim);font-style:italic}
-  summary{font-size:11px;text-transform:uppercase;letter-spacing:.08em;
-          color:var(--dim);font-weight:600;cursor:pointer;outline:none}
-  summary:hover{color:var(--ink)}
-  .hint{color:var(--dim);font-size:11px}
-  /* A row's label carries a native tooltip (title attr) explaining the
-     term — hover it. Cursor says so without adding visible clutter. */
-  #ptable tr[title]{cursor:help}
+  
+  /* Badges & Swatches */
   .swatch{display:inline-block;width:12px;height:12px;border-radius:3px;
           vertical-align:-2px;margin-right:6px;border:1px solid var(--edge)}
   .badge{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;
          padding:2px 7px;border-radius:5px;margin-right:6px;letter-spacing:.03em}
-  .badge-local{background:#16283a;color:var(--accent)}
-  .badge-remote{background:#3a2b16;color:var(--warn)}
-  .badge-unknown{background:var(--bg);color:var(--dim);border:1px solid var(--edge)}
-  .bar.stam>span{background:var(--good)}
-  /* Legend under the frame — same colours as the markers drawn on it, so
-     the picture and the key read as one thing. */
-  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:11px;
-          color:var(--dim)}
-  .legend .dot{display:inline-block;width:9px;height:9px;border-radius:50%;
-               margin-right:5px;vertical-align:-1px}
+  .badge-control{background:#16283a;color:var(--accent)}
+  .badge-affect{background:#2c1f3a;color:#c39bff}
+  .badge-context{background:#3a2b16;color:var(--warn)}
+  .badge-env{background:#16321f;color:var(--good)}
+  .badge-unassigned{background:var(--bg);color:var(--dim);border:1px solid var(--edge)}
+  
+  /* Mask Legend & Tabs */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:11px;color:var(--dim)}
+  .legend .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
   .dot-pos{background:#3ad6ff}
   .dot-target{background:#ff2fd0}
-  /* Mask layer picker. Only one mask is shown at a time — overlaying all
-     of them would be unreadable — so this is how you switch. */
-  /* Belief rows: entity, tag, certainty -- nothing else, so the panel can
-     be read at a glance. The evidence sits in the row's tooltip. */
-  .brief{font-family:var(--mono);font-size:11px;line-height:1.45;white-space:pre-wrap;
-         margin:0;color:var(--ink)}
-  .belrow{display:flex;align-items:center;gap:8px;font-family:var(--mono);
-          font-size:12px;padding:3px 0;cursor:help}
-  .belid{color:var(--ink);min-width:38px}
-  .belpct{margin-left:auto;color:var(--dim);font-variant-numeric:tabular-nums}
-  .tr{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--dim);
-      padding:1px 5px;border-radius:4px;margin-right:4px;border:1px solid transparent}
-  /* An exclusive transition is the interesting one -- give it the only
-     border in the panel so it is findable by scanning, not by reading. */
-  .tr.uniq{border-color:var(--good);color:var(--good);font-weight:700}
-  .tr .swatch{width:9px;height:9px;margin:0 2px;vertical-align:-1px}
+  
   .masktabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
   .masktab{font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:99px;
-           background:var(--bg);border:1px solid var(--edge);color:var(--dim);
-           cursor:pointer}
-  .masktab.active{background:var(--accent);color:#0b1220;border-color:var(--accent);
-                   font-weight:700}
-  /* Gamepad. The chosen action is the one filled in; everything else is
-     an outline, so "what did it press" is answerable at a glance rather
-     than by reading a table. */
+           background:var(--bg);border:1px solid var(--edge);color:var(--dim);cursor:pointer}
+  .masktab.active{background:var(--accent);color:#0b1220;border-color:var(--accent);font-weight:700}
+  
+  /* Gamepad */
   #pad svg{width:100%;height:auto;display:block;margin-top:4px}
-  .btn{fill:none;stroke:var(--edge);stroke-width:2}
+  .btn{fill:none;stroke:var(--edge);stroke-width:2; transition: all 0.2s; cursor:pointer;}
   .btn.live{stroke:var(--dim)}
   .btn.pick{fill:var(--accent);stroke:#bcd6ff;stroke-width:3}
-  .btn-l{font-family:var(--mono);font-size:13px;fill:var(--dim);
-         text-anchor:middle;dominant-baseline:central}
+  .btn:hover{stroke:var(--accent); stroke-width:3;}
+  .btn-l{font-family:var(--mono);font-size:13px;fill:var(--dim);text-anchor:middle;dominant-baseline:central; pointer-events:none;}
   .btn-l.live{fill:var(--ink)}
   .btn-l.pick{fill:#0b1220;font-weight:700}
-  .sub{font-family:var(--mono);font-size:9px;fill:var(--dim);text-anchor:middle}
+  .sub{font-family:var(--mono);font-size:9px;fill:var(--dim);text-anchor:middle; pointer-events:none;}
   .sub.pick{fill:var(--accent)}
   .padnote{font-family:var(--mono);font-size:10px;fill:var(--dim);text-anchor:middle}
+  
+  /* Live Bet (Hypothesis) */
+  .hyp-box { background: var(--bg); border: 1px solid var(--edge); border-radius: 6px; padding: 10px; margin-bottom: 10px;}
+  .hyp-box h3 { margin: 0 0 6px 0; font-size: 12px; color: var(--ink); }
+  .hyp-desc { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-bottom: 8px;}
+  progress { width: 100%; height: 8px; border-radius: 4px; border: none; background: var(--edge); }
+  progress::-webkit-progress-bar { background: var(--edge); border-radius: 4px; }
+  progress::-webkit-progress-value { background: var(--accent); border-radius: 4px; }
+  .hyp-stats { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 4px;}
+  
+  /* Surprises */
+  .surprise-box { border-left: 3px solid var(--bad); background: #3a1a1f33; padding: 8px 10px; font-family: var(--mono); font-size: 11px; color: var(--ink); margin-bottom: 6px; border-radius: 0 4px 4px 0;}
+  
+  /* Entity Matrix */
+  .role-group { margin-bottom: 12px; }
+  .role-header { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); border-bottom: 1px solid var(--edge); padding-bottom: 2px; margin-bottom: 6px; }
+  .belrow { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; padding: 4px 6px; border-radius: 4px; transition: opacity 0.2s; }
+  .belrow:hover { background: var(--bg); cursor: help; }
+  .belrow.dimmed { opacity: 0.2; }
+  .belid { color: var(--ink); min-width: 32px; font-weight: 600; }
+  .bely { color: var(--dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .belpct { margin-left: auto; color: var(--accent); font-weight: bold; }
+  
+  /* Recents Log */
+  .log-entry { font-family: var(--mono); font-size: 11px; border-bottom: 1px solid var(--edge); padding: 8px 0; color: var(--dim); line-height: 1.4; }
+  .log-entry b { color: var(--ink); }
+  .log-entry:last-child { border-bottom: none; }
+  
+  /* Accordions for raw data */
+  details { border-top: 1px solid var(--edge); padding: 6px 0; }
+  summary { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); font-weight: 600; cursor: pointer; outline: none; }
+  summary:hover { color: var(--ink); }
+  pre.brief-raw { font-family: var(--mono); font-size: 10px; color: var(--dim); white-space: pre-wrap; padding-left: 10px; }
 </style>
 </head>
 <body>
@@ -159,72 +161,51 @@
 <div style="padding:0 14px"><input type="range" id="scrub" min="0" value="0"></div>
 
 <main>
+  <!-- LEFT COL: Ground Truth & Forward Model -->
   <div class="stack">
     <div class="card fixed">
-      <h2>Frame — ground truth</h2>
-      <!-- No overlays here, deliberately: this is the raw grid the game
-           sent, nothing the agent believes drawn on top of it. Every
-           marker and mask lives in the Perceptions panel instead, so
-           it's never ambiguous which one you're looking at. -->
+      <h2>Frame</h2>
       <canvas id="grid"></canvas>
     </div>
-    <div class="card fill"><h2>Decision</h2>
+    <div class="card fill">
+      <h2>Forward Model (Decision & Controls)</h2>
       <div id="tier" class="tier t-none">—</div>
-      <div id="weights"></div>
-      <div id="pad"></div>
-      <!-- The action/payload/candidates/reasoning table lives in
-           renderDecisionTable(); the gamepad above says the same thing
-           faster. Uncomment the call in render() to bring it back. -->
-      <table id="dtable" hidden></table>
+      <div id="pad" style="flex:1"></div>
+      <details style="margin-top:auto">
+        <summary>Controls (Text Detail)</summary>
+        <div id="controls" style="margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--dim)"></div>
+      </details>
     </div>
   </div>
-  <div class="cols">
-    <div class="stack">
-    <div class="card half" style="flex-basis:52%">
+  
+  <!-- CENTER COL: Live Bet & Entity Matrix -->
+  <div class="stack">
+    <div class="card fixed">
+      <h2>Live Bet (Hypothesis)</h2>
+      <div id="live-bet"></div>
+      <div id="surprises" style="margin-top: 8px;"></div>
+    </div>
+    <div class="card fill" style="overflow-y:auto;">
+      <h2>Entity Matrix (Beliefs)</h2>
+      <div id="entity-matrix"></div>
+    </div>
+  </div>
+  
+  <!-- RIGHT COL: Perceptions & Log -->
+  <div class="stack">
+    <div class="card fixed">
       <h2>Perceptions</h2>
-      <!-- Every mask below is a real signal the agent already computes —
-           see the LAYERS list in the script for what each one answers
-           and, for "environment"/"explored", why it can be empty (they
-           need a confirmed board position; see the Position row below). -->
       <div class="masktabs" id="masktabs"></div>
       <canvas id="mask"></canvas>
       <div id="masklegend" class="legend"></div>
-      <table id="ptable"></table>
     </div>
-    <!-- The brief: the belief as text, exactly as a hypothesis proposer
-         would receive it. Shown so that "what would the LLM see right
-         now?" has an answer you can read rather than infer from panels. -->
-    <div class="card fill">
-      <h2>Brief — what a proposer would be sent</h2>
-      <pre id="brief" class="brief"></pre>
-    </div>
-    </div>
-    <div class="stack">
-      <!-- Fixed height on purpose: this card's content changes length as
-           actions are learned, and when it did the Belief card below
-           jumped up and down with every step. -->
-      <div class="card half">
-        <h2>Controls — what each button does</h2>
-        <div id="controls"></div>
-        <!-- Collapsed by default: these are raw tallies, useful when
-             digging and noise the rest of the time. -->
-        <details style="margin-top:14px">
-          <summary>Evidence per action</summary>
-          <div id="evidence" style="margin-top:8px"></div>
-        </details>
-        <details style="margin-top:8px">
-          <summary>What each action does to colours</summary>
-          <div id="signature" style="margin-top:8px"></div>
-        </details>
-      </div>
-      <!-- Belief is its own panel, not a section of Evidence: it is a
-           different KIND of statement. Evidence counts what happened;
-           belief says what a thing is to the agent, and is the only panel
-           here that composes the others. -->
-      <div class="card fill">
-        <h2>Belief — what each entity is to me</h2>
-        <div id="beliefs"></div>
-      </div>
+    <div class="card fill" style="overflow-y:auto;">
+      <h2>Event Log (Recent)</h2>
+      <div id="recent-log"></div>
+      <details style="margin-top:14px">
+        <summary>Raw Brief Data</summary>
+        <div id="brief-raw-container"></div>
+      </details>
     </div>
   </div>
 </main>
@@ -237,9 +218,8 @@
 </div>
 
 <script>
-const RUN = /*__RUN_DATA__*/null;
+const RUN = /*__RUN_DATA__*/null; 
 
-// ARC colour indices 0-15.
 const PALETTE = ["#000000","#0074D9","#FF4136","#2ECC40","#FFDC00","#AAAAAA",
                  "#F012BE","#FF851B","#7FDBFF","#870C25","#FFFFFF","#4B0082",
                  "#00FFA0","#8B4513","#556B2F","#FF69B4"];
@@ -257,19 +237,12 @@ $("seedpill").innerHTML = `seed <b>${RUN.seed}</b>`;
 $("stepmax").textContent = Math.max(steps.length - 1, 0);
 $("scrub").max = Math.max(steps.length - 1, 0);
 
-// A step is "a death" when the state seen at that decision is GAME_OVER, and
-// "a level-up" when levels_completed rose since the previous step. Computed
-// once so the jump keys are instant.
 const isDeath  = s => (s.state || "").includes("GAME_OVER");
 const isUp     = (s, k) => k > 0 && s.levels_completed > steps[k-1].levels_completed;
 const isVanish = s => (s.perception.pending_vanish || 0) > 0;
 const isBlock  = s => (s.decision.n_blocked || 0) > 0;
 const isThink  = s => s.decision.tier && s.decision.tier !== "epsilon";
 
-// Ground truth. Exactly the grid the game sent — no markers, no masks, no
-// belief drawn on top of it. If you need to know whether the agent's
-// picture of the world matches reality, this is the thing to compare
-// the Perceptions panel against.
 function drawFrame(s){
   const {rows, cols, grid} = s;
   if(!rows || !cols){ canvas.width = canvas.height = 1; return; }
@@ -285,41 +258,12 @@ function drawFrame(s){
   ctx.putImageData(img, 0, 0);
 }
 
-// ── Perception masks ─────────────────────────────────────────────────
-// Every layer here already exists in the agent (see scripts/recap.py's
-// `snapshot`, which is the only place these are read from) — this panel
-// answers "what does the agent believe is spatially true, and where",
-// which is a different question from "what did the game actually send"
-// (the Frame panel, left alone on purpose). Only one mask shows at a
-// time; overlaying all of them at once would be unreadable noise.
-// Environment (obstacles) and Explored were removed as mask layers, and
-// the removal is itself a finding: obstacles are stored in relative
-// displacement space, and on any game with two controllable objects the
-// move map is wrong, so converting them to board pixels lands off-board —
-// measured on wa30 at 94%, coordinates from -193 to 221 on a 64x64 board.
-// The mask was painting garbage the canvas silently clipped. The obstacle
-// COUNT and its off-board ratio stay in Perceptions, where the ratio is a
-// live check on whether the displacement space is sane at all. Explored
-// lived in the same broken space and overlapped Environment 63%.
 const LAYERS = [
-  {key:"entities", label:"Entities", rgb:[150,200,255],
-   help:"The scene as the agent groups it — one hue per entity. Grouping " +
-        "only; what each one IS to the agent is the Belief panel."},
-  {key:"controlled", label:"Controlled", rgb:[90,235,170],
-   help:"Every object confirmed to move when an action was taken — the " +
-        "cells it moved INTO (the part that overlaps where it already was " +
-        "doesn't change, so it isn't in the diff). Empty on games where " +
-        "nothing translates. Check the Controls row below: two colours " +
-        "there means two separately controllable objects."},
-  {key:"interest", label:"Interest", rgb:[255,110,25],
-   help:"Where change has happened that the agent didn't cause itself, " +
-        "accumulated over time. Not a claim about where the goal is."},
-  {key:"affect", label:"Affect", rgb:[255,210,40],
-   help:"This step's changes, minus the agent's own movement and the " +
-        "stamina meter."},
-  {key:"clicked", label:"Clicked", rgb:[196,140,255],
-   help:"Cells ACTION6 has already targeted, brighter where targeted " +
-        "more often."},
+  {key:"entities", label:"Entities", rgb:[150,200,255]},
+  {key:"controlled", label:"Controlled", rgb:[90,235,170]},
+  {key:"interest", label:"Interest", rgb:[255,110,25]},
+  {key:"affect", label:"Affect", rgb:[255,210,40]},
+  {key:"clicked", label:"Clicked", rgb:[196,140,255]}
 ];
 let activeLayer = "interest";
 
@@ -329,10 +273,7 @@ function renderMaskTabs(){
     `data-layer="${l.key}">${l.label}</button>`).join("");
 }
 $("masktabs").addEventListener("click", e => {
-  const btn = e.target.closest(".masktab");
-  if(!btn) return;
-  activeLayer = btn.dataset.layer;
-  render();
+  if(e.target.dataset.layer){ activeLayer = e.target.dataset.layer; render(); }
 });
 
 function drawMask(s){
@@ -341,9 +282,6 @@ function drawMask(s){
   if(!rows || !cols){ maskCanvas.width = maskCanvas.height = 1; return; }
   maskCanvas.width = cols; maskCanvas.height = rows;
 
-  // Dim, desaturated backdrop of the real frame — enough to see where a
-  // hot cell actually sits on the board, without competing with the mask
-  // colour for attention the way the full-colour frame would.
   const img = mctx.createImageData(cols, rows);
   for(let p = 0; p < rows * cols; p++){
     const c = PALETTE[parseInt(grid[p], 16)] || "#000";
@@ -359,74 +297,28 @@ function drawMask(s){
   const [cr, cg, cb] = layer.rgb;
   for(const [x, y, w] of cells){
     if(activeLayer === "entities"){
-      // A distinct hue per region id. Painting every entity one colour
-      // and varying only opacity made neighbouring ids indistinguishable,
-      // so two separate objects read as one — the golden angle keeps
-      // consecutive ids far apart on the wheel.
       mctx.fillStyle = `hsl(${((w||0) * 137.508) % 360} 75% 62% / 0.85)`;
     } else {
-      const t = Math.min((w || 1) / peak, 1);
-      mctx.fillStyle = `rgba(${cr},${cg},${cb},${(0.28 + 0.6*t).toFixed(2)})`;
+      mctx.fillStyle = `rgba(${cr},${cg},${cb},${(0.28 + 0.6*(Math.min((w||1)/peak,1))).toFixed(2)})`;
     }
     mctx.fillRect(x, y, 1, 1);
   }
 
-  // Always-on context, regardless of which mask is selected: where the
-  // agent is, and what it just targeted. These are perceptual
-  // annotations too, which is exactly why they're here and not on the
-  // ground-truth Frame panel.
   const anchor = s.perception.anchor;
   if(anchor) markCell(mctx, anchor[0], anchor[1], "#3ad6ff");
   const pay = s.decision.payload;
   if(pay && pay.x != null) markCell(mctx, pay.x, pay.y, "#ff2fd0");
-
+  
   renderMaskTabs();
-  // An empty mask has two very different meanings and they must not look
-  // alike: "nothing there yet" versus "this can never have anything on
-  // this game". Controlled/Environment/Explored all need a self-motion
-  // estimate, which 11 of 25 games never produce; Clicked needs the game
-  // to offer a coordinate action at all. Measured on cd82: those three
-  // are empty on 100% of 400 steps, which reads as a broken panel unless
-  // it says why.
-  const selfKnown = Object.keys(p0.moves || {}).length > 0
-                 || Object.keys(p0.controlled_by_action || {}).length > 0;
-  const needsSelf = ["controlled", "environment", "explored"].includes(activeLayer);
-  const hasClick = (s.available || []).includes("ACTION6");
-  const unavailable =
-    (needsSelf && !selfKnown) ? "nothing on this game ever moves, so there is no " +
-                                "\"self\" to measure this against — not empty, inapplicable"
-  : (activeLayer === "clicked" && !hasClick) ? "this game offers no coordinate " +
-                                "action, so nothing can ever be clicked"
-  : null;
-
-  const empty = cells.length === 0;
-  $("masklegend").innerHTML =
-    `<span><i class="dot" style="background:rgb(${cr},${cg},${cb})"></i>`
-    + `${layer.label} — ${cells.length} cell${cells.length === 1 ? "" : "s"} this step</span>`
-    + `<span><i class="dot dot-pos"></i>agent position${anchor ? "" : " (not yet confirmed)"}</span>`
-    + (pay && pay.x != null ? `<span><i class="dot dot-target"></i>this step's click target</span>` : "")
-    + `<div class="hint" style="width:100%;margin-top:4px">${layer.help}</div>`
-    + (unavailable
-        ? `<div class="hint" style="width:100%;color:var(--warn)">n/a — ${unavailable}.</div>`
-        : (empty ? `<div class="hint" style="width:100%">Nothing recorded yet — this `
-                 + `layer applies to this game but has no evidence so far.</div>` : ""));
+  $("masklegend").innerHTML = `<span><i class="dot" style="background:rgb(${cr},${cg},${cb})"></i>${layer.label} — ${cells.length} cells</span>`;
 }
 
-// A single board pixel disappears at real display scale (and can match
-// the cell's own colour exactly). A 5-pixel plus in a colour outside the
-// ARC palette stays visible over anything underneath it.
 function markCell(context, x, y, color){
   context.fillStyle = color;
   for(const [ox, oy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]])
     context.fillRect(x + ox, y + oy, 1, 1);
 }
 
-// ── Gamepad ───────────────────────────────────────────────────────────
-// ACTION1-4 sit in a D-pad diamond, placed by the offset the agent has
-// actually *learned* for each one rather than by a fixed convention — so
-// the pad shows what this game's controls do, and shows nothing
-// misleading before the move map exists (then it falls back to a stable
-// order, marked as unlearned). ACTION5-7 are face buttons on the right.
 const DIR_SLOT = {up:[100,46], left:[56,90], right:[144,90], down:[100,134]};
 const FALLBACK = {ACTION1:"up", ACTION2:"down", ACTION3:"left", ACTION4:"right"};
 
@@ -434,23 +326,18 @@ function slotFor(offset){
   if(!offset) return null;
   const [dx, dy] = offset;
   if(dx === 0 && dy === 0) return null;
-  return Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? "left" : "right")
-                                      : (dy < 0 ? "up" : "down");
+  return Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
 }
 
 function renderPad(s){
   const d = s.decision, p = s.perception;
-  const avail = new Set(s.available);
-  const cand  = new Set(d.candidates || []);
-  const w     = d.weights || null;
+  const avail = new Set(s.available), cand = new Set(d.candidates || []), w = d.weights || null;
   const wmax  = w ? Math.max(...Object.values(w), 1e-9) : 0;
 
-  // Assign the four directional actions to slots.
   const placed = {}, taken = new Set();
-  let learned = false;
   for(const a of ["ACTION1","ACTION2","ACTION3","ACTION4"]){
     const slot = slotFor(p.moves[a]);
-    if(slot && !taken.has(slot)){ placed[a] = slot; taken.add(slot); learned = true; }
+    if(slot && !taken.has(slot)){ placed[a] = slot; taken.add(slot); }
   }
   for(const a of ["ACTION1","ACTION2","ACTION3","ACTION4"]){
     if(placed[a]) continue;
@@ -459,225 +346,169 @@ function renderPad(s){
     if(slot){ placed[a] = slot; taken.add(slot); }
   }
 
-  const face = ["ACTION5","ACTION6","ACTION7"]
-    .filter(a => avail.has(a) || cand.has(a) || a === d.action);
-  const faceY = face.length === 1 ? [90]
-              : face.length === 2 ? [62,118] : [46,90,134];
+  const face = ["ACTION5","ACTION6","ACTION7"].filter(a => avail.has(a) || cand.has(a) || a === d.action);
+  const faceY = face.length === 1 ? [90] : face.length === 2 ? [62,118] : [46,90,134];
 
   const parts = [];
   const draw = (a, cx, cy) => {
-    const isPick = a === d.action;
-    const isLive = cand.has(a) || avail.has(a);
+    const isPick = a === d.action, isLive = cand.has(a) || avail.has(a);
     const cls = isPick ? "pick" : (isLive ? "live" : "");
+    parts.push(`<g class="action-btn" data-action="${a}">`);
     parts.push(`<circle class="btn ${cls}" cx="${cx}" cy="${cy}" r="21"/>`);
     parts.push(`<text class="btn-l ${cls}" x="${cx}" y="${cy}">${a.slice(6)}</text>`);
     const bits = [];
     if(w && w[a] != null) bits.push(`${(w[a]/wmax*100).toFixed(0)}%`);
     const off = p.moves[a];
     if(off) bits.push(`${off[0]},${off[1]}`);
-    if(bits.length)
-      parts.push(`<text class="sub ${isPick?'pick':''}" x="${cx}" y="${cy+34}">`
-                 + `${bits.join("  ")}</text>`);
-    // The coordinate action's payload is the decision, so show it.
-    if(isPick && d.payload && d.payload.x != null)
-      parts.push(`<text class="sub pick" x="${cx}" y="${cy+46}">`
-                 + `x = ${d.payload.x}, y = ${d.payload.y}</text>`);
+    if(bits.length) parts.push(`<text class="sub ${isPick?'pick':''}" x="${cx}" y="${cy+34}">${bits.join(" ")}</text>`);
+    parts.push(`</g>`);
   };
 
   for(const [a, slot] of Object.entries(placed)) draw(a, ...DIR_SLOT[slot]);
   face.forEach((a, k) => draw(a, 262, faceY[k]));
 
-  // Notes sit on their own baseline below every button label — the
-  // down-button's weight label already occupies y=168 at the same x.
-  if(d.action === "RESET")
-    parts.push('<text class="padnote" x="170" y="190">RESET — died, restarting the level</text>');
-  else if(!learned)
-    parts.push('<text class="padnote" x="170" y="190">no move map on this game '
-               + '— D-pad positions are a placeholder</text>');
-
-  $("pad").innerHTML =
-    `<svg viewBox="0 0 340 200" role="img" aria-label="controller state">`
-    + parts.join("") + `</svg>`;
+  $("pad").innerHTML = `<svg viewBox="0 0 340 200">${parts.join("")}</svg>`;
+  
+  // Hover Linking Event
+  $("pad").querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('mouseenter', (e) => highlightEntitiesForAction(e.currentTarget.dataset.action));
+      btn.addEventListener('mouseleave', () => highlightEntitiesForAction(null));
+  });
 }
 
-// Each row is [label, valueHtml, hoverExplanation?]. The explanation goes
-// on a native `title` attribute — hover to read it, nothing extra to
-// close, no clutter for someone who already knows what the row means.
-function rowsHtml(rows){
-  return rows.map(([k, v, hint]) =>
-    `<tr${hint ? ` title="${hint.replace(/"/g,"&quot;")}"` : ""}>`
-    + `<td>${k}</td><td>${v === "" || v == null
-      ? '<span class="empty">none</span>' : v}</td></tr>`).join("");
-}
-
-function backgroundSwatch(idx){
-  if(idx == null) return '<span class="empty">not yet identified</span>';
-  return `<span class="swatch" style="background:${PALETTE[idx]||'#000'}"></span>colour ${idx}`;
-}
-
-// (dx, dy) read naturally as board pixels; nobody reads "(-15, 20)" as
-// "left and down" on sight, so say it in words. Anchored only once a real
-// movement has fixed where "start" was on the actual board — until then
-// this is a relative count with no picture to match it to.
-function describeDisplacement([dx, dy], anchorKnown){
-  const bits = [];
-  if(dx) bits.push(`${Math.abs(dx)} ${dx > 0 ? "right" : "left"}`);
-  if(dy) bits.push(`${Math.abs(dy)} ${dy > 0 ? "down" : "up"}`);
-  const phrase = bits.length ? bits.join(", ") + " of the start point" : "at the start point";
-  return phrase + (anchorKnown ? ""
-    : ' <span class="hint">(no confirmed movement yet — relative only)</span>');
-}
-
-// The move model's frame of reference, in one line, shown only once a
-// move map exists: without one there is no "self" whose position, visited
-// count or obstacles mean anything, and printing them anyway presented a
-// single avatar the agent has not found (and may not exist on this game).
-function displacementFrameLine(p){
-  if(!p.moves || !Object.keys(p.moves).length) return "";
-  const bits = [describeDisplacement(p.displacement, !!p.anchor),
-                `${p.visited} visited`,
-                `${p.obstacles || 0} blocked`];
-  const warn = p.obstacles && p.obstacles_offboard > 0.2
-    ? ` <span style="color:var(--warn)">(${(p.obstacles_offboard*100).toFixed(0)}% `
-      + `of them convert off-board — the move map is not trustworthy here)</span>` : "";
-  return `<div class="hint" style="margin-top:8px" title="Where the agent believes `
-    + `it is relative to where this attempt started, how many such positions it `
-    + `has reached, and how many learned moves failed there.">`
-    + `frame: ${bits.join(" · ")}${warn}</div>`;
-}
-
-// The move map in words: which object each action moves, and which way.
-// Restored as a row after being cut as "redundant with the D-pad" — the
-// pad prints a raw offset like "-5,0" in 9px type under one of four
-// slots, which is not the same as being able to read "A1 -> left" in a
-// list. Directions are named with the same rule the pad uses, so the two
-// can never disagree.
-//
-// Also the clearest readout of the conflation problem: on sp80 this
-// shows ACTION1/3 driving one colour and ACTION2/4 another, while the
-// agent treats all four as moving a single "me".
-// The entity list. Largest first, because the canvas is usually the
-// biggest region and seeing it named is a useful sanity check.
-// Kept but unused: the entity listing moved to the Belief panel, which
-// says what each one IS rather than only how big it is. Re-add the row if
-// sizes and positions are ever needed again.
-function entitiesRow(list, staminaId){
-  if(!list || !list.length) return '<span class="empty">no regions yet</span>';
-  const rows = list.slice(0, 8).map(([rid, colour, n, x, y, w, h]) =>
-    `<div><span class="swatch" style="background:${PALETTE[colour]||'#000'}"></span>`
-    + `#${rid} <span class="hint">${n} cells, ${w}x${h} at (${x},${y})`
-    + `${rid === staminaId ? " — <b>the stamina meter</b>" : ""}`
-    + `${n > 2000 ? " — the canvas" : ""}</span></div>`).join("");
-  const more = list.length > 8
-    ? `<div class="hint">+${list.length - 8} more</div>` : "";
-  return `<div class="hint">${list.length} tracked</div>` + rows + more;
-}
-
-function controlsRow(byAction, moves, turns, beliefs){
-  byAction = byAction || {}; moves = moves || {}; turns = turns || {};
-  const acts = [...new Set([...Object.keys(moves), ...Object.keys(byAction),
-                            ...Object.keys(turns)])].sort();
-  // Actions the move map says nothing about, but belief does. Previously
-  // these were shown only when the move map was entirely empty, so on
-  // cd82 ACTION5 -- which recolours rather than moves -- disappeared the
-  // moment the other four actions learned their offsets.
-  const extra = {};
-  for(const b of (beliefs || [])){
-    for(const [a, kind] of Object.entries(b.kinds || {})){
-      if(acts.includes(a)) continue;
-      (extra[a] ||= []).push({id: b.id, kind});
+function highlightEntitiesForAction(actionName) {
+    const rows = document.querySelectorAll('.belrow');
+    if(!actionName) {
+        rows.forEach(r => r.classList.remove('dimmed'));
+        return;
     }
-  }
-  const extraRows = Object.keys(extra).sort().map(a => {
-    const byKind = {};
-    for(const e of extra[a]) (byKind[e.kind || "changes"] ||= []).push(`#${e.id}`);
-    return `<div>${a.replace("ACTION","A")} → `
-      + Object.entries(byKind).map(([k, ids]) =>
-          `<b>${k}</b> <span class="hint">${ids.join(", ")}</span>`).join(" · ")
-      + `</div>`;
-  }).join("");
-  if(!acts.length){
-    // The move map can be empty while BELIEF knows perfectly well which
-    // button drives what -- that is the situation on cd82, where no exact
-    // motion lens fires but action contrast still identifies the control.
-    // Saying "nothing has moved yet" there is the panel that knows less
-    // shouting over the panel that knows more.
-    // Name the KIND, not just "drives" -- the belief knows whether the
-    // action turns, moves, grows or shrinks the thing, and that is the
-    // whole content of "what does this button do".
-    const byAct = {};
-    for(const b of (beliefs || [])){
-      for(const [a, kind] of Object.entries(b.kinds || {}))
-        (byAct[a] ||= []).push({id: b.id, kind});
-      if(!Object.keys(b.kinds || {}).length)
-        for(const m of (b.why || "").matchAll(/ACTION\d/g))
-          (byAct[m[0]] ||= []).push({id: b.id, kind: null});
+    rows.forEach(r => {
+        const why = r.dataset.why || "";
+        if(why.includes(actionName)) r.classList.remove('dimmed');
+        else r.classList.add('dimmed');
+    });
+}
+
+const escapeHtml = s => s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+function parseAndRenderBrief(text){
+    if(!text) return;
+    const lines = text.split("\n");
+    let currentSection = "";
+    const data = { HYPOTHESIS: [], RECENT: [], PREDICTED: [], RAW: [] };
+    
+    for(let line of lines){
+        const match = line.match(/^([A-Z]+)\b/);
+        if(!line.startsWith(" ") && match) {
+            currentSection = match[1];
+        } else {
+            if(data[currentSection]) data[currentSection].push(line.trim());
+            else data.RAW.push(line.trim());
+        }
     }
-    const rows = Object.keys(byAct).sort().map(a => {
-      const byKind = {};
-      for(const e of byAct[a]) (byKind[e.kind || "changes"] ||= []).push(`#${e.id}`);
-      const parts = Object.entries(byKind)
-        .map(([k, ids]) => `<b>${k}</b> <span class="hint">${ids.join(", ")}</span>`);
-      return `<div>${a.replace("ACTION","A")} → ${parts.join(" · ")}</div>`;
-    }).join("");
-    return rows
-      ? rows + '<div class="hint">from belief — no exact offset learned, '
-             + 'so there is no move map to show</div>'
-      : '<span class="empty">nothing has moved yet</span>';
-  }
-  const colours = new Set(Object.values(byAction));
-  const body = acts.map(a => {
-    const colour = byAction[a], off = moves[a];
-    const swatch = colour != null
-      ? `<span class="swatch" style="background:${PALETTE[colour]||'#000'}"></span>` : "";
-    // A rotation is a different kind of answer to "what does this button
-    // do" and cannot be phrased as an offset, so it is reported as itself
-    // rather than squeezed into a direction.
-    const spin = Object.entries(turns[a] || {})
-      .map(([k, n]) => `${k.replace("rot","").replace("90","90° ")} ×${n}`).join(", ");
-    // Fall through to what belief knows rather than shrugging: an action
-    // with no stable offset may still have a perfectly clear effect.
-    const bkind = {};
-    for(const b of (beliefs || []))
-      if((b.kinds || {})[a]) (bkind[b.kinds[a]] ||= []).push(`#${b.id}`);
-    const believed = Object.entries(bkind)
-      .map(([k, ids]) => `<b>${k}</b> <span class="hint">${ids.join(", ")}</span>`)
-      .join(" · ");
-    const dir = off
-      ? `<b>${slotFor(off) || "no direction"}</b> <span class="hint">(${off[0]},${off[1]})</span>`
-      : (spin ? `<b>turns</b> <span class="hint">${spin}</span>`
-              : (believed
-                 || '<span class="hint">no stable effect learned yet</span>'));
-    const both = off && spin ? ` <span class="hint">+ turns ${spin}</span>` : "";
-    return `<div>${swatch}${a.replace("ACTION","A")} → ${dir}${both}</div>`;
-  }).join("");
-  const warn = colours.size > 1
-    ? `<div class="hint" style="color:var(--warn)">${colours.size} separate `
-      + `objects — merged into one position by the move map</div>`
-    : "";
-  return body + extraRows + warn;
+
+    // 1. Live Bet (Hypothesis)
+    let hypHtml = '<span class="empty">No active hypothesis</span>';
+    if(data.HYPOTHESIS.length > 0) {
+        // e.g. "testing: drive distance(#4,#5) 26->0 with ACTION2 (lever +100%), step 1/8, now 22"
+        const hypText = data.HYPOTHESIS.find(l => l.startsWith('testing:'));
+        if(hypText) {
+            const match = hypText.match(/testing:\s*(.*?),\s*step\s*(\d+)\/(\d+),\s*now\s*(\d+)/);
+            if(match) {
+                const desc = match[1]; // "drive distance(#4,#5) 26->0 with ACTION2 (lever +100%)"
+                const step = parseInt(match[2]), maxStep = parseInt(match[3]), currentVal = parseInt(match[4]);
+                
+                // Extract start/target to calc progress. Rough regex.
+                const valMatch = desc.match(/(\d+)->(\d+)/);
+                let progressHtml = "";
+                if(valMatch) {
+                    const start = parseInt(valMatch[1]), target = parseInt(valMatch[2]);
+                    const totalDist = Math.abs(start - target);
+                    const currentDist = Math.abs(currentVal - target);
+                    const pct = totalDist === 0 ? 100 : Math.max(0, Math.min(100, 100 - (currentDist / totalDist * 100)));
+                    progressHtml = `
+                        <progress value="${pct}" max="100"></progress>
+                        <div class="hyp-stats"><span>Residual: ${currentVal} (Goal: ${target})</span><span>Step ${step}/${maxStep}</span></div>
+                    `;
+                }
+                
+                hypHtml = `
+                    <div class="hyp-box">
+                        <h3>ACTIVE BET</h3>
+                        <div class="hyp-desc">${escapeHtml(desc)}</div>
+                        ${progressHtml}
+                    </div>
+                `;
+            } else {
+                hypHtml = `<div class="hyp-box"><div class="hyp-desc">${escapeHtml(hypText)}</div></div>`;
+            }
+        }
+    }
+    $("live-bet").innerHTML = hypHtml;
+
+    // 2. Surprises
+    const surprises = data.PREDICTED.filter(l => l.startsWith('surprised'));
+    if(surprises.length > 0) {
+        $("surprises").innerHTML = surprises.map(s => `<div class="surprise-box">⚠️ ${escapeHtml(s.replace('surprised ', ''))}</div>`).join('');
+    } else {
+        $("surprises").innerHTML = '';
+    }
+
+    // 3. Recents Log
+    if(data.RECENT.length > 0) {
+        // Reverse to show newest at top usually preferred, but keeping original order for now.
+        // E.g., "t=14 ACTION2: distance(#0,#4) 22->26"
+        $("recent-log").innerHTML = data.RECENT.reverse().map(l => {
+            // Bold the Action
+            const formatted = l.replace(/(t=\d+)\s+(ACTION\d+):/, '<span>$1</span> <b style="color:var(--accent)">$2</b>:');
+            return `<div class="log-entry">${formatted}</div>`;
+        }).join('');
+    } else {
+        $("recent-log").innerHTML = '<span class="empty">No recent events</span>';
+    }
+    
+    // Dump the rest in RAW
+    $("brief-raw-container").innerHTML = `<pre class="brief-raw">${escapeHtml(text)}</pre>`;
 }
 
-function actsLocallyBadge(v){
-  if(v === true)
-    return '<span class="badge badge-local">LOCAL</span>'
-         + '<span class="hint">changes the cell it targets</span>';
-  if(v === false)
-    return '<span class="badge badge-remote">REMOTE</span>'
-         + '<span class="hint">changes cells elsewhere on the board</span>';
-  return '<span class="badge badge-unknown">UNKNOWN</span>'
-       + '<span class="hint">not enough evidence yet</span>';
-}
+function renderEntityMatrix(beliefs){
+    if(!beliefs || beliefs.length === 0) {
+        $("entity-matrix").innerHTML = '<span class="empty">no entity has earned a role yet</span>';
+        return;
+    }
+    
+    const ROLE_MAP = {
+        control: "badge-control", affect: "badge-affect", 
+        context: "badge-context", environment: "badge-env", unassigned: "badge-unassigned"
+    };
 
-// Coloured with the game's OWN detected stamina colour rather than a
-// generic green/red, so the bar and the pixels it is reading from stay
-// visibly the same thing.
-function staminaBar(fraction, colourIdx){
-  if(fraction == null) return '<span class="empty">not detected on this game</span>';
-  const pct = Math.max(0, Math.min(100, Math.round(fraction * 100)));
-  const color = PALETTE[colourIdx] ?? "#5ddba0";
-  return `<div class="bar stam"><span style="width:${pct}%;background:${color}"></span>
-           <label><i>${pct}% left</i><i>colour ${colourIdx}</i></label></div>`;
+    const grouped = { control: [], affect: [], context: [], environment: [], unassigned: [] };
+    beliefs.forEach(b => {
+        if(grouped[b.role]) grouped[b.role].push(b);
+        else grouped.unassigned.push(b);
+    });
+
+    let html = '';
+    for(const [role, items] of Object.entries(grouped)){
+        if(items.length === 0 && role !== 'control') continue; // Show empty control if none
+        html += `<div class="role-group">`;
+        html += `<div class="role-header">${role}</div>`;
+        if(items.length === 0) {
+            html += `<span class="empty" style="padding-left:6px; font-size:10px;">None</span>`;
+        }
+        items.forEach(b => {
+            const badge = ROLE_MAP[role] || "badge-unassigned";
+            html += `
+            <div class="belrow" data-why="${escapeHtml(b.why)}" title="${escapeHtml(b.why)}">
+                <span class="swatch" style="background:${PALETTE[b.colour]||'#000'}"></span>
+                <span class="belid">#${b.id}</span>
+                <span class="bely">${escapeHtml(b.why)}</span>
+                <span class="belpct">${(b.strength*100).toFixed(0)}%</span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+    $("entity-matrix").innerHTML = html;
 }
 
 function render(){
@@ -690,187 +521,22 @@ function render(){
   $("statepill").textContent = (s.state || "").replace("GameState.","");
   $("scrub").value = i;
 
-  const f = [];
-  if(isUp(s, i))  f.push('<span class="flag f-up">LEVEL UP</span>');
-  if(isDeath(s))  f.push('<span class="flag f-death">DEATH</span>');
-  if(isVanish(s)) f.push('<span class="flag f-vanish">VANISH</span>');
-  if(isBlock(s))  f.push(`<span class="flag f-block">${s.decision.n_blocked} BLOCKED</span>`);
-  $("flags").innerHTML = f.join("") || '<span style="color:var(--dim)">—</span>';
-
-  // "available" and "move map" are cut here — the gamepad shows both
-  // already (dimmed buttons, and the offset printed under each D-pad
-  // button), so a text row repeating them was pure duplication. Interest
-  // moves from a coordinate list to the heatmap painted on the frame
-  // above, plus the summary line in the legend.
-  const p = s.perception;
-  // Position, explored and obstacles were rows here; they are three
-  // reports from one structure (the move model's displacement frame) and
-  // said "at the start point / 1 visited / 0 obstacles" on every game,
-  // including click games where no such frame exists. They now appear as
-  // one line under the move map they depend on, only once it exists. The
-  // background colour moved to the Belief panel, where the canvas is an
-  // entity like any other.
-  $("ptable").innerHTML = rowsHtml([
-    ["stamina", staminaBar(p.stamina_fraction, p.stamina_colour),
-      "An on-screen quantity that drains during an attempt and refills " +
-      "when it restarts — a lives counter, a step budget, whatever this " +
-      "particular game renders."],
-    ["clicking", actsLocallyBadge(p.acts_locally),
-      "Does the coordinate action (ACTION6) change the cell it targets, " +
-      "or something elsewhere on the board?"],
-    ["route", p.route_len ? `${p.route_len} step(s) queued` : null,
-      "A planned path toward the most salient cell — used only once " +
-      "nothing else has already proven itself this game."],
-  ]);
-
   const d = s.decision;
   const tier = d.tier || "none";
   $("tier").className = "tier t-" + tier;
-  const note = {epsilon:"  — random, not a decision",
-                reset:"  — died, restarting the level"}[tier] || "";
-  $("tier").textContent = tier.toUpperCase().replace("_"," ") + note;
-
-  if(d.weights){
-    const max = Math.max(...Object.values(d.weights), 1e-9);
-    $("weights").innerHTML = Object.entries(d.weights).map(([a,w]) =>
-      `<div class="bar ${a===d.action?'pick':''}">
-         <span style="width:${(w/max*100).toFixed(1)}%"></span>
-         <label><i>${a}</i><i>${w}</i></label></div>`).join("");
-  } else {
-    $("weights").innerHTML = "";
-  }
-
-  // The move map belongs with the other per-action facts, not buried
-  // mid-table in Perceptions — it answers "what does this button do",
-  // which is an Evidence question.
-  $("controls").innerHTML = controlsRow(
-    p.controlled_by_action, p.moves, p.rotations_by_action, s.evidence.beliefs)
-    + displacementFrameLine(p);
+  $("tier").textContent = tier.toUpperCase().replace("_"," ");
 
   renderPad(s);
-  // renderDecisionTable(d);   // ← uncomment for the raw fields
+  
+  // Fill controls raw detail (Fallback for now)
+  const p = s.perception;
+  let ctrls = [];
+  if(p.moves) Object.keys(p.moves).forEach(k => ctrls.push(`${k} -> offset ${p.moves[k]}`));
+  $("controls").innerHTML = ctrls.join("<br>") || "None learned.";
 
-  const e = s.evidence;
-  // Union of ALL five evidence dicts, not just tries/changes. Those two
-  // reset every death by design (contingency stats are per-attempt); the
-  // other three deliberately survive a RESET (my_agent.py's own comment:
-  // "which action makes progress is a property of the game, not of one
-  // attempt"). Building this list from tries/changes alone made that
-  // persisted evidence disappear from the panel the instant an attempt
-  // ended, until the action happened to be tried again — silently
-  // hiding real, often more important signal (verified: a vanish count
-  // of 16 sat invisible for two full steps after a death on cd82).
-  const acts = [...new Set([
-    ...Object.keys(e.tries), ...Object.keys(e.changes),
-    ...Object.keys(e.interactions), ...Object.keys(e.vanishes),
-    ...Object.keys(e.level_ups),
-  ])].sort();
-  // "affect" (was the unexplained label "inter") counts steps where this
-  // action changed something that was NOT the agent's own movement. It
-  // can only be counted when a self-motion estimate exists for that step
-  // — otherwise there is no "self" to subtract and it would collapse into
-  // "anything changed". On a game where nothing ever translates it is
-  // therefore permanently uncountable, which is a different statement
-  // from "measured, found none" and must not read as a plain 0.
-  const selfKnown = Object.keys(s.perception.moves || {}).length > 0
-                 || Object.keys(s.perception.controlled_by_action || {}).length > 0;
-  const affect = a => selfKnown
-    ? `affect ${e.interactions[a]||0}`
-    : `<span title="No self-motion estimate on this game, so a change ` +
-      `can't be split into 'me' vs 'not me'. Not zero — unmeasurable.">` +
-      `affect n/a</span>`;
-  $("evidence").innerHTML = acts.length
-    ? `<div class="hint" style="margin-bottom:6px">tried = chosen · changed = ` +
-      `something moved on screen · affect = changed something that wasn't me · ` +
-      `vanish = an object disappeared · level-up = scored. ` +
-      `<b>x/y</b> = this attempt / lifetime — the first two reset on death.</div>`
-      + acts.map(a => {
-        // tried/changed reset every attempt by design; the lifetime total
-        // is shown beside them so a fresh attempt does not read as "this
-        // action has never been used".
-        const tt = (e.tries_total||{})[a]||0, ct = (e.changes_total||{})[a]||0;
-        const t = e.tries[a]||0, c = e.changes[a]||0;
-        return `<div class="ev"><b>${a}</b> &nbsp;tried ${t}`
-          + (tt !== t ? `<span class="hint">/${tt}</span>` : "")
-          + ` &nbsp;changed ${c}`
-          + (ct !== c ? `<span class="hint">/${ct}</span>` : "")
-          + ` &nbsp;${affect(a)}`
-          + ` &nbsp;vanish ${e.vanishes[a]||0}`
-          + ` &nbsp;<span style="color:var(--good)">level-up `
-          + `${e.level_ups[a]||0}</span></div>`;
-      }).join("")
-    : '<span class="empty">no evidence yet</span>';
-
-  // What each action actually DOES to colours, and which transitions only
-  // it causes. The agent tracks none of this — `changed` is a yes/no, and
-  // the colour census is global rather than per action — so an action
-  // with an exclusive, large effect looks identical to one that nudges a
-  // counter. On cd82 this is where ACTION5's 0->15 shows up.
-  // Beliefs: the composed view. A role here is a statement about how an
-  // entity's behaviour correlates with the agent's own actions — not about
-  // what the thing is in the game.
-  const bel = s.evidence.beliefs || [];
-  const counts = s.evidence.belief_roles || {};
-  const ROLE_CLASS = {control:"badge-local", affect:"badge-remote",
-                      context:"badge-unknown", environment:"badge-unknown"};
-  // Entity, tag, and how dependable the relation is. A role is only
-  // claimed at all once it is statistically convincing (that test gates
-  // the assignment and is not shown, because past a few hundred
-  // observations it reads 100% for everything). What IS shown is how
-  // reliably the relation holds: for CONTROL/AFFECT, how often the entity
-  // responds to its driving action; for CONTEXT, how often it changes at
-  // all. Hover a row for the evidence behind it.
-  $("beliefs").innerHTML = bel.length
-    ? `<div class="hint" style="margin-bottom:7px">`
-      + Object.entries(counts).filter(([k, v]) => v && k !== "environment")
-          .map(([k, v]) => `${k} ${v}`).join(" · ")
-      + (counts.environment ? ` · <i>${counts.environment} static, hidden</i>` : "")
-      + (s.evidence.belief_ghosts ? ` · <i>${s.evidence.belief_ghosts} off-screen</i>` : "")
-      + (p.canvas ? ` · canvas #${p.canvas.id} <span class="swatch" style="background:`
-                    + `${PALETTE[p.canvas.colour]||'#000'}"></span>` : "")
-      + `</div>`
-      + bel.map(b =>
-        `<div class="belrow" title="${b.why}${b.live === false ? ' — not on screen now' : ''}"`
-        + `${b.live === false ? ' style="opacity:.45"' : ''}>`
-        + `<span class="swatch" style="background:${PALETTE[b.colour]||'#000'}"></span>`
-        + `<span class="belid">#${b.id}${b.live === false ? '<span class="hint"> ghost</span>' : ''}</span>`
-        + `<span class="badge ${ROLE_CLASS[b.role]||'badge-unknown'}">`
-        + `${b.role.toUpperCase()}</span>`
-        + `<span class="belpct">${(b.strength*100).toFixed(0)}%</span></div>`).join("")
-    : '<span class="empty">no entity has earned a role yet</span>';
-
-  $("brief").textContent = s.brief || "(no brief yet)";
-
-  const sig = s.evidence.signature || {};
-  const sigActs = Object.keys(sig).filter(a => a !== "RESET").sort();
-  $("signature").innerHTML = sigActs.length ? sigActs.map(a => {
-    const pairs = sig[a].map(p =>
-      `<span class="tr${p.unique ? " uniq" : ""}" title="${p.cells} cells`
-      + `${p.unique ? " — no other action ever causes this transition" : ""}">`
-      + `<span class="swatch" style="background:${PALETTE[p.from]||'#000'}"></span>`
-      + `→<span class="swatch" style="background:${PALETTE[p.to]||'#000'}"></span>`
-      + `${p.cells}</span>`).join(" ");
-    return `<div class="ev"><b>${a}</b> ${pairs}</div>`;
-  }).join("") + '<div class="hint" style="margin-top:6px">Outlined = a colour '
-    + 'transition <b>only this action</b> ever causes.</div>'
-    : '<span class="empty">nothing has changed colour yet</span>';
-}
-
-// Kept, not deleted: the gamepad is faster to read but these are the raw
-// fields behind it. Re-enable the call in render() when a decision needs
-// picking apart rather than glancing at.
-function renderDecisionTable(d){
-  const t = $("dtable");
-  t.hidden = false;
-  t.innerHTML = rowsHtml([
-    ["action", `<b>${d.action}</b>`],
-    ["payload", d.payload ? `(${d.payload.x}, ${d.payload.y})` : null],
-    ["candidates", (d.candidates || []).join(" ")],
-    ["novel", d.novel ? d.novel.join(" ") : null],
-    ["blocked here", d.n_blocked || null],
-    ["reasoning", typeof d.reasoning === "object" && d.reasoning
-        ? JSON.stringify(d.reasoning) : d.reasoning],
-  ]);
+  // New Dashboard Modules
+  renderEntityMatrix(s.evidence.beliefs);
+  parseAndRenderBrief(s.brief);
 }
 
 function go(n){ i = Math.max(0, Math.min(steps.length - 1, n)); render(); }
