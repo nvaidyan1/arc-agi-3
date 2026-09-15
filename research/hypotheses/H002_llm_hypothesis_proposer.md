@@ -1,6 +1,6 @@
 # H002: An intermittent LLM as hypothesis scientist, not controller
 
-Status: IN PROGRESS — E-H002-1 seed-paired rerun after fixes: valid-schema rate 27%->39%, cd82's gap closed (3/3 LLM bets tested, one HELD); a second format bug found on ka59, not yet fixed
+Status: IN PROGRESS — E-H002-2 (n=5 seeds) confirms the fixes generalise (55.9% valid rate); no score verdict yet, missing the matched non-LLM baseline
 Research question: RQ5 (compute-efficient reasoning) / RQ3 (active testing)
 Date opened: 2026-09-14
 Origin: council verdict step (c'); reviewer C §7, §8, §11, §28, §32 steps 3–4,
@@ -227,3 +227,37 @@ separate, still-open capacity question. The `HELD` result is one data
 point, not evidence the model is reliably correct, but it is the first
 proof the full pipeline (propose -> validate -> pool -> select -> verify
 -> confirm) can complete end to end with a real model's output.
+- 2026-09-14 **E-H002-2**: same 5 games as E-H002-1, seeds 1-5, 200-step
+  cap (closed-loop-control check, not full-episode completion, per the
+  user), `gemma3:4b`, both proposer fixes committed (`eaad22f`). 25 runs,
+  2,523s wall (~42 min; matches the ETA given before launch).
+
+  | | E-H002-1 (n=1) | E-H002-1 rerun (n=1, fixed) | **E-H002-2 (n=5, fixed)** |
+  |---|---|---|---|
+  | valid-schema rate | 27% | 39% | **55.9% (146/261)** |
+  | calls | 15 | 12 | 57 (2.28/run) |
+
+  Confirms the fixes generalise across seeds — not a lucky single rerun.
+  Of 146 valid LLM hypotheses: 1 `held`, 78 `falsified`, 19 `expired`, 11
+  still `live` at the 200-step cutoff, 8 evicted. LLM hit rate
+  (`held/(held+falsified)`) = 1/79 = **1.3%**; the enumerator's own hit
+  rate in the *same* sweep = 11/416 = **2.6%** — lower, same order of
+  magnitude, on a system where most bets of either source get falsified
+  by design (falsification-driven; a low hit rate is not itself evidence
+  of bad reasoning). Gameplay: 3/25 runs reached level 1+ (cd82 0/5, cn04
+  1/5, tu93 0/5, ka59 0/5, ar25 2/5).
+
+  **No matched non-LLM baseline exists at these same seeds/games/steps.**
+  E-7a's baseline numbers (cd82 2/30, etc.) are a different seed set and a
+  different step cap (400) — not a valid pairing. This was flagged before
+  the sweep and confirmed after: E-H002-2 cannot yet answer "does Gemma
+  help the score," only "does the proposer mechanism work and generalise"
+  (yes to the second question).
+
+**Inference.** The mechanism question is answered: the pipeline
+(propose → validate → pool → select → verify) works end to end and the
+27%→39%→55.9% trend across three independent checks is real, not noise.
+The score question remains genuinely open. Next: the matched baseline arm
+(same seeds/games/steps, `ARC_PROPOSER=1` without the LLM) before any
+score claim is defensible. Full context and a second external review in
+`docs/plan.md` START HERE and `docs/expert-reviews/reviewer_c_09_14_2026b.md`.

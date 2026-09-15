@@ -2501,3 +2501,32 @@ of a nested object (5 of 34 rejects) — not yet fixed.
 **Inference.** Real, reproducible improvement in the predicted direction
 on every metric, not just the earlier single-run smoke check. Full detail
 in `research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+## 2026-09-14 — E-H002-2: the fixes generalise, the score question is still open
+
+**Hypothesis.** The entity-id and pool-priority fixes, already confirmed
+on a single seed-paired rerun, should hold across multiple seeds — and a
+proper multi-seed sweep is needed before any claim about score.
+
+**Observation.** 5 games (cd82, cn04, tu93, ka59, ar25) × seeds 1-5 × 200
+steps, `gemma3:4b`, fixed code, 42 minutes wall. Valid-schema rate
+**55.9%** (146/261) — up again from the single-seed checks (27%, 39%),
+confirming the fixes are real and not a lucky run. LLM hit rate (bets
+confirmed correct, of those given a verdict) 1.3% vs. the enumerator's
+own 2.6% in the same sweep — lower but the same order of magnitude on a
+system that falsifies most bets by design. 3 of 25 runs reached level 1+.
+No matched non-LLM baseline exists at these seeds/steps, so the gameplay
+number has nothing to compare against yet.
+
+**A second external review** (`docs/expert-reviews/reviewer_c_09_14_2026b.md`)
+correctly named the sharpest remaining gap: once the LLM is stochastic,
+`recap.py`'s re-run-from-seed is a *rerun*, not a *replay* — a regenerated
+page for an LLM-enabled run is not guaranteed to match what actually
+happened. Agreed; pushed back on the proposed full event-sourcing rewrite
+as premature before the score question is answered, per the review's own
+suggested sequencing.
+
+**Inference.** Mechanism confirmed working and generalising. Score effect
+still unknown — needs the matched baseline arm next. Full numbers in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`; actionables and
+order in `docs/plan.md` START HERE.

@@ -473,57 +473,98 @@ falsifiable and UNASSIGNED is a real answer.
       bounding-box extent, not size. cd82's bucket and ls20's sprite both
       read `control 100%` with a four-way map. See `history.md` 2026-09-14.
 
-## START HERE (handoff, 2026-09-14 evening)
+## START HERE (handoff, 2026-09-14 night)
 
-**State.** `main` at `49fcd3e` is pushed. Uncommitted in the tree: the LLM
-proposer scaffold (`agent/proposer_llm.py`, hypothesis pool +
-`select_experiment` in `my_agent.py`, `source/confidence/falsifier` on
-`Hypothesis`, `research/hypotheses/H002`, tests; 215 pass). Nothing runs in
-the background. `ARC_PROPOSER` and `ARC_LLM_PROPOSER` are OFF by default.
-Score at default: median 0.0145 (unchanged since `5855c9d`). No model runtime
-on this machine (no Ollama, no `openai`, no keys).
+**State.** `main` at `1eeca67` is pushed (two commits: H003+H004+H002 with
+242 tests; the recap GUI 3-column redesign). `ARC_PROPOSER` and
+`ARC_LLM_PROPOSER` are still OFF by default — nothing here changed the
+default score. Ollama + `gemma3:4b` are installed and working locally
+(`qwen3.5:4b` is unusable — a thinking model whose reasoning never
+terminates in bounded time on this build; confirmed independently by the
+user hanging on a plain "hi"). Nothing runs in the background.
 
-**The oversight to avoid.** Reviewer C (`reviewer_c_09_14_2026.MD`, §12,
-§32 steps 3–4; second note "Experiments 1–4") said: build a **predictive
-transition model** and **genuinely competing hypotheses** *before* attaching
-a language model. The LLM interface got built first anyway (it is fine to
-keep — it is inert without a model). Do not attach a model until 3a and 3b
-below exist; the LLM's proposals must be verified against predictions, not
-only residual direction.
+**3a/3b done, per the previous handoff's order.** H003 (`agent/predictor.py`):
+one-step forecast from the tallies already held, scored against what
+happens. Finding: the world model's largest gap is state-dependent
+geometry (containment/distance error concentrates under movement actions),
+not another semantic condition — **position is the next primitive**, not
+more vocabulary. H004 (`agent/hypothesis.py` rival/forecast/exclusive):
+mechanism fires and is measurably active; net effect against E-7a was
+mixed, not a clean win — not promoted, kept behind `ARC_PROPOSER`.
+
+**H002: attached, then fixed twice, then swept at n=5.** E-H002-1 (5
+games, 1 seed) found the dominant rejection was a format mismatch, not
+hallucination — the model echoes the brief's own `"#5"` notation instead
+of a bare int. Fixed (lenient id parsing, a worked prompt example, a
+pool-priority tiebreak so valid LLM bets actually get tested instead of
+losing to the enumerator's bets for pool slots, eviction accounting to
+make that measurable). Seed-paired single-seed rerun: valid-schema rate
+27%→39%. **E-H002-2** (5 games × 5 seeds × 200 steps, `gemma3:4b`, the
+fixed code): valid-schema rate **55.9%** (146/261) — confirms the fixes
+generalise across seeds, not a lucky single run. 57 calls total (2.28/run).
+Of 146 valid: 1 `held`, 78 `falsified`, 19 `expired`, 11 live at cutoff.
+LLM hit rate (held/(held+falsified)) 1.3% vs the enumerator's own 2.6% in
+the *same* sweep — lower, but same order of magnitude on a falsification-
+heavy system where most bets of either source die; not evidence the
+model's hypotheses are dramatically worse. Gameplay: 3/25 runs reached
+level 1+ (cd82 0/5, cn04 1/5, tu93 0/5, ka59 0/5, ar25 2/5) — **but there
+is no matched non-LLM baseline at these same seeds/games/steps**, so this
+cannot yet answer whether the LLM moves the score. Full numbers in
+`research/hypotheses/H002_llm_hypothesis_proposer.md`.
+
+**A second reviewer-C pass** (`docs/expert-reviews/reviewer_c_09_14_2026b.md`)
+landed after E-H002-2 was scoped. Its central claim is correct and already
+independently flagged before reading it: **`recap.py`'s re-run-from-seed
+approach stops being a replay once a stochastic LLM is in the loop — it
+is a rerun, and should not be read as ground truth for an LLM-enabled run.**
+Agreed and actionable; pushed back on the proposed full event-sourcing
+rewrite (`agent.export_step()`, a Tier 1-5 architecture, `recap.py` reading
+a saved trace instead of re-running) as bigger than justified before
+E-H002-2 has told us the LLM proposer is worth the continued investment —
+the review's own recommended sequencing agrees (logging rework comes
+*after* analysis, not before). Also flagged: the "paired experiment" framing
+assumed a baseline that doesn't exist yet.
 
 **Order for the next session.**
-1. **3a. Predictive transition model** (write `H003` first). From evidence
-   already held — `Belief.effects[action]` (kind + direction per entity,
-   with determinism) and `PairRecord.by_action[_given]` (residual direction
-   per action, per condition) — `predict(action, condition) -> {entity:
-   expected kind, pair: expected residual direction, confidence}`. Every
-   step compare to what happened; log **prediction error per layer**
-   (entity motion / relation direction) as the world-model metric between
-   representation validity and behavioural utility. Small; no simulator.
-2. **3b. Competing transition hypotheses** (`H004`). The enumerator
-   proposes rule pairs about the *same* action whose predictions differ —
-   "ACTION5 changes the block from any side" vs "only from side −x" — and
-   `select_experiment` prefers the state where they diverge, so one press
-   falsifies one. The current pool heuristic (action shared by most bets)
-   is not this.
-3. **Ollama locally** (user approved): `brew install ollama`, pull
-   `qwen3.5:4b` or `gemma3:4b` (~3 GB). Agent already targets
-   `http://127.0.0.1:11434/v1` (`ARC_LLM_BASE_URL/MODEL`). Same client the
-   Kaggle path uses (vLLM on `127.0.0.1:8000/v1`).
-4. **E-H002-1**: five cold briefs → model → valid-schema rate; does anyone
-   state cd82's two-factor rule (side × selected swatch)? Then E-H002-2 on
-   the touched games, n=30, calls per level counted.
+1. **Matched baseline arm**: same 5 games (cd82, cn04, tu93, ka59, ar25),
+   same seeds 1-5, same 200-step cap, `ARC_PROPOSER=1` **without** the LLM
+   — the missing half of E-H002-2's comparison. Only then does "does Gemma
+   help" have an answer.
+2. **Durable per-LLM-call I/O capture** — prompt, raw reply, parsed/accepted
+   hypotheses, rejection reasons, latency, trigger reason, persisted to
+   disk. Small, bounded addition to `LLMProposer` (which already holds
+   most of this in memory as `stats`, just never writes it). Prerequisite
+   for the highest-value follow-up experiment: inject the exact hypotheses
+   a run actually generated offline against a deterministic agent, to
+   separate LLM generation quality from LLM integration quality.
+3. Document the rerun-vs-replay distinction explicitly in `recap.py`'s own
+   docstring, so a regenerated LLM-run page is never mistaken for the
+   authoritative trace of what happened.
+4. Deferred (correctly, per the review's own sequencing): the full
+   event-sourcing rewrite of `recap.py`/logging; LLM call-purpose framing
+   (model-discovery vs. hypothesis-discrimination vs. experiment-selection
+   prompts); call-budget-by-information-gain; the full ablation ladder
+   (baseline / LLM-ignored / LLM-accepted / LLM-injected-offline). Revisit
+   once (1) exists and says the LLM is worth keeping.
 
-**Open case.** cd82: paint effect is two-factor (side × selected paint
-colour) and the level needs *arrangement*, which has no gradient by rule.
-Three enumerator-side attempts (exploration floor, adjacency, side) each
-sharpened the diagnosis, none moved 16 → 2 of 30. Not to be chased again
-through the enumerator; it is the LLM proposer's first test case.
+**Open case, unchanged.** cd82: paint effect is two-factor (side × selected
+paint colour) and the level needs *arrangement*, which has no gradient by
+rule. Still the LLM proposer's test case; still not solved by it — no
+hypothesis across E-H002-1 or E-H002-2 has named a precondition on another
+entity's state, because the precondition schema has no slot for it
+(`{adjacency, side, member}` only). A representation-language ceiling, not
+yet evidence about the model's reasoning either way.
 
 **Standing rules that bit this session.** Commit/push only when asked, per
-batch. Never edit `agent/` while a sweep runs. Retention: latest 5 sweep
-summaries. Test on the games a change touches, not the full sweep, when
-the touched set is known.
+batch — and re-read the file before writing the commit message if it
+changed on disk since you last touched it (caught one wrong message before
+pushing this session). Never edit `agent/` while a sweep runs. A "before
+vs after" comparison needs the same seeds captured for *both* arms, not
+assumed. Retention: latest 5 sweep summaries. Test on the games a change
+touches, not the full sweep, when the touched set is known. Ollama serves
+one request at a time (`OLLAMA_NUM_PARALLEL=1`) — running multiple game
+processes concurrently does not parallelise LLM-proposer sweeps, only
+non-LLM ones.
 
 ## NEXT: relations as residuals, gated by a probe (council verdict 2026-09-14)
 
