@@ -577,6 +577,15 @@ day, it does not skip it.**
    (state, swatch, marked), seeds 1–3, against Stage 3; then the
    enumerator alone — does the lever form? Gate (H007 P1): jointly met on
    ≥ 3 of 8 steps (Stage 3: 0–1).
+   **Done 2026-09-15.** Kind, setter memory (keyed by resulting state)
+   and acting route built, 264 tests, default stream unchanged. Oracle
+   seeds 1–3: state restored in one step on all three; jointly met 3/8
+   on seed 2 (falsified: wrong colour named — the verifier working), 0/8
+   on seeds 1, 3 because the *walk* to the block's −x side has no path
+   (orbit hops vs a displacement planner). Correction: H001/H005 put the
+   adjacency on the template, whose −x side is off screen. Enumerator
+   tally not built: the state never varies under exploration (6 strip
+   clicks / 4,000 steps) — week 2's information-gain item.
 5. **Multi-step prediction — H008.** `Predictor.rollout(S, [a1..ak])` in the
    vocabulary — apply the forecast's entity effects and residual
    directions to an imagined S, forecast again. No pixels, no simulator.

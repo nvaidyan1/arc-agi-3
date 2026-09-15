@@ -174,6 +174,14 @@ class MyAgent(Agent):
         # scored after it. The policy does not read it; the brief, the
         # sweep summary and the rival hypotheses do.
         self.predictor = predictor.Predictor()
+        # H007: per entity, per state it has been seen to enter, the action
+        # that took it there — with the click, when it was one. The
+        # transition half of a state variable, in its smallest form: not
+        # "what last changed #2" (which cannot bring #2 *back*) but "what
+        # put #2 into state K". A `state:` precondition that is unmet is
+        # satisfied by *acting*, not by walking, and this is the only
+        # record of how. Ids die with the level, so this does too.
+        self._setters: dict[int, dict[str, tuple[str, tuple[int, int] | None]]] = {}
         self.llm: proposer_llm.LLMProposer | None = (
             proposer_llm.LLMProposer(
                 proposer_llm.OpenAICompatibleClient(LLM_BASE_URL, LLM_MODEL, LLM_API_KEY),
@@ -328,6 +336,7 @@ class MyAgent(Agent):
         self.interest.clear()
         self.regions.clear()
         self.belief.clear()
+        self._setters.clear()
         self.relations.clear()
         self.brief.clear()
         self.proposer.clear()
@@ -548,6 +557,11 @@ class MyAgent(Agent):
         # memory here had beliefs forming about ghosts, and the router
         # aiming at them (docs/history.md, 2026-09-14).
         self.belief.update(self._tracked_live, action.name, changed)
+        for rid, effect in self.belief.last_effects.items():
+            if effect != belief.UNCHANGED and rid in self._tracked_live:
+                token = relations.state_key(*self._tracked_live[rid])
+                self._setters.setdefault(rid, {})[token] = (
+                    action.name, self._last_click if action is GameAction.ACTION6 else None)
         self.relations.update(self.regions._tracked, self.regions.live, action.name,
                               skip=self._canvas_ids(), control=self._control_ids())
         self.predictor.score(forecast, self.belief, self.relations, self._level_step + 1)
@@ -833,12 +847,23 @@ class MyAgent(Agent):
                      if not self._condition_met(cond, member)]
             h.pending_met = not unmet
             if unmet:
+                # H007: a state condition is one action away when it can
+                # be satisfied at all, and setting it does not move the
+                # controlled thing; a walk is many steps and may not
+                # survive. So states first, then the proposer's order.
+                unmet.sort(key=lambda cm: not cm[0].startswith(relations.STATE + ":"))
                 cond, member = unmet[0]
-                step, note = self._route_to(member, candidates, side=cond.partition(":")[2])
+                if cond.startswith(relations.STATE + ":"):
+                    # H007: a state is not somewhere to walk to. Take the
+                    # action that has set this entity before, if any.
+                    step, note = self._route_by_acting(member, cond.partition(":")[2], candidates)
+                else:
+                    step, note = self._route_to(member, candidates, side=cond.partition(":")[2])
                 if step is not None:
                     step.reasoning = f"hypothesis: {h.describe()} — {note}"
                     self._arm_riders(step.name)
-                    self._last_click = None
+                    if step is not GameAction.ACTION6:
+                        self._last_click = None
                     self._last_action = step
                     return step
         else:
@@ -954,11 +979,15 @@ class MyAgent(Agent):
 
     def _condition_met(self, cond: str, member: int) -> bool:
         """Is the controlled thing within ADJACENT_GAP of `member`, on
-        `cond`'s side if it names one? False when either is off screen."""
+        `cond`'s side if it names one? Or (H007, `state:<token>`): does
+        `member` currently look like the token says? False when either
+        thing is off screen."""
         adjacency, _, side = cond.partition(":")
         tracked = self.regions._tracked
         if member not in self.regions.live or member not in tracked:
             return False
+        if adjacency == relations.STATE:
+            return relations.state_key(*tracked[member]) == side
         md = relations.Descriptor.of(*tracked[member])
         for c in self._control_ids():
             if c in self.regions.live and c in tracked:
@@ -968,6 +997,25 @@ class MyAgent(Agent):
                         not side or relations.side_of(cd.centroid, md.centroid) == side):
                     return True
         return False
+
+    def _route_by_acting(self, member: int, token: str, candidates):
+        """H007: the action that has put `member` into state `token` before
+        — with its click, if it was one — or (None, "") when nothing has,
+        or that action is not legal now. A bet whose state condition
+        cannot be satisfied this way proceeds unmet and expires, which is
+        the right outcome: the agent does not know how to reach that
+        state yet."""
+        setter = self._setters.get(member, {}).get(token)
+        if setter is None:
+            return None, ""
+        name, click = setter
+        action = next((a for a in candidates if a.name == name), None)
+        if action is None or (action is GameAction.ACTION6 and click is None):
+            return None, ""
+        if action is GameAction.ACTION6:
+            action.set_data({"x": click[0], "y": click[1]})
+            self._last_click = click
+        return action, f"acting to put #{member} into state {token} ({name})"
 
     def _route_to(self, target_id: int, candidates, side: str = ""):
         """First step of a path that brings the controlled thing next to

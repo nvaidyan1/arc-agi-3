@@ -163,6 +163,7 @@ def test_level_proven_dies_with_the_level_but_action_credit_does_not():
     agent.interest = InterestMap()
     agent.regions = entities.RegionTracker()
     agent.belief = belief.WorldBelief()
+    agent._setters = {}
     import brief, hypothesis, relations
     agent.relations = relations.RelationEngine()
     agent.brief = brief.Briefer()

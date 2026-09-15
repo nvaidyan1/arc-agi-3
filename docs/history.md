@@ -3043,3 +3043,40 @@ next family would reference the controlled thing's relation to what was
 clicked or moved (S_t now makes that computable) and needs more visits
 per context — deferred to week 2. H007 proceeds on its own evidence.
 Full tables in `research/hypotheses/H006_latent_state.md`.
+
+## 2026-09-15 — H007 Day 4: the state condition kind, and a walk that cannot be planned
+
+**Hypothesis.** A `state:<token>` precondition on another entity, met
+when that entity currently looks like the token and satisfied when unmet
+by acting (the action that put it into that state before), makes cd82's
+two-factor rule jointly satisfiable where H005's adjacency conjunction
+was not.
+
+**Built.** `relations.state_key`; `_condition_met` dispatch;
+`MyAgent._setters` keyed by entity and *resulting* state (the first
+version keyed by "what last changed it" could not bring a thing back —
+caught by the oracle's own design before the first run); `_route_by_
+acting`; state conditions before walks. Enumerator, LLM schema,
+predictor untouched. 264 tests. Default action stream byte-identical
+(cd82, sp80, seed 1). `scripts/h007_cd82_oracle.py`: three forced swatch
+clicks so the agent's own memory learns both transitions, then a bet on
+`adjacent:-x` of the block AND `state:K0` of the strip.
+
+**Observation.** Seeds 1–3: the strip's token flips K0/K1 with every
+click; `_setters[2]` learned both directions from observation; the
+acting route restored K0 in one step on every seed. Seed 2: jointly met
+3 of 8, falsified (residual 5 held — the block needed the other colour).
+Seeds 1, 3: 0 of 8 — `_route_to` found no path to the block's −x side on
+6 of 7 steps and the lever was pressed unmet. Found on the way: H001 and
+H005's oracles put the adjacency condition on the template, whose −x
+side is off screen; the tally's member is the block.
+
+**Inference.** The state kind works end to end and costs one step; the
+bottleneck for joint satisfiability is now the walk, and specifically
+that cd82's moves are orbit hops the displacement-space planner cannot
+express — a router limit the review ranked last and this result puts
+back on the table for cd82 alone. The enumerator cannot form a
+state-conditioned lever until the state varies under exploration (6
+strip clicks in 4,000 steps), which is the information-gain item, week
+2. H007's P1 met on one seed of three; mechanism on three of three.
+Tables in `research/hypotheses/H007_state_condition.md`.

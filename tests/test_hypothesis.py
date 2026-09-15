@@ -254,3 +254,64 @@ def test_a_conjunctive_precondition_requires_every_condition_met():
     a.regions._tracked[5] = (2, [(0, 1)])
     assert a._condition_met("adjacent", 5) is True
     assert a._precondition_met(h) is True
+
+
+# ── the state condition kind (H007) ──────────────────────────────────────
+
+def test_describe_renders_a_state_condition():
+    h = make(10)
+    h.precondition = (("adjacent:-x", 2), ("state:a1b2c3d4", 7))
+    assert "adjacent on side -x of #2 and #7 in state a1b2c3d4" in h.describe()
+
+
+def test_a_state_condition_reads_the_members_current_appearance():
+    """`state:<token>` is met exactly when the member's colour+shape token
+    (relations.state_key) equals the one the hypothesis names — position
+    does not matter, shape does. H005 Stage 3 found adjacency the wrong
+    proxy for cd82's "which swatch is selected"; this is the condition
+    kind that can carry it."""
+    import my_agent, relations
+    from types import SimpleNamespace
+    marker_left = [(0, 0), (1, 0), (2, 0), (0, 1)]
+    marker_right = [(0, 0), (1, 0), (2, 0), (2, 1)]
+    a = object.__new__(my_agent.MyAgent)
+    a.regions = SimpleNamespace(live={1, 7}, _tracked={1: (3, [(0, 0)]), 7: (5, marker_left)})
+    a._control_ids = lambda: {1}
+    want = relations.state_key(5, marker_left)
+    assert a._condition_met(f"state:{want}", 7) is True
+    a.regions._tracked[7] = (5, [(x + 10, y + 10) for x, y in marker_left])   # moved, same shape
+    assert a._condition_met(f"state:{want}", 7) is True
+    a.regions._tracked[7] = (5, marker_right)                                 # changed in place
+    assert a._condition_met(f"state:{want}", 7) is False
+    a.regions.live = {1}                                                       # off screen
+    assert a._condition_met(f"state:{want}", 7) is False
+
+
+def test_an_unmet_state_condition_is_satisfied_by_acting_not_walking():
+    """The router for a state condition is the action that has put that
+    entity into the named state before, with its click coordinates when
+    it was a click. Keyed by the RESULTING state, not "what last changed
+    it": the last change may have taken the thing away from the state the
+    bet needs. Nothing known for that state, or the action illegal now,
+    and the bet proceeds unmet."""
+    import my_agent
+    from arcengine import GameAction
+    a = object.__new__(my_agent.MyAgent)
+    a._setters = {}
+    a._last_click = None
+    legal = [GameAction.ACTION1, GameAction.ACTION5, GameAction.ACTION6]
+    assert a._route_by_acting(7, "k0", legal) == (None, "")           # nothing has set #7
+    a._setters[7] = {"k1": ("ACTION5", None)}
+    assert a._route_by_acting(7, "k0", legal) == (None, "")           # k1 is known, k0 is not
+    step, note = a._route_by_acting(7, "k1", legal)
+    assert step is GameAction.ACTION5 and "#7" in note
+    a._setters[7]["k0"] = ("ACTION6", (43, 4))
+    a._setters[7]["k1"] = ("ACTION6", (37, 4))
+    step, _ = a._route_by_acting(7, "k0", legal)
+    assert step is GameAction.ACTION6
+    assert step.action_data.x == 43 and step.action_data.y == 4
+    assert a._last_click == (43, 4)
+    a._setters[7]["k0"] = ("ACTION6", None)                             # a click with no coordinate
+    assert a._route_by_acting(7, "k0", legal) == (None, "")
+    a._setters[7]["k0"] = ("ACTION3", None)                             # not legal now
+    assert a._route_by_acting(7, "k0", legal) == (None, "")

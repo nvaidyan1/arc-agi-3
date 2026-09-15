@@ -48,6 +48,7 @@ enumerator above this layer, not of the vocabulary.
 """
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from typing import Iterable
 
@@ -627,3 +628,20 @@ def _shape(cells: frozenset) -> frozenset:
     x0 = min(c[0] for c in cells)
     y0 = min(c[1] for c in cells)
     return frozenset((x - x0, y - y0) for x, y in cells)
+
+
+# H007: the second condition KIND. `adjacent:<side>` asks where the
+# controlled thing stands; `state:<token>` asks what another entity
+# currently LOOKS like — a marker that has moved within a strip, a switch
+# that has flipped, a slot that has filled. The token is colour + shape,
+# position removed, so a thing that moves without changing keeps its
+# state and a thing that changes in place does not.
+STATE = "state"
+
+
+def state_key(colour: int, cells) -> str:
+    """One entity's appearance as a short token. The tracker keeps an id
+    only within one colour (a thing that changes colour outright becomes
+    a new entity), so in practice this is about shape."""
+    shape = sorted(_shape(frozenset(cells)))
+    return hashlib.md5(f"{colour}:{shape}".encode()).hexdigest()[:8]

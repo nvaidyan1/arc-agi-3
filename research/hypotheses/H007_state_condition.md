@@ -74,3 +74,57 @@ precondition-unmet rate by condition kind; hypothesis outcomes.
 ## Status log
 
 - 2026-09-15 opened.
+- 2026-09-15 **Day 4 built and run.** `relations.state_key` (colour +
+  shape token, position removed) and `STATE`; `Hypothesis.precondition`
+  accepts `("state:<token>", member)` through `conditions_of` unchanged;
+  `_condition_met` dispatches on the kind; `MyAgent._setters` — per
+  entity, per state it has been seen to *enter*, the action that took it
+  there with its click — recorded in `_learn_from` from
+  `belief.last_effects` (keyed by the resulting state, not "what last
+  changed it", because the last change may have taken the thing *away*
+  from the state a bet needs); `_route_by_acting` looks that up when a
+  state condition is unmet; the policy satisfies state conditions before
+  walks (one action, no displacement). Enumerator, LLM schema and the
+  predictor untouched. 264 tests (3 new). Default action stream
+  byte-identical on cd82 and sp80 seed 1 (the memory is recording-only
+  until a state condition exists).
+
+  `scripts/h007_cd82_oracle.py`, seeds 1–3, injection at step 24 after
+  three forced swatch clicks so the agent's *own* memory learns both
+  transitions (nothing injected into `_setters`):
+
+  | seed | strip tokens through the clicks | setters learned | acting route | jointly met / 8 | verdict |
+  |---|---|---|---|---|---|
+  | 1 | K0 → K1 → K0 → K1 | both (K1: click (37,4); K0: click (43,4)) | fired once, K0 restored in one step | 0 | expired: no path to the block's −x side for 6 of 7 steps, lever pressed unmet |
+  | 2 | same | both | fired once | **3** | falsified: residual 5 held under three met presses |
+  | 3 | same | both | fired once | 0 | expired, as seed 1 |
+
+  **P1 met on 1 of 3 seeds, and the mechanism confirmed on 3 of 3.** The
+  state condition read correctly (tokens flip deterministically), the
+  transition memory learned both directions from observation, and the
+  acting route restored the named state in one step every time. What
+  kept seeds 1 and 3 from the joint test is the *walking* condition —
+  `_route_to` found no path to the block's −x side (cd82's moves are
+  orbit hops the displacement planner cannot express), a pre-existing
+  router limit, not the state kind. **P3 supported in spirit**: the state
+  condition cost one step per seed, adjacency seven.
+
+  **Seed 2's falsification is the verifier working.** The oracle named
+  the *initial* state K0 (colour 15 selected); seed 2's block stood at
+  residual 5 and needed the other colour, so painting 15 could not lower
+  it. The right bet there is `state:K1`; a proposer that reads which
+  colour the block lacks would name it. Not a failure of the kind.
+
+  **A correction to the record.** H001/H005's oracles conditioned
+  adjacency on the *template* (#0), which sits at the board's left edge —
+  its −x side is off screen, so that condition was near-impossible by
+  geometry. H001's `adjacent:-x` lever was tallied relative to the pair's
+  nearest non-control member, i.e. the **block** (#10). H005 Stage 3's
+  0–1 of 8 was partly this, not only the swatch-adjacency proxy.
+
+  **P2 (the enumerator forms a state-conditioned lever) — not built,
+  and not reachable by tallies alone.** The agent clicked the strip 6
+  times in 4,000 recorded steps, so the selection state never varies
+  under its own exploration and no tally can contrast it. That is an
+  exploration / information-gain problem (week 2), not a representation
+  one; the tally extension waits for it.

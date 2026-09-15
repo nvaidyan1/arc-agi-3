@@ -69,6 +69,14 @@ def conditions_of(precondition) -> tuple:
     return tuple(precondition)
 
 
+def _clause(cond: str, member: int) -> str:
+    """One condition, readably: "adjacent on side -x of #7", or (H007)
+    "#7 in state a1b2c3d4" for a `state:<token>` condition."""
+    if cond.startswith(_relations.STATE + ":"):
+        return f"#{member} in state {cond.partition(':')[2]}"
+    return f"{cond.replace(':', ' on side ')} of #{member}"
+
+
 def describe_conditions(precondition, exclusive: bool = False) -> str:
     """The human-readable clause `Hypothesis.describe()` and the brief's
     hypothesis log both want: "" with none, "only when X of #7" with one,
@@ -77,7 +85,7 @@ def describe_conditions(precondition, exclusive: bool = False) -> str:
     if not conds:
         return ""
     only = "only " if exclusive else ""
-    clauses = " and ".join(f"{c.replace(':', ' on side ')} of #{m}" for c, m in conds)
+    clauses = " and ".join(_clause(c, m) for c, m in conds)
     return f" {only}when {clauses}"
 
 
