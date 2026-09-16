@@ -3217,3 +3217,43 @@ validation numbers (P1–P3) are unchanged by the fix. Standing rule added:
 never gate a commit on a test command piped through `tail`, since the
 pipeline's exit status belongs to the last command, not the one that
 matters.
+
+## 2026-09-15 — H009 closes: the position graph is learnable within one live episode
+
+**Hypothesis.** (User's request, as the natural completion of H009
+before moving on.) H010 Stage 1 validated the position-graph model
+against ten seeds' pooled data — does a SINGLE live episode's own
+exploration build a usable graph fast enough to matter, before its own
+budget runs out? Answerable without touching the shipped router: tap
+the real agent and feed a fresh `PositionModel` only what that one
+episode has itself seen.
+
+**Built.** `scripts/h009_live_validation.py`: ten seeds, 400 steps,
+checkpointed at 10/25/50/100/150/200/300 decisions, recording admitted
+edges and whether `plan_graph` (with only that episode's own evidence)
+finds a route to a currently-known −x target.
+
+**Observation.** A warm-up curve, not a fixed rate: 0/10 usable at
+decision 10, 4/10 at 100, 8/10 at 150, 9/10 at 300. One seed (4) never
+succeeds — it visits only 7 of 8 orbit positions in 400 steps and ends
+at 9 of 32 possible edges, well below the other nine seeds (17-29).
+Checked independently against that seed's own separately-recorded
+default-policy trace: identically 7 positions, same one missing — a
+real property of that seed's exploration under the current policy, not
+an artefact of the validation script. A real (not noise) dip at
+decision 200 on two seeds: graph reachability depends on the edges
+known FROM the bucket's current position, not total edge count, so a
+seed can regress by standing somewhere its own history under-explored
+even as its total count climbs.
+
+**Inference.** The fix is live-viable, not just an offline artefact:
+most episodes have a usable route to the walk H009 found missing, well
+inside budget. Where it fails, it fails for the same underlying reason
+H007's swatch-click problem does — the exploration policy doesn't
+guarantee coverage of what a later decision needs. That reframes two
+separate-looking findings from this week as one gap, and it is exactly
+the information-directed exploration item already queued next, not a
+new problem to solve. H009 is closed: diagnosis, fix, and live
+viability are all established. H010 Stage 2 (wiring into the shipped
+router) stays deliberately unbuilt. Full detail in
+`research/hypotheses/H009_planner_factorial.md`.

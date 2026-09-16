@@ -126,3 +126,63 @@ length; E1 path-found rate, honoured rate, first divergence step.
   -> pos'`, admitted where deterministic — the same admit rule as
   H006's), which `navigation.plan` can search unchanged. Not built this
   week; it is the first item on week 2's list, above information gain.
+
+## Closing experiment: does a single live episode learn the graph in time?
+
+Requested by the user (2026-09-15 night) as the natural completion of
+this hypothesis before moving on — a "quick, killer" test of whether
+H010's fix would actually help *live*, not only against ten seeds'
+pooled hindsight. Deliberately scoped to avoid touching the shipped
+router: `scripts/h009_live_validation.py` plays cd82 with the real,
+unmodified agent and, from a tap, feeds a fresh `PositionModel` only
+what that one episode has itself observed so far — the same
+`.observe()` call Stage 2 would make from `_learn_from`, called from
+outside instead of shipped.
+
+**Method.** Ten seeds, 400 steps. At checkpoints (10, 25, 50, 100, 150,
+200, 300 decisions), record: edges admitted so far; whether the
+bucket's *current* position is already a −x target; if not, whether
+`plan_graph`, given only the edges learned up to that point, finds a
+route.
+
+**Result — a warm-up curve, not a fixed rate:**
+
+| decision | seeds with a usable route or already there |
+|---|---|
+| 10 | 0/10 |
+| 25 | 1/10 |
+| 50 | 1/10 |
+| 100 | 4/10 |
+| 150 | 8/10 |
+| 200 | 7/10 (a real dip — see below, not noise) |
+| 300 | 9/10 |
+
+Final coverage: 8 of 10 seeds see all 8 orbit positions and admit
+17–29 of the 32 possible edges; two see fewer. The 200→150 dip is real,
+not sampling noise: reachability from the graph depends on the edges
+*known from the bucket's current position*, not on total edge count, so
+a seed can regress if it happens to be standing somewhere its own
+history has under-explored, even while its overall edge count keeps
+climbing (seed 2 and seed 3 both do exactly this). One seed (4) never
+succeeds at all — it visits only 7 of 8 positions in the full 400
+steps and ends at 9 edges, well below the rest. Checked against that
+seed's own separately-recorded default-policy trace
+(`recordings/latent/seed4/cd82.jsonl`): identically 7 positions, the
+same one missing — this is a real property of that seed's exploration
+trajectory under the current policy, reproduced independently, not an
+artefact of this script.
+
+**Inference.** The position graph is learnable live, fast enough to
+matter: 8 or 9 of 10 seeds have a usable route well inside a typical
+200–400 step budget, most by decision 150. Where it fails, it fails for
+the same reason H007's swatch-click problem does — the current
+exploration policy does not guarantee coverage of what a later decision
+will need, whether that is a state to click into or a position to have
+passed through. That is one underlying gap behind two separate findings
+this week, and it is the information-directed exploration item already
+queued for next, not a new problem. **This closes H009**: the
+diagnosis (reading B), the fix (H010's model), and now its live
+viability are all established. Wiring it into the shipped router
+(H010 Stage 2) remains deliberately not done, by direction — an
+available, tested, unwired asset for whenever routing is back on the
+agenda.
