@@ -1,6 +1,6 @@
 # H006: The aliasing is state, not noise — a few history-set variables resolve it
 
-Status: OPENED — Day 0: aliasing measured (654 contexts on 10 games), nothing built
+Status: TESTED — holds for the meter class: `Z1 = actions since reset` confirmed with repeats and a null on 6 games; the mechanic remainder (sk48/su15/sc25/g50t) is not resolved by the history-derived family. See the status log below for the day-by-day record; this line is kept in sync with `research/hypotheses/README.md`.
 Research question: RQ2 (predictive world modelling)
 Date opened: 2026-09-15
 Origin: reviewer C, fourth pass (`docs/expert-reviews/reviewer_c_09_15_2026.md`,

@@ -1,6 +1,6 @@
 # H011: A novelty term in target selection reaches under-explored cells the salience heuristic misses
 
-Status: OPENED — Stage 1 (offline, click targeting) run
+Status: TESTED (Stage 1 offline + Stage 2 live) — the click blend is built (`agent/attention.py`) and swept live on cd82: strip clicks 1.6% -> 42-52% at every weight tried. The effect is almost entirely structural (ending the hard tier cutoff), not the novelty term's weight, and comes with a measured, real trade-off (the hottest-region click share fell from ~20% to 14-18%). Movement-side novelty (the frontier tier in `_select`) is not yet built. Uncommitted as of 2026-09-16: a matched-seed (n=30) whole-sweep parity check is running before this is finalized.
 Research question: RQ3 (active testing)
 Date opened: 2026-09-15
 Origin: two independent findings from this week point at the same gap.

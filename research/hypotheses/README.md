@@ -6,6 +6,8 @@ build is about to test it (reviewer C, 2026-09-14: "only create an artifact
 when a recurring research problem demands it"). `history.md` stays the
 chronological record; these are the scientific claims it tests.
 
+Each file's own `Status:` header line is kept in sync with this table's right column — added 2026-09-16 after an external reviewer (`docs/expert-reviews/reviewer_g_09_16_2026.md`) proposed H012/H013 as new work that turned out to already be H011 Stage 2 and H007, most likely because several files' headers had drifted to say "OPENED — not built" long after their status logs below recorded a tested result. Read this table first; if a header ever disagrees with it, the table is right and the header is a bug to fix, not a fact to act on.
+
 | id | title | status |
 |---|---|---|
 | H001 | Conditional affordances — a lever given a precondition | TESTED — falsifier 2 met on cd82 |
@@ -18,4 +20,4 @@ chronological record; these are the scientific claims it tests.
 | H008 | State in the tallies raises k-step predictive sufficiency, only where state exists | TESTED (Day 5) — Z1 gains 2-7pt at k=10 on 5/10 aliased games, 0 on controls; move-map games separate cleanly at k=10 |
 | H009 | cd82's walk fails in the planner's model class, not the representation or the search | CLOSED — reading B; live-episode learning viable on 8-9/10 seeds within budget; the failures trace to the same exploration gap as H007's | 
 | H010 | A position-graph transition model closes the gap H009 found | STAGE 1 TESTED — P1-P3 all met through real code (32 edges, reachable <=3, 1779/1779 honoured vs plan's 0/1244); Stage 2 (live wiring) needs a regression design first |
-| H011 | A novelty term in target selection reaches under-explored cells the salience heuristic misses | TESTED (Stage 1) — 32x expected-click gap (160.1 vs 5 real), the strip is never absent or structurally disadvantaged; tier ordering is the whole cause |
+| H011 | A novelty term in target selection reaches under-explored cells the salience heuristic misses | TESTED (Stage 1 offline + Stage 2 live) — Stage 1: 32x expected-click gap offline. Stage 2 (live, cd82, seeds 1-5): strip clicks 1.6% -> 42-52% at every weight tried; the effect is mostly structural (ending the hard tier cutoff), not novelty itself; a real, measured concentration trade-off found (~20% -> 14-18% in the hottest region). Uncommitted pending a whole-sweep n=30 parity check (in progress 2026-09-16). |

@@ -1,6 +1,6 @@
 # H007: A `state` condition kind — a two-factor rule becomes jointly satisfiable
 
-Status: OPENED — not built; the 09-14 handoff's item 1 reframed
+Status: TESTED — the `state` condition kind is built and works: mechanism confirmed 3/3 seeds live on cd82 (state restored in one action every time). P1 (jointly met >= 3/8) met on 1 of 3 seeds; the other two are blocked by the walk (`navigation.plan`'s offset model), not by the state condition — see H009. P2 (the enumerator forms a state-conditioned lever) is blocked by an exploration gap, not a representation one — see H011.
 Research question: RQ3 (active testing)
 Date opened: 2026-09-15
 Origin: `H001` falsifier 2 (cd82's second factor is *another entity's

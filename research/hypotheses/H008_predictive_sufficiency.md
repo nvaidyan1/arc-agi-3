@@ -1,6 +1,6 @@
 # H008: State in the tallies raises k-step predictive sufficiency, and only where state exists
 
-Status: OPENED — not built
+Status: TESTED — the predictor scores its own k=1/3/10 rollouts live now. Z1 (H006) gains 2-7 points of k=10 accuracy on 5 of 10 aliased games, 0 on the three 0%-aliased controls, exactly as predicted; games with a real move map separate cleanly from those without at k=10, and cd82 sits mid-table, foreshadowing H009.
 Research question: RQ2 (predictive world modelling)
 Date opened: 2026-09-15
 Origin: `H003` (one-step forecast in the vocabulary; its largest error is

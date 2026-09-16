@@ -1,6 +1,6 @@
 # H009: cd82's walk fails in the planner's model class, not in the representation or the search
 
-Status: OPENED — not run
+Status: CLOSED — reading B (the transition model's *class* is the defect, not representation or search). H010 is the fix, validated offline against this hypothesis's own data (P1-P3 all met). The closing live-episode experiment found the fix learnable within a single episode's budget on 8-9 of 10 seeds; the one holdout traces to the same exploration gap H011 addresses.
 Research question: RQ2 (predictive world modelling) / RQ4 (planning)
 Date opened: 2026-09-15
 Origin: user-relayed reviewer proposal (2026-09-15 evening), on top of
