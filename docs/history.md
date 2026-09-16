@@ -3257,3 +3257,39 @@ new problem to solve. H009 is closed: diagnosis, fix, and live
 viability are all established. H010 Stage 2 (wiring into the shipped
 router) stays deliberately unbuilt. Full detail in
 `research/hypotheses/H009_planner_factorial.md`.
+
+## 2026-09-15 — H011 Stage 1: the swatch strip is 32x under-served by tier order, not by lacking a novelty signal
+
+**Hypothesis.** H007 and H009's closing experiment both point at the
+same gap: click and movement targeting rank by salience/visited-once,
+never by how uncharacterized a candidate's outcome still is. Opened as
+H011. First offline test: would a pure novelty rule have clicked cd82's
+swatch strip (4-5 of 322 real clicks, 1.2-1.6%) far more often, using
+only evidence already on disk?
+
+**Built.** `scripts/h011_click_novelty.py` replays the 322 real ACTION6
+decisions across ten seeds' recorded frames, holding real per-cell click
+counts and each frame fixed. First metric tried — "is the strip ever
+tied for fewest real clicks" — read 322/322 and was recognised as
+near-vacuous before being reported: with a median 833 non-background
+cells against 322 total clicks, almost the whole board stays tied at
+zero throughout, so the test barely discriminates anything. Replaced
+with the metric that actually says something: expected strip clicks
+under a uniform draw from the tied set, weighted by that set's size each
+time.
+
+**Observation.** Real: 5/322 (1.6%). Expected under uniform-novelty tie-
+break: 160.1/322 — a 32x gap. The strip is visible as a normal candidate
+on every single decision (never absent) and makes up a median 49.6% of
+the tied-for-fewest set on decisions where it appears, far above its
+share of the board's area (it is a dense, mostly-filled bar). The
+policy's narrower salience tiers — interest, recently-active, near the
+action zone — almost never run out of fresh candidates, so the broad
+tier where the strip would win a fair contest is close to unreachable
+in practice.
+
+**Inference.** The strip is not perceptually or structurally
+disadvantaged; the entire 32x gap is tier *ordering*. Confirms H011's
+claim precisely: a novelty-aware re-ranking, not a new signal, closes
+this. Full detail in
+`research/hypotheses/H011_information_directed_targeting.md`.

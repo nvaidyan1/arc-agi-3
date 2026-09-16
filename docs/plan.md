@@ -676,6 +676,21 @@ cross-seed Z1 admission** for `latent_rollout.py` (H008's own finding:
 wa30/sc25/sk48/su15 gained nothing under a per-seed-only admission
 despite wa30 being H006-confirmed at the pooled level).
 
+**H011 opened and Stage 1 run, 2026-09-15 night** (the information-
+directed exploration item, started early per user direction after H009
+closed): `scripts/h011_click_novelty.py` replays cd82's 322 real
+ACTION6 decisions and asks whether a novelty-aware re-ranking would
+reach the swatch strip far more than the real 1.6%. Result: expected
+160.1 of 322 (32x) under uniform draw from whatever is tied for fewest
+real clicks; the strip is never absent and holds ~50% of that tied set
+when present. The gap is entirely `ClickTargeting.pick()`'s tier
+ordering (narrower salience tiers almost never run dry), not a missing
+signal or a structural disadvantage. Full detail in
+`research/hypotheses/H011_information_directed_targeting.md`. Stage 2
+(blending novelty into `pick()`'s live ranking) is next, pending
+direction on the exact mechanism — a change to `agent/attention.py`,
+not the router and not new representation.
+
 **Standing rules, unchanged, plus one new one (2026-09-15 night):**
 never gate a commit on `make test | tail -N` or any piped test command —
 the pipeline's exit status is the last command's, not the test run's,
