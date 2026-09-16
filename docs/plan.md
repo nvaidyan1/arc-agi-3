@@ -691,6 +691,84 @@ signal or a structural disadvantage. Full detail in
 direction on the exact mechanism — a change to `agent/attention.py`,
 not the router and not new representation.
 
+**H011 Stage 2 built and swept live, 2026-09-15 night**
+(`agent/attention.py`, `agent/constants.py CLICK_NOVELTY_WEIGHT`, per
+user direction to blend salience and novelty as a weighted score, not
+a hard override). Live sweep on cd82 (seeds 1-5, weights 0/0.5/1/2/4):
+strip clicks 1.6% -> 42-52% at EVERY weight, including 0 -- the fix is
+almost entirely structural (ending the hard tier cutoff), not the
+novelty term itself, which is documented plainly rather than
+overclaimed. Measured trade-off: the hottest 8x8 region's click share
+fell from ~20% to 14-18%. Weight set to 1.0 (least arbitrary given flat
+sensitivity, not a tuned optimum). 8 new tests, 286 total pass. Not
+done: a broader multi-game regression sweep and any score read. Full
+detail in `research/hypotheses/H011_information_directed_targeting.md`.
+
+**A second reviewer (`docs/expert-reviews/reviewer_g_09_16_2026.md`)
+converged independently on the same two gaps**, then revised cleanly
+once shown H007 and H011 Stage 2 already existed (its first pass
+proposed both as new work — traced to the same stale-header bug fixed
+below, not a flaw in its reasoning). The two-pass exchange settled on
+one sequence, folded in here:
+
+1. **Immediate, in flight**: finish and read the whole-sweep n=30
+   seed-paired parity check on H011 Stage 2 (baseline arm done 30/30,
+   clean — mean 0.0286, median 0.0162, matching the historical noise
+   floor; treatment arm running 2026-09-16). **Hard gate, both
+   reviewers' words**: revert or soften the tier-structure change if
+   level-1 clears drop by more than 1 per 30 sweeps on games that
+   previously cleared, or if the median score falls materially.
+2. **H012 opened** (`research/hypotheses/H012_movement_novelty.md`):
+   the movement-side symmetric counterpart to H011 — score frontier-
+   tier actions by `PositionModel`/`MoveModel` sighting counts, not a
+   visited/unvisited bit. Given its own number rather than "H011 Stage
+   2b": a separately falsifiable claim, same split logic as H006/H007/
+   H008. Predicts orbit coverage on cd82 reaches >= 9/10 of H009's
+   seeds by decision 150 (was 8/10). Explicitly does NOT claim to
+   unblock H007 P2 — that depends on click coverage (H011, already
+   live), not movement coverage; a corrected reading of the second
+   review's first pass, which had pinned that prediction to the wrong
+   mechanism. Flag-gated (`ARC_MOVEMENT_NOVELTY`) per both reviewers'
+   operating rule — the gap H011 Stage 2 left uncorrected. Waits on
+   H011's own parity gate first.
+3. **Re-test H007 P2 standalone**, decoupled from H012 and runnable as
+   soon as H011 clears its gate: rerun the enumerator on cd82 (10
+   seeds, 400 steps) and ask whether a state-conditioned lever for the
+   paint action now forms, given the click-coverage change alone. If
+   not, the residual gap is in tally/lever-formation logic, a smaller
+   follow-up than assumed.
+4. **H010 Stage 2**, once H011 (and H012, if it ships) are parity-clean:
+   wire `PositionModel.observe` into `_learn_from`; prefer `plan_graph`
+   over `plan` when it has edges from the current position, falling
+   back otherwise. Same regression design and hard gate as above,
+   n>=30 on sp80/ls20/ar25/m0r0/dc22. Success criterion (both
+   reviewers): the "path found but immediately dropped" failure H009
+   documented disappears, and the H007 two-condition oracle's joint-
+   satisfaction rate rises on the seeds that were walk-blocked.
+5. **Phase 4 (new, not yet built)**: gate a hypothesis's live action
+   budget on a short internal residual rollout (H008's predictor,
+   extended a few steps) showing the residual is expected to fall
+   before any live action is spent — the minimal "plan through the
+   model" step, staying inside residual language. Implement only after
+   H010 Stage 2 is wired, so the internal model actually has
+   position-dependent transitions to roll out.
+6. **Only then reopen the proposer** (H002, a richer enumerator):
+   giving it more power while exploration and the transition model are
+   still incomplete mainly amplifies existing failure modes, per both
+   reviewers.
+
+**Operating rules, adopted from the exchange**: one live behavioural
+change at a time, behind a flag (H011 Stage 2 is the one exception,
+built before this rule was adopted — not retrofitted, since it is
+already mid-parity-check); n>=30 seed-paired parity with the explicit
+"> 1 level-1 clear per 30 sweeps" regression bar on games that already
+work; offline/oracle/counterfactual first whenever a claim is
+representational or about ranking, live only once the mechanism is
+proven; the README table is the single source of truth for hypothesis
+status, headers kept in sync with it (see `research/hypotheses/
+README.md`'s own note, added 2026-09-16 after exactly this drifted and
+produced the first review pass's staleness).
+
 **Standing rules, unchanged, plus one new one (2026-09-15 night):**
 never gate a commit on `make test | tail -N` or any piped test command —
 the pipeline's exit status is the last command's, not the test run's,

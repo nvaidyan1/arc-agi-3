@@ -131,3 +131,65 @@ sanity check that this isn't strip-specific overfitting.
   change to `agent/attention.py`'s target-selection function — a
   decision-weighting change over existing evidence, not new
   representation and not the navigation router.
+
+## Stage 2: live implementation and weight sweep
+
+**Built** (`agent/attention.py` `ClickTargeting.pick()`; `agent/
+constants.py` `CLICK_NOVELTY_WEIGHT`, per user direction to blend
+novelty with salience as a weighted score rather than a hard override
+or replacement). Every live (non-habituated) candidate across every
+tier — not just the first non-empty one — now gets
+`score = salience(cell) + CLICK_NOVELTY_WEIGHT * novelty(cell)`, with
+`salience(cell) = 1 / (1 + its best tier's index)` and
+`novelty(cell) = 1 / (1 + times clicked so far)`; the pick is a weighted
+random draw over all of them. Habituation (a cell clicked before with
+zero effect) is excluded before scoring, unchanged. The `acts_locally`
+branch that drops the "recent AND non-background" tier when clicking
+acts remotely is unchanged in structure. 8 new unit tests
+(`tests/test_attention.py`), 286 total pass.
+
+**Live weight sweep** (`scripts/h011_weight_sweep.py`, cd82, seeds 1–5,
+400 steps, weights 0/0.5/1/2/4):
+
+| weight | strip clicks | strip % | hottest 8×8 region % |
+|---|---|---|---|
+| 0.0 | 57/117 | 48.7% | 13.7% |
+| 0.5 | 56/125 | 44.8% | 13.6% |
+| 1.0 | 64/122 | 52.5% | 18.0% |
+| 2.0 | 55/130 | 42.3% | 15.4% |
+| 4.0 | 59/127 | 46.5% | 15.0% |
+
+**A larger and more honest finding than expected.** Strip clicks moved
+from the old 1.6% to 42–52% at *every* weight tested, including 0.0 —
+pure salience, no novelty term at all. The fix is almost entirely
+structural, not from novelty: replacing "the top non-empty tier wins
+outright" with "every candidate gets summed weight, drawn
+proportionally" means a tier with hundreds of cells (tier 3, "any
+non-background") now carries real total probability mass even at a low
+per-cell score, purely because there are so many of them — the strip
+being roughly half the board's non-background area (Stage 1) means it
+now wins close to half the time regardless of the specific novelty
+weight. `CLICK_NOVELTY_WEIGHT`'s own effect, in isolation, is close to
+flat over the tested range.
+
+**The real trade-off, measured rather than assumed.** Clicks in the
+single most-active 8×8 region fell from ~20% (the original, separately-
+measured 63/322 concentration) to 14–18% here. Some of the concentration
+that made "interest always wins outright" the right rule in the first
+place is traded away by ending the hard cutoff — a modest, not
+catastrophic, dilution, but a real one, and this project's own history
+(`docs/history.md` 2026-09-13, "more routing made the score worse") is
+reason enough not to wave it away.
+
+**Weight chosen: 1.0** — the natural, least-arbitrary value (equal
+footing between one salience tier-step and full novelty) given that
+sensitivity to it is nearly flat on this data, not because it
+measurably beat the alternatives. `constants.py` documents this
+precisely, including the flat-sensitivity finding, so a future reader
+does not mistake the choice for a tuned optimum.
+
+**Not done:** a broader multi-game regression check (this touches every
+game with a click action, not only cd82) and any score-level read —
+consistent with "score is read last," and the concentration trade-off
+above is a specific, named reason a live sweep across click-heavy games
+should happen before this is trusted beyond cd82.

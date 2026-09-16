@@ -3293,3 +3293,36 @@ disadvantaged; the entire 32x gap is tier *ordering*. Confirms H011's
 claim precisely: a novelty-aware re-ranking, not a new signal, closes
 this. Full detail in
 `research/hypotheses/H011_information_directed_targeting.md`.
+
+## 2026-09-15 — H011 Stage 2: the click blend works, but not for the reason expected
+
+**Hypothesis.** Per user direction: blend novelty with salience as a
+weighted score in ClickTargeting.pick(), rather than a hard override.
+Every live candidate across every tier gets score = salience(its best
+tier) + CLICK_NOVELTY_WEIGHT * novelty(times clicked); pick is a
+weighted random draw over all of them, habituation unchanged.
+
+**Built.** agent/attention.py, agent/constants.py
+(CLICK_NOVELTY_WEIGHT). 8 new unit tests, 286 total pass. A smoke test
+(make verify-local) confirmed nothing crashes on other games.
+
+**Live weight sweep** (cd82, seeds 1-5, weights 0/0.5/1/2/4): strip
+clicks moved from the old 1.6% to 42-52% AT EVERY WEIGHT TESTED,
+including 0.0 (pure salience, zero novelty). This is a bigger and more
+honest finding than "novelty fixed it": the jump is almost entirely
+structural -- ending "the top non-empty tier wins outright" in favour
+of "every candidate gets summed weight" means a tier with hundreds of
+cells (any non-background) now carries real probability mass purely
+from its size, regardless of the novelty term's weight. Measured
+trade-off: clicks in the single hottest 8x8 region fell from the
+originally-measured ~20% to 14-18% -- some of the concentration that
+made "interest always wins" the right rule in the first place is traded
+away by removing the hard cutoff. Real, not catastrophic.
+
+**Inference.** Weight chosen: 1.0, the least arbitrary value given
+near-flat sensitivity over the tested range, not a measured optimum --
+documented as such in constants.py so it isn't mistaken for a tuned
+result. Not done: a broader regression check across every game with a
+click action, and any score-level read, consistent with score read
+last. Full detail in
+`research/hypotheses/H011_information_directed_targeting.md`.
