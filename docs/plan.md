@@ -95,6 +95,213 @@ offered as a third governing principle. It is precisely the claim the ladder
 below tests, so it stays a *candidate* until gate 3 branches. Promoting it
 now would repeat the error this exchange just corrected.
 
+**REVISED AGAIN 2026-09-17 (evening): the fork is resolved, and the research
+question has changed.** Both branches returned, and between them they removed
+four architectural explanations rather than adding any. What is left is a
+much narrower and better-founded program.
+
+> ### Permanent rule, earned by E1 (2026-09-17)
+>
+> **No retrospective discovery metric can motivate architecture by itself.**
+> A candidate must survive: discovery -> holdout -> downstream consumer ->
+> gameplay. Three claims, kept distinct:
+>
+> | evidence | what it proves |
+> |---|---|
+> | resolved contexts | the candidate can partition observed history |
+> | held-out prediction | it captures reusable predictive information |
+> | gameplay improvement | that information is converted into action |
+>
+> This would have stopped the 81-context conjunction being read as a
+> representation breakthrough. **It applies equally to `n_reset`**: +0.234
+> held-out lift makes it interesting and says nothing yet about whether
+> wiring it improves play.
+
+> ### The research question now
+>
+> Not *how should the agent represent state?* — H013 says it represents it
+> adequately. Not even *how should it discover state variables?* — H013 says
+> it discovers them, given evidence. It is:
+>
+> **How should an agent decide which observations deserve more evidence, and
+> which discovered variables should be composed into predictive state?**
+>
+> The larger hypothesis this serves: **ARC3 accuracy may depend less on
+> constructing a richer world representation than on dynamically
+> constructing the smallest predictive state needed for the current
+> uncertainty.** A controller does not need a maximal model of its
+> environment; it needs what disambiguates the next decision.
+
+**What the fork established, and what it removed.**
+
+| question | evidence | status |
+|---|---|---|
+| Can existing machinery discover useful temporal variables? | H013: temporal family won all four games | **yes** |
+| Was H006's failure evidence the candidate family was wrong? | sk48/su15 became strong at 3x repeats | **no** |
+| Does g50t need a latent recurrent memory? | `G_ngram3 AND n_reset` resolves 81 | **no evidence for it** |
+| Does composing explicit candidates add value? | 81 vs 44 resolved | **yes, provisional** |
+| Does the agent know when to compose? | it never formed the pair | **no** |
+| Is "more evidence" itself sufficient? | g50t saturates after `n_level` | **no** |
+
+Both ingredients of the winning pair were already in the vocabulary. Nothing
+had to be invented. **That is evidence for a composition/admission problem,
+not a representation problem.**
+
+**Two failure modes now separate cleanly**, and the machinery currently
+confuses them:
+
+```text
+             candidate exists
+                    |
+       +------------+------------+
+       |                         |
+ insufficient evidence     sufficient evidence
+       |                         |
+   observe more            single variable?
+                                 |
+                          +------+------+
+                          |             |
+                         yes            no
+                          |             |
+                      promote      compose candidates
+```
+
+**FROZEN — do not build, so that the simpler mechanism can be evaluated on
+its own:** LMU (retired), StateManager (not earned), relational-state
+architecture (unsupported by H013), stronger LLM proposer (not yet), budget
+pricing (falsified with the cd82 rule), generic novelty expansion (not the
+next lever). Adding any of these now would destroy our ability to tell
+whether the small mechanism sufficed.
+
+**The next phase is three experiments, in order.**
+
+**E1 — conjunction validity: DONE 2026-09-17, and it FAILS.** Discover on
+seeds <= 20, freeze, predict 21-30, against a context-majority baseline
+("no state variable").
+
+| g50t (n=461, base 0.289) | cov | acc\|cov | acc | lift |
+|---|---|---|---|---|
+| **`n_reset`** | **0.92** | 0.566 | **0.523** | **+0.234** |
+| `n_level` | 0.59 | 0.467 | 0.367 | +0.078 |
+| `G_ngram3 AND n_reset` | 0.25 | **0.612** | 0.349 | +0.061 |
+
+| sk48 (n=128, base 0.453) | cov | acc\|cov | acc | lift |
+|---|---|---|---|---|
+| **`G_ngram3`** | 0.32 | 0.805 | **0.508** | **+0.055** |
+| `G_ngram3 AND n_reset` | 0.10 | **0.923** | 0.461 | +0.008 |
+
+(su15 had 13 held-out visits — too few to interpret, not read.)
+
+**The 81-vs-44 was largely partitioning.** On both games with enough
+held-out data a *single* variable beats the pair and the retrospective
+ranking reverses. The failure has a precise shape though: the conjunction
+has the **highest accuracy wherever it applies** (0.612, 0.923) and the
+**lowest coverage** (0.25, 0.10) — precise but narrow. That is a data-volume
+problem, the sample-complexity result one level up: **a conjunction costs
+far more evidence than either part, and we do not have it.**
+
+**So conjunctive admission is NOT the next code change** — it was the
+leading candidate on retrospective evidence and did not survive its own
+validation. Not "never": coverage would rise with far more data.
+
+**What E1 did establish:** a single explicit temporal variable carries real
+held-out lift — `n_reset` on g50t is **+0.234** over the no-state baseline
+at 92% coverage — and the best variable **differs per game** (`n_reset` on
+g50t, `G_ngram3` on sk48), which argues for per-game admission over any
+fixed schema.
+
+**The methodological finding is the most valuable part: resolved-context
+counts are misleading on their own.** They ranked the pair first; holdout
+ranks it third. Every H006/H013-style result must pass a holdout gate before
+it motivates code. The filter worked on the first result it was pointed at.
+
+Superseded description of E1, kept for the record: g50t. Discover on one set of
+trajectories, freeze, predict held-out ones. Compare `n_level`, `G_ngram3`,
+`n_reset`, the pair, and a non-temporal control against the
+**context-majority baseline** — predicting the context's most common outcome
+while ignoring the candidate, which is exactly "no state variable".
+Success: the pair's advantage survives holdout. Failure: the 81-resolution
+result was largely partitioning. `scripts/h013_holdout.py`.
+
+**E2 — evidence sufficiency: DONE 2026-09-17, with a fixed held-out set.**
+Answer to "can early evidence predict eventual usefulness?": **yes, and
+earlier than expected.** On g50t `n_reset` is the best candidate at **5**
+discovery seeds (+0.122) and at every budget after (+0.253 at 25); on sk48
+`last_changer` is clearly best from **10** seeds (+0.161 -> +0.297). More
+evidence sharpens accuracy; it does not change which variable wins.
+
+**This corrects H013's own sample-complexity claim.** H013 said H006 was
+"2-3x under-powered" on sk48 because `last_changer` sat at +1.6 over null at
+10 traces. But held-out prediction *at the same 10-seed budget* already
+ranks it first at +0.161. **H006 had enough data; it used a metric that
+could not see the signal.** Read "under-powered" as **under-powered for the
+metric it used**.
+
+**A correction to E1:** it reported sk48's best variable as `G_ngram3`
+(+0.055). That was an incomplete candidate list — `last_changer`, H013's own
+retrospective winner there, was never scored. At the same split it reaches
+**+0.297**. "Best variable differs per game" survives; the sk48 figure was
+wrong.
+
+**E3 — promotion audit: DONE, and the answer is "there is no pathway".**
+Traced through `agent/`:
+- `n_reset` / `since_reset` / `Z1` appear **nowhere** in `agent/*.py`. The
+  variable worth +0.25 held-out lift on g50t does not exist in the agent.
+- The live predictor conditions tallies via `relations.condition_now()`,
+  whose docstring is explicit: *"where the controlled thing stands relative
+  to its nearest non-control member **on the current frame**"*. The
+  conditioning vocabulary is spatial-relational, current-frame only.
+- `scripts/latent_rollout.py` states it outright: it adds "the arm **the
+  agent cannot run yet**".
+
+**So the bottleneck is not premature rejection, not a threshold, and not
+evidence allocation. There is no slot in the tally key for a history-derived
+variable.** Every discovery from H006, H008, H013, E1 and E2 lives in
+offline scripts; the agent has never had access to any of it.
+
+**That makes the next intervention smaller and better-founded than
+"evidence-aware promotion":** give `by_action_given` a key that can carry a
+history-derived variable, admit one per game on evidence the machinery
+already computes, and measure it through the full chain. The three-state
+promotion ladder is a refinement of a mechanism that does not yet exist —
+**build the mechanism first, then decide whether it needs a ladder.**
+
+Superseded E2 description, kept for the record: From H013's curves, ask whether early
+evidence predicts whether *waiting* would reveal a useful candidate. If it
+does, promotion changes from a fixed threshold to three states —
+**rejected / provisional / promoted**, where *uncertain is not false*.
+sk48's candidate looked useless at 10 seeds and won at 30; premature
+rejection is costing accuracy. Do not simply lower thresholds: that promotes
+noise.
+
+**E3 — gameplay ablation.** Only after E1 and E2. Seed-paired, n>=30:
+baseline vs conjunctive admission vs evidence-aware promotion vs both. Read
+L1, **L2**, depth, median score, actions-to-level, and the predictive
+accuracy of promoted state. **L2 movement remains the strongest external
+criterion.**
+
+**The methodological change that binds them.** Every promoted candidate must
+eventually pass the whole chain, not just the first link:
+
+```text
+candidate -> retrospective resolution -> held-out prediction
+          -> action selection changes -> game outcome improves
+```
+
+A pair resolving 81 contexts is interesting. A pair that also predicts
+unseen transitions is evidence of learned state. A pair that also raises
+level progression means we improved the agent. Only the last one counts, and
+this is the filter against the fragmentation problem the conjunction result
+raised.
+
+**Scope discipline for conjunctive admission when it is built:** do NOT
+enumerate arbitrary pairs across the whole universe — that manufactures
+combinatorial garbage. Compose only candidates that individually show some
+relevance, occur in the same unresolved context, leave a substantial
+residual alone, and have enough observations to test.
+
+---
+
 **REVISED 2026-09-17 (afternoon): the ladder is replaced by a diagnostic
 fork.** Gates 1, 2 and 4 all returned the same shape — *mechanism proven,
 consumer unmoved* — and H016 then found why. The eight-gate ladder below is
@@ -223,9 +430,11 @@ refuted. So H014's question is now exactly: *does an order-sensitive history
 representation separate the g50t contexts that every explicit candidate we
 can enumerate has failed to separate?* One game, offline, alternatives ruled
 out rather than assumed. **CONJUNCTIONS TESTED — and they close it.** `G_ngram3 AND n_reset`
-resolves **81** of g50t's 400 mechanic contexts against a null of 1.0,
-versus 44 for the best single, and cuts the unresolved remainder from 217 to
-100. Both halves are explicit candidates the machinery already enumerates.
+increased resolved contexts from 44 to **81** against a null of 1.0 and cut
+unresolved from 217 to 100. Treat this as a strong **discovery signal, not a
+causal result** — a conjunction also partitions observations into smaller
+groups where local consistency is easier to obtain; held-out prediction (E1)
+is what settles it. Both halves are explicit candidates the machinery already enumerates.
 g50t's remainder was a missing *pair*, not a missing representation.
 **H014's last mandate is retired**: the condition for it was "every explicit
 candidate fails on g50t", and that is now false.

@@ -3966,8 +3966,9 @@ score pairs of what we already enumerate.
 | **`G_ngram3` AND `n_reset`** | **81** | **100** | 1.0 | **+80.0** |
 | `presses_since_click` AND `G_last2_changers` | 62 | 52 | 1.0 | +61.0 |
 
-The best pair nearly doubles resolution and more than halves the unresolved
-remainder, against a null of 1.0. Both halves are explicit candidates the
+The best conjunctive candidate increased resolved contexts from 44 to 81 and
+reduced unresolved from 217 to 100, against a null of 1.0 — a strong
+discovery signal, not yet a causal result. Both halves are explicit candidates the
 machinery already generates: a three-action n-gram and actions-since-reset.
 
 **Inference. g50t's remainder was a missing conjunction, not a missing
@@ -3989,3 +3990,102 @@ vacuously unique rather than explained. `resolved` requires a value-group
 with >= 2 visits and is the honest measure; at 81 against a null of 1.0 it is
 far above chance. Triples would fragment further, and diminishing returns
 should be expected.
+
+## 2026-09-17 — E1: the conjunction does not survive holdout, and resolved-context counts are a misleading metric
+
+**Hypothesis.** The conjunction `G_ngram3 AND n_reset` raised g50t's resolved
+contexts from 44 to 81. That is a discovery signal, not a causal result: a
+conjunction also partitions observations into smaller groups where local
+consistency is easier to reach. Discover on seeds <= 20, freeze, and predict
+held-out seeds 21-30 against a context-majority baseline — predicting the
+pixel-context's most common outcome while ignoring the candidate, which is
+exactly "no state variable".
+
+**Observation.** g50t, 461 held-out visits, baseline 0.289: `n_reset` 0.523
+(+0.234) at 92% coverage; `n_level` 0.367 (+0.078); **the pair 0.349
+(+0.061) at 25% coverage**. sk48, 128 visits, baseline 0.453: `G_ngram3`
+0.508 (+0.055) at 32% coverage; **the pair 0.461 (+0.008) at 10% coverage**.
+su15 had 13 held-out visits — too few to interpret and not read.
+
+**Inference. E1 fails for the conjunction.** On both games with enough
+held-out data a single variable beats the pair, and the retrospective
+ranking reverses.
+
+The failure has a precise shape and it is not "the pair is wrong": the
+conjunction has the **highest accuracy wherever it applies** — 0.612 on
+g50t, 0.923 on sk48 — and the lowest coverage, 0.25 and 0.10. Precise but
+narrow. Its key is usually never seen in discovery. That is a data-volume
+problem, and it is the sample-complexity result one level up: **a
+conjunction costs far more evidence than either of its parts, and we do not
+have that evidence.** So the finding is "does not pay at available data
+volumes", not "never".
+
+Consequence: **conjunctive admission is not the next code change.** An hour
+ago it was the leading candidate on retrospective evidence; it did not
+survive its own validation gate.
+
+What E1 did establish is not nothing. A single explicit temporal variable
+carries real held-out lift — `n_reset` on g50t is +0.234 over the no-state
+baseline at 92% coverage — and the best variable differs per game (`n_reset`
+on g50t, `G_ngram3` on sk48), which argues for per-game admission rather
+than any fixed schema.
+
+**The most valuable part is methodological. Resolved-context counts are
+misleading on their own**: they ranked the pair first, holdout ranks it
+third. Every H006/H013-style result should pass a holdout gate before it is
+allowed to motivate code. This is the filter working as intended, on the
+first result it was pointed at. Evidence: `scripts/h013_holdout.py`.
+
+## 2026-09-17 — E2 and E3: the variable was identifiable early, and the agent has nowhere to put it
+
+**Hypothesis.** E1 showed held-out prediction reverses the retrospective
+ranking. Two follow-ups, no code. E2: with a FIXED held-out set (seeds
+26-30) and only the discovery budget moving, can early evidence predict
+eventual usefulness? E3: trace the winning candidate through the existing
+machinery and find the exact gate where it exists but is not used.
+
+**Observation — E2.** g50t: `n_reset` is the best candidate at **5**
+discovery seeds (+0.122) and at every budget after (+0.165, +0.190, +0.247,
++0.253), coverage 0.73 -> 0.94. sk48: `last_changer` is clearly best from
+**10** seeds (+0.161, +0.289, +0.297, +0.247). More evidence sharpens
+accuracy; it does not change which variable wins. The ranking is stable from
+the earliest interpretable budget.
+
+This **corrects H013's own sample-complexity claim**. H013 concluded H006 was
+"2-3x under-powered" on sk48 because `last_changer` sat at +1.6 over null at
+10 traces. Held-out prediction at that same 10-seed budget already ranks it
+first at +0.161. H006 had enough data — it used a metric that could not see
+the signal. The retrospective resolved-context count is not only misleading
+for conjunctions (E1); it is less sensitive than held-out prediction for
+single candidates too.
+
+Also a correction to E1: it named `G_ngram3` sk48's best variable (+0.055)
+because `last_changer` — H013's own retrospective winner there — was never
+in the candidate list. At the same split it reaches +0.297. "Best variable
+differs per game" survives; the sk48 figure was wrong.
+
+**Observation — E3.** `n_reset`, `since_reset`, `Z1` appear **nowhere** in
+`agent/*.py`. The live predictor conditions its tallies through
+`relations.condition_now()`, documented as "where the controlled thing
+stands relative to its nearest non-control member **on the current frame**"
+— spatial-relational, current-frame only. `scripts/latent_rollout.py` says
+it adds "the arm the agent cannot run yet".
+
+**Inference. The bottleneck is not premature rejection, not a threshold, and
+not evidence allocation. There is no slot in the tally key for a
+history-derived variable.** Every discovery from H006, H008, H013, E1 and E2
+lives in offline scripts; the agent has never had access to any of it. The
+question "why wasn't this variable already driving behaviour?" has a flat
+answer: it was never in the agent.
+
+That makes the next intervention smaller than "evidence-aware promotion":
+give `by_action_given` a key that can carry a history-derived variable, admit
+one per game on evidence the machinery already computes, and measure through
+the full chain. The three-state promotion ladder refines a mechanism that
+does not exist yet — build the mechanism first.
+
+Adopted as a permanent rule, earned by E1: **no retrospective discovery
+metric can motivate architecture by itself.** A candidate survives discovery
+-> holdout -> downstream consumer -> gameplay, and the three prove different
+things. It applies to `n_reset` too: +0.234 held-out lift says nothing yet
+about whether wiring it improves play.
