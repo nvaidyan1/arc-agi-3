@@ -95,6 +95,178 @@ offered as a third governing principle. It is precisely the claim the ladder
 below tests, so it stays a *candidate* until gate 3 branches. Promoting it
 now would repeat the error this exchange just corrected.
 
+**REVISED 2026-09-17 (afternoon): the ladder is replaced by a diagnostic
+fork.** Gates 1, 2 and 4 all returned the same shape — *mechanism proven,
+consumer unmoved* — and H016 then found why. The eight-gate ladder below is
+kept as the record of how gates 1-4 were decided; **it is no longer the
+plan.** What replaces it:
+
+> ### The rule this phase adopts
+>
+> **No infrastructure follow-up until the mechanism it enables has passed a
+> direct causal test. Mechanism first, infrastructure second.**
+>
+> More precisely: test whether the proposed causal relation is real using
+> the cheapest available oracle or counterfactual. *Only then* invest in
+> making the agent reliably discover and exploit it.
+>
+> H010, H011 and H015 each broke this rule unintentionally. Four gates of
+> engineering went into making ONE proposition executable on cd82, and
+> H016 showed the proposition does not hold. We optimised the conditions
+> under which a hypothesis could be tested without establishing that the
+> hypothesis deserved testing.
+
+**The fork, not a ladder.** Two independent branches run in parallel; what
+comes after is chosen by their results, not pre-committed.
+
+```text
+                     CURRENT STATE
+                           |
+            +--------------+--------------+
+            |                             |
+          H016                          H013
+   cd82 oracle rule,              unresolved mechanic
+   direct causal test             aliases (4 games)
+            |                             |
+   +--------+--------+            state-variable
+   |        |        |              discovery
+   A        B        C
+ support falsify  unreachable
+   |        |        |
+   |        |        +-- revisit target computation / reachability
+   |        +----------- STOP investing in H007's proposition
+   +-------------------- budget-pricing follow-up -> model-based action
+```
+
+**H014 (LMU) is no longer "next because the ladder says so."** It is
+conditional on what H013 finds. H012 stays parked. No aggregate sweep until
+a branch produces a substantive behavioural change.
+
+**Branch 1 — H016: DONE, OUTCOME B (2026-09-17).** The specific H007 causal
+rule is falsified: 19 jointly-met presses across 8 usable seeds, residual
+fell 5 / flat 10 / **rose 4**, verifier verdicts 4 falsified / 3 expired /
+1 live / **0 supported**. Joint satisfaction *is* reachable once budget
+allows travel (6 of 8 usable seeds), so H015's premise about what blocked
+execution was right — and what was being executed does not hold.
+**Scope, stated precisely: this falsifies
+`(adjacent:-x, state K0) -> ACTION5 -> residual falls`. It does NOT falsify
+cd82's mechanic, which remains undiscovered** — one failed conditional
+action leaves the underlying rule unfound.
+Side finding (outcome C on a minority): 2 of 8 usable seeds never achieved
+adjacency at all, seed 11 while moving over 19 distinct positions. Target
+computation or geometric reachability stays suspect there — gate 1's
+reading B, now narrowed to named seeds rather than open.
+**Consequence: do not build the budget-pricing mechanism.** It was worth
+building only under outcome A. Full detail in
+`research/hypotheses/H016_oracle_rule_test.md`.
+
+**Branch 2 — H013: DONE 2026-09-17. YES, and the missing ingredient was repeats, not a new family.** su15 / sk48 / sc25 / g50t, the ~72 mechanic
+aliases H006 left unresolved. Strategically this is the branch that does
+**not** depend on the cd82 story, and the project had become dangerously
+concentrated on one game: H007, H010 and H015 all hang off the same
+unresolved bet.
+Scoped more ambitiously than "run more repeats". For each unresolved alias,
+classify candidate splitters into:
+
+| | candidate family |
+|---|---|
+| A | **temporal** — actions since reset, event history |
+| B | **spatial** — absolute or relative position |
+| C | **relational** — controlled entity <-> clicked/moved entity |
+| D | **interaction history** — which object has been touched/activated |
+| E | **configuration** — arrangement, occupancy, cardinality |
+| F | **unexplained** |
+
+then ask whether one produces a repeatable split above the null. That makes
+H013 a direct test of the real proposition: **can our existing
+state-selection machinery discover the variables needed to disambiguate an
+unseen mechanic?** — which matters far more than finding one more latent
+variable. Repeat traces (seeds 11-30) are running now; H006's own finding
+was that at ~2 visits per context a splitter can only be refuted, never
+confirmed.
+
+**RESULT.** 30 seeds per game (H006 had 10), restricted to the *mechanic*
+remainder — contexts differing off the meter line, H006's own
+classification and H013's actual target.
+
+| game | mechanic ctx | winner | family | resolved | still | null | lift |
+|---|---|---|---|---|---|---|---|
+| su15 | 98 | `n_moved` | **A** | 28 | 35 | 8.8 | **+19.2** |
+| sk48 | 314 | `last_changer` | **A** | 97 | 72 | 28.8 | **+68.2** |
+| sc25 | 4 | `n_reset` | **A** | 4 | 0 | 0.0 | +4.0 |
+| g50t | 400 | `n_level` | **A** | 44 | 217 | 3.2 | **+40.8** |
+
+**Family A (temporal) won all four. B, C, D, E won nowhere** — the closest
+was `D_touched_set` on sk48 (+33.8), runner-up to `last_changer` (+68.2).
+
+**H006's negatives were underpowered, not correct.** It reported sk48's best
+at 19 resolved vs null 21 (noise) and su15's `n_moved` at 10 vs 1.8
+("suggestive, not confirmed"). At 30 seeds those are 97 vs 28.8 and 28 vs
+8.8. H006's own stated requirement — more repeats — was the binding
+constraint, and **the relational family it guessed was missing was not
+missing at all**; it lost to plain temporal candidates on every game.
+
+**What it supports:** the existing machinery *can* discover disambiguating
+variables on games it was not designed around, given enough visits. An
+argument against reaching for new representation first.
+**What it leaves open:** a real remainder — still-refuted su15 36%, sk48
+23%, **g50t 54%**.
+
+**Consequence for H014 (LMU): weakened to one narrow, well-posed question.**
+The variables that resolve these mechanics are *explicit temporal* ones the
+enumerator already generates. An explicit **ordered/sequence family (G)** —
+action n-grams, time-since-event, last-two-changers — was then added and run
+against g50t's remainder, per the reviewer's gate that a simple explicit
+variable must be ruled out before appealing to an LMU. It does **not** crack
+it: `G_ngram3` reaches only +7.0 over its null and leaves 200 of 400
+refuted. So H014's question is now exactly: *does an order-sensitive history
+representation separate the g50t contexts that every explicit candidate we
+can enumerate has failed to separate?* One game, offline, alternatives ruled
+out rather than assumed. Try the cheaper thing first: conjunctions of
+existing candidates were not tested.
+
+**THE SAMPLE-COMPLEXITY RESULT — the more consequential half of H013.**
+Rescoring each winner using only the first N traces gives three different
+curve shapes:
+
+| traces | su15 `n_moved` | sk48 `last_changer` | g50t `n_level` |
+|---|---|---|---|
+| 10 (H006's regime) | +6.0 | **+1.6** | +14.6 |
+| 15 | +6.6 | +9.2 | +34.8 |
+| 20 | +11.4 | +17.2 | +42.0 |
+| 30 | +18.2 | +65.8 | +41.2 |
+
+sk48 is a pure evidence problem — indistinguishable from null at 10, strong
+past 25, so H006 was 2-3x under-powered and *could not* have found it. su15
+rises steadily and is still rising at 30. **g50t saturates at ~20 while its
+unresolved count climbs 45 -> 217**: more data adds unresolved contexts
+faster than the candidate resolves them, so g50t is *not* an evidence
+problem at all.
+
+"Give the learner more repeats" is therefore the right answer for two of
+these games and the **wrong** answer for the third — and only the curve
+tells them apart. An agent that could read its own evidence curve would know
+which uncertainties deserve more experience and which need a different
+question asked. That is the bridge from exploration to active learning, and
+it is a better-founded next target than any new representation.
+
+**What H015's result is worth, stated carefully.** 235 wasted budgets
+reclaimed, depth unmoved, means **action-budget efficiency is not currently
+sufficient to unlock depth**. That is a real negative result about where not
+to look. It does *not* license "therefore we need better planning" — that is
+the same trap, and H016 is why.
+
+**Deliberately not pre-committed.** After H016/H013 we do not assume "world
+model" is the answer. The branches can land as: budget pricing really was
+the blocker (H016 A — now ruled out); state selection becomes much stronger
+(H013 finds relational variables); the representation is already adequate
+and the problem is hypothesis formation (H013 mostly succeeds); coverage and
+target computation come back (H016 C); the LMU earns a mandate (H013 finds
+temporal structure the explicit machinery cannot capture); or temporal
+latent state is deprioritised outright (H013 finds no meaningful splits).
+
+---
+
 **The unit of progress, and what the ladder is for.** Added 2026-09-17 from
 a third read (a colleague's note, then reviewer C against it). Every gate
 below is infrastructure toward one milestone, and that milestone is the
@@ -127,9 +299,8 @@ language is rich, but **no live hypothesis budget is gated on an internal
 roll-out**. That gap is more glaring now precisely because the substrate for
 closing it exists.
 
-**The ladder. Eight gates. Each result selects the next; gates 1 and 2 are
-independent and run in parallel. Do not start gates 5+ ahead of gate 3's
-branch.**
+**The ladder (superseded 2026-09-17 by the fork above — kept because gates
+1-4 were decided by it and their results are recorded inside it).**
 
 1. **Gate 1 — RUN AND RESOLVED 2026-09-17. Not coverage; a budget-economy defect.** Offline, no live
    behavioural change, on data already on disk. cd82 seeds 1 and 3, at the

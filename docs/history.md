@@ -3778,3 +3778,174 @@ through four iterations. And the arm labelling only exists because the
 runner wrote a manifest: the sweep summary's `config` records `max_steps`
 only, so two arms differing by an env flag are indistinguishable from their
 summaries — the same gap that made H011's arms unrecoverable after the fact.
+
+## 2026-09-17 — H016: the proposition four gates were built to test does not hold
+
+**Hypothesis.** H010 (routing), H011 (click coverage) and H015 (budget
+economy) each returned the same shape: mechanism proven, consumer unmoved.
+All three were infrastructure for ONE proposition on cd82 —
+`(adjacent:-x of the block) AND (state K0 on the strip) -> ACTION5 ->
+the template-vs-block residual falls`. It had been jointly satisfied and
+actually tested exactly once (H007 Day 4, seed 2, three met presses) and the
+residual did not move. Before building the budget-pricing mechanism H015
+named, ask the cheaper question: give the oracle budget 120 instead of 8 so
+travel is affordable, and measure dR = R_before - R_after at the presses
+where the condition is jointly met.
+
+**Observation.** 12 seeds, injection at step 154, budget 120. Four aborted
+on the oracle's own pre-existing entity guard (entity 10 not live) — not a
+result. Eight usable.
+
+Joint satisfaction *is* reachable once budget allows travel: 6 of 8 usable
+seeds reached it, against 0 of 4 at budget 8. H015's premise about what was
+blocking execution was correct.
+
+Across 19 jointly-met presses: residual **fell 5, flat 10, rose 4**. The
+verifier's own verdicts were 4 falsified, 3 expired, 1 live — **zero
+supported**. Seed 9 is representative: 50 -> 25, then 25 -> 40, then
+40 -> 25, then 25 -> 25. The residual moves in both directions under the
+satisfied condition. That is not a lever.
+
+Side finding: 2 of 8 usable seeds never achieved adjacency at all, seed 11
+while moving over 19 distinct positions — gate 1's reading B (target
+computation or geometric reachability), now narrowed to named seeds.
+
+**Inference. Outcome B: the specific H007 causal rule is falsified.** Scope
+stated precisely, because it matters: this kills
+`(adjacent:-x, state K0) -> ACTION5 -> residual falls`. It does **not**
+falsify cd82's mechanic, which remains undiscovered — one failed conditional
+action leaves the underlying rule unfound, and nothing here says the swatch
+is irrelevant or that ACTION5 does nothing.
+
+Consequence: **do not build the budget-pricing mechanism.** It was worth
+building only under outcome A. And the three prior results are reinterpreted
+— they did not fail independently; they were making executable a thing that
+was probably wrong.
+
+The rule adopted with this result, now in `plan.md` above the fork: **no
+infrastructure follow-up until the mechanism it enables has passed a direct
+causal test. Mechanism first, infrastructure second.** The eight-gate ladder
+is superseded by a two-branch diagnostic fork (H016 / H013); H014 is no
+longer "next because the ladder says so" but conditional on H013; H012 stays
+parked; no aggregate sweep until a branch produces a behavioural change.
+
+One process note, because it is the same over-claim this hypothesis exists
+to prevent: the first pass of the script declared OUTCOME A off a single
+dR=+35 on one seed. The residual is a part-size difference other events can
+move. The verdict now requires >= 8 jointly-met presses and a majority-fall
+with no rises, and states no verdict below that. Evidence:
+`scripts/h016_oracle_rule_test.py`.
+
+## 2026-09-17 — H013: the machinery can find the variables; it was starved of repeats, not of families
+
+**Hypothesis.** Branch 2 of the diagnostic fork, and deliberately the one
+line of work independent of the cd82 story. H006 left ~72 mechanic-aliased
+contexts on su15/sk48/sc25/g50t where its history-derived family was
+"refuted or below null", and named two requirements: more repeats, and a
+family referencing the controlled thing's relation to the clicked or moved
+entity. Scoped larger than "find one more variable": can the existing
+state-selection machinery discover the variables that disambiguate an unseen
+mechanic? Classify candidates into temporal / spatial / relational /
+interaction-history / configuration / unexplained and ask which, if any,
+splits above the null.
+
+**Observation.** 30 seeds per game (H006 had 10), 12,030 steps each,
+restricted to the mechanic remainder — contexts differing off the meter
+line.
+
+| game | mechanic ctx | winner | family | resolved | still | null | lift |
+|---|---|---|---|---|---|---|---|
+| su15 | 98 | `n_moved` | A | 28 | 35 | 8.8 | +19.2 |
+| sk48 | 314 | `last_changer` | A | 97 | 72 | 28.8 | +68.2 |
+| sc25 | 4 | `n_reset` | A | 4 | 0 | 0.0 | +4.0 |
+| g50t | 400 | `n_level` | A | 44 | 217 | 3.2 | +40.8 |
+
+Family A (temporal) won on all four. B, C, D and E won nowhere; the closest
+was `D_touched_set` on sk48 (+33.8), runner-up to `last_changer` (+68.2).
+
+**Inference. H006's negatives were underpowered, not correct.** It reported
+sk48's best candidate at 19 resolved against a null of 21 — noise — and
+su15's `n_moved` at 10 vs 1.8 as "suggestive, not confirmed". At three times
+the repeats those are 97 vs 28.8 and 28 vs 8.8. The binding constraint was
+the one H006 itself named (more visits per context), and **the relational
+family it guessed was missing was not missing** — it lost to plain temporal
+candidates on every game.
+
+This is a positive result for the current representation philosophy: the
+machinery discovers disambiguating variables on games it was not designed
+around, once it has data. It is an argument against reaching for new
+representation first, and it is the opposite of what both H006 and reviewer
+C predicted.
+
+A real remainder persists — still-refuted su15 35 of 98 (36%), sk48 72 of
+314 (23%), g50t 217 of 400 (54%).
+
+**Consequence for H014 (LMU): weakened, not strengthened.** The variables
+that resolve these mechanics are explicit temporal ones the enumerator
+already generates. The LMU's question narrows from "is generic temporal
+memory the missing architecture" to "does it explain the g50t remainder" — a
+much smaller mandate.
+
+**Method notes.** The meter/mechanic filter is an operational proxy for
+H006's hand classification (outcomes differing within <= 2 rows or columns).
+The first version tested a single row/column and wrongly called all 644 sc25
+contexts mechanic; H006 documents sc25's meter as columns 62-63. Corrected,
+sc25 has 4 — essentially all meter, matching H006. Also fixed: candidate
+keys differ between traces, so the value table was sparse across files
+(filled the union with None, "not applicable" being a legitimate group).
+Without the meter filter at all, the temporal family simply re-finds the
+meters H006 already explained — the first run made exactly that mistake.
+Evidence: `scripts/h013_family_splitter.py`.
+
+## 2026-09-17 — H013's second half: evidence curves, and g50t is not an evidence problem
+
+**Hypothesis.** H013 showed the existing temporal family resolves the
+mechanic remainder once given 3x the repeats, which raised the reviewer's
+question: was the winner detectable at 15 visits when H006 had 10, or did it
+need 25-30? The first is a footnote; the second is a sample-complexity
+problem worth building around. Mined from the data already collected, no new
+sweep: rescore each winner against its own shuffle null using only the first
+N traces.
+
+**Observation.** Three different curve shapes.
+
+| traces | su15 `n_moved` | sk48 `last_changer` | g50t `n_level` |
+|---|---|---|---|
+| 5 | +5.4 | **-2.0** | +3.0 |
+| 10 (H006) | +6.0 | **+1.6** | +14.6 |
+| 15 | +6.6 | +9.2 | +34.8 |
+| 20 | +11.4 | +17.2 | +42.0 |
+| 25 | +14.0 | +47.0 | +38.4 |
+| 30 | +18.2 | +65.8 | +41.2 |
+
+sk48 is a pure evidence problem: at 10 traces `last_changer` is +1.6, which
+is exactly the "19 resolved vs null 21, noise" H006 recorded. It emerges
+near 15 and is only strong past 25 — **H006 was 2-3x under-powered and could
+not have found it**. su15 rises steadily and is still rising at 30. g50t
+**saturates at ~20** (+42.0, +38.4, +41.2) while its unresolved count climbs
+45 -> 86 -> 134 -> 185 -> 217: more data adds unresolved contexts faster
+than the candidate resolves them.
+
+Then the reviewer's gate before any appeal to an LMU — rule out a simple
+explicit variable first. An ordered/sequence family (G) was added (action
+n-grams of 2-4, time-since-event, last-two-changers, time-since-action) and
+run on g50t's 400 mechanic contexts. It does not crack them: `G_ngram3`
+reaches +7.0 over its own null and still leaves 200 refuted; nothing in
+families A-G resolves more than ~11%.
+
+**Inference.** The headline is not "temporal variables won". It is that
+**"give the learner more repeats" is the right answer for two of these games
+and the wrong answer for the third, and only the evidence curve tells them
+apart.** g50t is a representational gap; sk48 was a statistical
+identification failure wearing the costume of one. An agent that could read
+its own curve would know which uncertainties deserve more experience and
+which need a different question asked — the bridge from exploration to
+active learning, and a better-founded target than any new representation.
+
+H014 keeps exactly one narrow mandate as a result: does an order-sensitive
+history representation separate the g50t contexts that every explicit
+candidate we can enumerate has failed to separate? One game, offline,
+alternatives ruled out rather than assumed. Cheaper thing first, and not yet
+tried: conjunctions of existing candidates (`n_level` AND `G_ngram3`), since
+only single candidates were scored. Evidence:
+`scripts/h013_family_splitter.py --max-traces N --candidate NAME`.
