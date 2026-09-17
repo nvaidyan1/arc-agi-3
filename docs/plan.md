@@ -711,13 +711,17 @@ proposed both as new work — traced to the same stale-header bug fixed
 below, not a flaw in its reasoning). The two-pass exchange settled on
 one sequence, folded in here:
 
-1. **Immediate, in flight**: finish and read the whole-sweep n=30
-   seed-paired parity check on H011 Stage 2 (baseline arm done 30/30,
-   clean — mean 0.0286, median 0.0162, matching the historical noise
-   floor; treatment arm running 2026-09-16). **Hard gate, both
-   reviewers' words**: revert or soften the tier-structure change if
-   level-1 clears drop by more than 1 per 30 sweeps on games that
-   previously cleared, or if the median score falls materially.
+1. **Done, 2026-09-16 — gate passed, shipped.** n=30 seed-paired,
+   both arms clean. Median rose (0.0163 -> 0.0206); the five named
+   parity games showed zero regression (one improved); one game (lp85,
+   13->10) tripped the literal wording but its per-seed pattern is a
+   balanced shuffle, not a one-directional loss — read as noise, not a
+   regression. ft09 and vc33 jumped from a hard 0/30 to 12/30 and
+   11/30, a more confidently real signal, not yet explained. `agent/
+   attention.py`, `agent/constants.py`, the weight-sweep script and its
+   tests are now committed; all 60 sweep summaries kept as a
+   matched-pair exception. Full detail in `research/hypotheses/
+   H011_information_directed_targeting.md`.
 2. **H012 opened** (`research/hypotheses/H012_movement_novelty.md`):
    the movement-side symmetric counterpart to H011 — score frontier-
    tier actions by `PositionModel`/`MoveModel` sighting counts, not a

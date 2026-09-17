@@ -1,0 +1,6330 @@
+{
+  "schema_version": 1,
+  "run_id": "20260916-012333-87253",
+  "recorded_at": "2026-09-16T05:28:16+00:00",
+  "config": {
+    "max_steps": 400,
+    "games_requested": [
+      "tu93",
+      "ar25",
+      "re86",
+      "su15",
+      "m0r0",
+      "cn04",
+      "ft09",
+      "tr87",
+      "sc25",
+      "lp85",
+      "dc22",
+      "sp80",
+      "ka59",
+      "g50t",
+      "sb26",
+      "lf52",
+      "bp35",
+      "s5i5",
+      "r11l",
+      "sk48",
+      "wa30",
+      "vc33",
+      "ls20",
+      "cd82",
+      "tn36"
+    ],
+    "seed": 120,
+    "flags": {
+      "shift_fallback": true,
+      "belief_target": false,
+      "route_per_level": false
+    },
+    "git": {
+      "sha": "d950b329956507cc6f2384f8db201ad6d1f80226",
+      "dirty": true,
+      "subject": "Sync stale hypothesis-file Status headers, add reviewer G's notes"
+    }
+  },
+  "aggregate_score": 0.005476640561706724,
+  "observed": {
+    "ar25": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 2041053796,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 390,
+        "entity": {
+          "hits": 2889,
+          "misses": 260,
+          "undecidable": 0,
+          "abstained": 296,
+          "accuracy": 0.917,
+          "coverage": 0.914,
+          "brier": 0.068
+        },
+        "pair": {
+          "hits": 46908,
+          "misses": 2694,
+          "undecidable": 871,
+          "abstained": 8321,
+          "accuracy": 0.946,
+          "coverage": 0.856,
+          "brier": 0.04
+        },
+        "by_action": {
+          "ACTION1": {
+            "entity": [
+              518,
+              33
+            ],
+            "pair": [
+              8638,
+              403
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              663,
+              87
+            ],
+            "pair": [
+              11121,
+              816
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              78,
+              0
+            ],
+            "pair": [
+              1289,
+              18
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              751,
+              34
+            ],
+            "pair": [
+              11690,
+              526
+            ]
+          },
+          "ACTION7": {
+            "entity": [
+              97,
+              23
+            ],
+            "pair": [
+              1571,
+              110
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              687,
+              82
+            ],
+            "pair": [
+              11324,
+              802
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              95,
+              1
+            ],
+            "pair": [
+              1275,
+              19
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            10124,
+            0
+          ],
+          "distance": [
+            7627,
+            1437
+          ],
+          "count_diff": [
+            8796,
+            268
+          ],
+          "containment": [
+            17306,
+            822
+          ],
+          "shape_diff": [
+            287,
+            0
+          ],
+          "palette_missing": [
+            2120,
+            0
+          ],
+          "part_size_diff": [
+            648,
+            167
+          ]
+        },
+        "conditional": [
+          32490,
+          1657
+        ],
+        "unconditional": [
+          14418,
+          1037
+        ],
+        "moving": {
+          "entity": [
+            1727,
+            211
+          ],
+          "pair": [
+            6008,
+            913
+          ]
+        },
+        "moved": {
+          "entity": [
+            1727,
+            183
+          ],
+          "pair": [
+            6008,
+            1887
+          ]
+        },
+        "cells": {
+          "ACTION1 containment": [
+            727,
+            91
+          ],
+          "ACTION1 distance": [
+            243,
+            243
+          ],
+          "ACTION1 part_size_diff": [
+            51,
+            48
+          ],
+          "ACTION3 containment": [
+            941,
+            300
+          ],
+          "ACTION3 distance": [
+            609,
+            387
+          ],
+          "ACTION3 part_size_diff": [
+            68,
+            55
+          ],
+          "ACTION5 containment": [
+            102,
+            0
+          ],
+          "ACTION5 distance": [
+            4,
+            18
+          ],
+          "ACTION2 containment": [
+            949,
+            126
+          ],
+          "ACTION2 distance": [
+            341,
+            310
+          ],
+          "ACTION2 part_size_diff": [
+            95,
+            30
+          ],
+          "ACTION7 distance": [
+            17,
+            99
+          ],
+          "ACTION5 part_size_diff": [
+            12,
+            0
+          ],
+          "ACTION4 containment": [
+            1052,
+            294
+          ],
+          "ACTION4 distance": [
+            704,
+            372
+          ],
+          "ACTION4 part_size_diff": [
+            92,
+            34
+          ],
+          "ACTION4 count_diff": [
+            1,
+            102
+          ],
+          "ACTION3 count_diff": [
+            0,
+            74
+          ],
+          "ACTION1 count_diff": [
+            0,
+            21
+          ],
+          "ACTION2 count_diff": [
+            0,
+            60
+          ],
+          "ACTION7 containment": [
+            0,
+            11
+          ],
+          "ACTION6 distance": [
+            0,
+            8
+          ],
+          "ACTION6 count_diff": [
+            0,
+            11
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 2889,
+            "misses": 260,
+            "undecidable": 0,
+            "abstained": 160,
+            "accuracy": 0.917,
+            "coverage": 0.952
+          },
+          "3": {
+            "hits": 2472,
+            "misses": 390,
+            "undecidable": 44,
+            "abstained": 303,
+            "accuracy": 0.864,
+            "coverage": 0.904
+          },
+          "10": {
+            "hits": 1788,
+            "misses": 448,
+            "undecidable": 119,
+            "abstained": 493,
+            "accuracy": 0.8,
+            "coverage": 0.819
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "bp35": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 104362560,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 384,
+        "entity": {
+          "hits": 4897,
+          "misses": 346,
+          "undecidable": 0,
+          "abstained": 300,
+          "accuracy": 0.934,
+          "coverage": 0.946,
+          "brier": 0.049
+        },
+        "pair": {
+          "hits": 178558,
+          "misses": 4752,
+          "undecidable": 3804,
+          "abstained": 18346,
+          "accuracy": 0.974,
+          "coverage": 0.909,
+          "brier": 0.02
+        },
+        "by_action": {
+          "ACTION7": {
+            "entity": [
+              1092,
+              101
+            ],
+            "pair": [
+              37054,
+              1285
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              1342,
+              102
+            ],
+            "pair": [
+              48280,
+              1400
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              1029,
+              1
+            ],
+            "pair": [
+              44010,
+              58
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              1434,
+              142
+            ],
+            "pair": [
+              49214,
+              2009
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            34561,
+            0
+          ],
+          "distance": [
+            28939,
+            2083
+          ],
+          "count_diff": [
+            30013,
+            1009
+          ],
+          "containment": [
+            60467,
+            1577
+          ],
+          "shape_diff": [
+            14583,
+            0
+          ],
+          "palette_missing": [
+            7078,
+            0
+          ],
+          "part_size_diff": [
+            2917,
+            83
+          ]
+        },
+        "conditional": [
+          53640,
+          1487
+        ],
+        "unconditional": [
+          124918,
+          3265
+        ],
+        "moving": {
+          "entity": [
+            990,
+            244
+          ],
+          "pair": [
+            7586,
+            489
+          ]
+        },
+        "moved": {
+          "entity": [
+            990,
+            292
+          ],
+          "pair": [
+            7586,
+            4560
+          ]
+        },
+        "cells": {
+          "ACTION7 containment": [
+            1509,
+            519
+          ],
+          "ACTION7 distance": [
+            16,
+            456
+          ],
+          "ACTION6 containment": [
+            1650,
+            8
+          ],
+          "ACTION3 containment": [
+            2133,
+            461
+          ],
+          "ACTION3 distance": [
+            8,
+            676
+          ],
+          "ACTION4 containment": [
+            2258,
+            589
+          ],
+          "ACTION4 distance": [
+            8,
+            901
+          ],
+          "ACTION6 distance": [
+            3,
+            50
+          ],
+          "ACTION4 count_diff": [
+            0,
+            483
+          ],
+          "ACTION7 count_diff": [
+            0,
+            293
+          ],
+          "ACTION3 part_size_diff": [
+            1,
+            30
+          ],
+          "ACTION7 part_size_diff": [
+            0,
+            17
+          ],
+          "ACTION4 part_size_diff": [
+            0,
+            36
+          ],
+          "ACTION3 count_diff": [
+            0,
+            233
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4897,
+            "misses": 346,
+            "undecidable": 0,
+            "abstained": 191,
+            "accuracy": 0.934,
+            "coverage": 0.965
+          },
+          "3": {
+            "hits": 4129,
+            "misses": 566,
+            "undecidable": 51,
+            "abstained": 402,
+            "accuracy": 0.879,
+            "coverage": 0.921
+          },
+          "10": {
+            "hits": 2605,
+            "misses": 975,
+            "undecidable": 60,
+            "abstained": 514,
+            "accuracy": 0.728,
+            "coverage": 0.874
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "cd82": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1374973744,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 4308,
+          "misses": 317,
+          "undecidable": 0,
+          "abstained": 299,
+          "accuracy": 0.931,
+          "coverage": 0.939,
+          "brier": 0.047
+        },
+        "pair": {
+          "hits": 136832,
+          "misses": 7091,
+          "undecidable": 657,
+          "abstained": 10978,
+          "accuracy": 0.951,
+          "coverage": 0.929,
+          "brier": 0.032
+        },
+        "by_action": {
+          "ACTION4": {
+            "entity": [
+              1589,
+              101
+            ],
+            "pair": [
+              50419,
+              2689
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              1526,
+              86
+            ],
+            "pair": [
+              48366,
+              2417
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              225,
+              37
+            ],
+            "pair": [
+              6897,
+              538
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              249,
+              14
+            ],
+            "pair": [
+              8135,
+              122
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              335,
+              38
+            ],
+            "pair": [
+              10582,
+              582
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              384,
+              41
+            ],
+            "pair": [
+              12433,
+              743
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            31215,
+            0
+          ],
+          "distance": [
+            20164,
+            2025
+          ],
+          "count_diff": [
+            21961,
+            228
+          ],
+          "containment": [
+            40558,
+            3820
+          ],
+          "shape_diff": [
+            1175,
+            0
+          ],
+          "palette_missing": [
+            18052,
+            0
+          ],
+          "part_size_diff": [
+            3707,
+            1018
+          ]
+        },
+        "conditional": [
+          113951,
+          5370
+        ],
+        "unconditional": [
+          22881,
+          1721
+        ],
+        "moving": {
+          "entity": [
+            1019,
+            241
+          ],
+          "pair": [
+            12817,
+            5369
+          ]
+        },
+        "moved": {
+          "entity": [
+            1019,
+            170
+          ],
+          "pair": [
+            12817,
+            4972
+          ]
+        },
+        "cells": {
+          "ACTION4 distance": [
+            1702,
+            888
+          ],
+          "ACTION4 containment": [
+            2806,
+            1383
+          ],
+          "ACTION4 part_size_diff": [
+            687,
+            370
+          ],
+          "ACTION3 distance": [
+            1812,
+            728
+          ],
+          "ACTION3 containment": [
+            2766,
+            1294
+          ],
+          "ACTION3 part_size_diff": [
+            675,
+            364
+          ],
+          "ACTION6 containment": [
+            89,
+            84
+          ],
+          "ACTION6 part_size_diff": [
+            20,
+            28
+          ],
+          "ACTION5 containment": [
+            14,
+            270
+          ],
+          "ACTION5 part_size_diff": [
+            1,
+            57
+          ],
+          "ACTION4 count_diff": [
+            0,
+            48
+          ],
+          "ACTION3 count_diff": [
+            0,
+            31
+          ],
+          "ACTION5 count_diff": [
+            0,
+            102
+          ],
+          "ACTION5 distance": [
+            0,
+            109
+          ],
+          "ACTION2 distance": [
+            456,
+            167
+          ],
+          "ACTION2 containment": [
+            599,
+            419
+          ],
+          "ACTION2 part_size_diff": [
+            150,
+            110
+          ],
+          "ACTION1 distance": [
+            397,
+            123
+          ],
+          "ACTION1 containment": [
+            508,
+            370
+          ],
+          "ACTION1 part_size_diff": [
+            133,
+            89
+          ],
+          "ACTION6 distance": [
+            2,
+            10
+          ],
+          "ACTION2 count_diff": [
+            0,
+            47
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4308,
+            "misses": 317,
+            "undecidable": 0,
+            "abstained": 208,
+            "accuracy": 0.931,
+            "coverage": 0.957
+          },
+          "3": {
+            "hits": 3643,
+            "misses": 577,
+            "undecidable": 14,
+            "abstained": 507,
+            "accuracy": 0.863,
+            "coverage": 0.893
+          },
+          "10": {
+            "hits": 2722,
+            "misses": 673,
+            "undecidable": 55,
+            "abstained": 968,
+            "accuracy": 0.802,
+            "coverage": 0.778
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "cn04": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 379601170,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 390,
+        "entity": {
+          "hits": 1851,
+          "misses": 1216,
+          "undecidable": 0,
+          "abstained": 697,
+          "accuracy": 0.604,
+          "coverage": 0.815,
+          "brier": 0.206
+        },
+        "pair": {
+          "hits": 29729,
+          "misses": 4969,
+          "undecidable": 4106,
+          "abstained": 35255,
+          "accuracy": 0.857,
+          "coverage": 0.496,
+          "brier": 0.087
+        },
+        "by_action": {
+          "ACTION4": {
+            "entity": [
+              693,
+              351
+            ],
+            "pair": [
+              11900,
+              1500
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              286,
+              278
+            ],
+            "pair": [
+              4682,
+              960
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              180,
+              163
+            ],
+            "pair": [
+              3393,
+              470
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              299,
+              240
+            ],
+            "pair": [
+              5227,
+              1073
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              310,
+              101
+            ],
+            "pair": [
+              3180,
+              669
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              83,
+              83
+            ],
+            "pair": [
+              1347,
+              297
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            6758,
+            0
+          ],
+          "distance": [
+            5052,
+            1429
+          ],
+          "count_diff": [
+            5396,
+            1085
+          ],
+          "containment": [
+            10528,
+            2434
+          ],
+          "shape_diff": [
+            1378,
+            0
+          ],
+          "palette_missing": [
+            554,
+            0
+          ],
+          "part_size_diff": [
+            63,
+            21
+          ]
+        },
+        "conditional": [
+          12948,
+          2351
+        ],
+        "unconditional": [
+          16781,
+          2618
+        ],
+        "moving": {
+          "entity": [
+            621,
+            541
+          ],
+          "pair": [
+            1230,
+            2026
+          ]
+        },
+        "moved": {
+          "entity": [
+            621,
+            901
+          ],
+          "pair": [
+            1230,
+            3404
+          ]
+        },
+        "cells": {
+          "ACTION4 containment": [
+            162,
+            796
+          ],
+          "ACTION4 distance": [
+            25,
+            413
+          ],
+          "ACTION5 distance": [
+            97,
+            310
+          ],
+          "ACTION5 containment": [
+            131,
+            498
+          ],
+          "ACTION3 containment": [
+            12,
+            234
+          ],
+          "ACTION3 distance": [
+            15,
+            110
+          ],
+          "ACTION2 distance": [
+            284,
+            370
+          ],
+          "ACTION2 containment": [
+            295,
+            474
+          ],
+          "ACTION5 count_diff": [
+            23,
+            146
+          ],
+          "ACTION4 count_diff": [
+            17,
+            286
+          ],
+          "ACTION6 containment": [
+            28,
+            324
+          ],
+          "ACTION6 count_diff": [
+            29,
+            237
+          ],
+          "ACTION6 distance": [
+            15,
+            106
+          ],
+          "ACTION4 part_size_diff": [
+            5,
+            5
+          ],
+          "ACTION1 distance": [
+            52,
+            120
+          ],
+          "ACTION2 part_size_diff": [
+            7,
+            8
+          ],
+          "ACTION2 count_diff": [
+            15,
+            221
+          ],
+          "ACTION3 count_diff": [
+            10,
+            126
+          ],
+          "ACTION1 count_diff": [
+            1,
+            69
+          ],
+          "ACTION1 containment": [
+            5,
+            108
+          ],
+          "ACTION5 part_size_diff": [
+            2,
+            6
+          ],
+          "ACTION6 part_size_diff": [
+            0,
+            2
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 1851,
+            "misses": 1216,
+            "undecidable": 0,
+            "abstained": 424,
+            "accuracy": 0.604,
+            "coverage": 0.879
+          },
+          "3": {
+            "hits": 918,
+            "misses": 1515,
+            "undecidable": 344,
+            "abstained": 602,
+            "accuracy": 0.377,
+            "coverage": 0.802
+          },
+          "10": {
+            "hits": 287,
+            "misses": 1283,
+            "undecidable": 821,
+            "abstained": 608,
+            "accuracy": 0.183,
+            "coverage": 0.721
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "dc22": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1388139493,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 4290,
+          "misses": 527,
+          "undecidable": 0,
+          "abstained": 247,
+          "accuracy": 0.891,
+          "coverage": 0.951,
+          "brier": 0.057
+        },
+        "pair": {
+          "hits": 143937,
+          "misses": 5920,
+          "undecidable": 294,
+          "abstained": 8451,
+          "accuracy": 0.96,
+          "coverage": 0.947,
+          "brier": 0.023
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              265,
+              20
+            ],
+            "pair": [
+              8699,
+              257
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              1064,
+              146
+            ],
+            "pair": [
+              36030,
+              1700
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              953,
+              117
+            ],
+            "pair": [
+              32197,
+              1351
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              980,
+              125
+            ],
+            "pair": [
+              32739,
+              1362
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              1028,
+              119
+            ],
+            "pair": [
+              34272,
+              1250
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            32796,
+            0
+          ],
+          "distance": [
+            23506,
+            518
+          ],
+          "count_diff": [
+            23916,
+            108
+          ],
+          "containment": [
+            43589,
+            4459
+          ],
+          "shape_diff": [
+            1811,
+            0
+          ],
+          "palette_missing": [
+            17544,
+            0
+          ],
+          "part_size_diff": [
+            775,
+            835
+          ]
+        },
+        "conditional": [
+          11394,
+          559
+        ],
+        "unconditional": [
+          132543,
+          5361
+        ],
+        "moving": {
+          "entity": [
+            391,
+            378
+          ],
+          "pair": [
+            3052,
+            3240
+          ]
+        },
+        "moved": {
+          "entity": [
+            391,
+            216
+          ],
+          "pair": [
+            3052,
+            2690
+          ]
+        },
+        "cells": {
+          "ACTION6 containment": [
+            0,
+            210
+          ],
+          "ACTION3 containment": [
+            679,
+            1230
+          ],
+          "ACTION3 distance": [
+            17,
+            168
+          ],
+          "ACTION3 part_size_diff": [
+            135,
+            230
+          ],
+          "ACTION4 distance": [
+            16,
+            209
+          ],
+          "ACTION4 containment": [
+            599,
+            967
+          ],
+          "ACTION4 part_size_diff": [
+            180,
+            175
+          ],
+          "ACTION6 part_size_diff": [
+            0,
+            35
+          ],
+          "ACTION6 distance": [
+            0,
+            12
+          ],
+          "ACTION1 containment": [
+            286,
+            1082
+          ],
+          "ACTION1 part_size_diff": [
+            70,
+            205
+          ],
+          "ACTION1 distance": [
+            0,
+            57
+          ],
+          "ACTION2 containment": [
+            878,
+            970
+          ],
+          "ACTION2 distance": [
+            2,
+            72
+          ],
+          "ACTION2 part_size_diff": [
+            190,
+            190
+          ],
+          "ACTION3 count_diff": [
+            0,
+            72
+          ],
+          "ACTION2 count_diff": [
+            0,
+            18
+          ],
+          "ACTION1 count_diff": [
+            0,
+            18
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4290,
+            "misses": 527,
+            "undecidable": 0,
+            "abstained": 117,
+            "accuracy": 0.891,
+            "coverage": 0.976
+          },
+          "3": {
+            "hits": 3727,
+            "misses": 882,
+            "undecidable": 6,
+            "abstained": 221,
+            "accuracy": 0.809,
+            "coverage": 0.954
+          },
+          "10": {
+            "hits": 3177,
+            "misses": 899,
+            "undecidable": 27,
+            "abstained": 390,
+            "accuracy": 0.779,
+            "coverage": 0.913
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "ft09": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1935273263,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 376,
+        "entity": {
+          "hits": 15149,
+          "misses": 28,
+          "undecidable": 0,
+          "abstained": 123,
+          "accuracy": 0.998,
+          "coverage": 0.992,
+          "brier": 0.002
+        },
+        "pair": {
+          "hits": 1627121,
+          "misses": 1472,
+          "undecidable": 5916,
+          "abstained": 17968,
+          "accuracy": 0.999,
+          "coverage": 0.989,
+          "brier": 0.001
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              15149,
+              28
+            ],
+            "pair": [
+              1627121,
+              1472
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            315915,
+            0
+          ],
+          "distance": [
+            283279,
+            1472
+          ],
+          "count_diff": [
+            284751,
+            0
+          ],
+          "shape_diff": [
+            106930,
+            0
+          ],
+          "containment": [
+            569502,
+            0
+          ],
+          "palette_missing": [
+            62328,
+            0
+          ],
+          "part_size_diff": [
+            4416,
+            0
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          1627121,
+          1472
+        ],
+        "moving": {
+          "entity": [
+            641,
+            24
+          ],
+          "pair": [
+            31299,
+            562
+          ]
+        },
+        "moved": {
+          "entity": [
+            641,
+            28
+          ],
+          "pair": [
+            31299,
+            910
+          ]
+        },
+        "cells": {
+          "ACTION6 containment": [
+            24924,
+            0
+          ],
+          "ACTION6 distance": [
+            6375,
+            1472
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 15149,
+            "misses": 28,
+            "undecidable": 0,
+            "abstained": 0,
+            "accuracy": 0.998,
+            "coverage": 1.0
+          },
+          "3": {
+            "hits": 14126,
+            "misses": 16,
+            "undecidable": 35,
+            "abstained": 0,
+            "accuracy": 0.999,
+            "coverage": 1.0
+          },
+          "10": {
+            "hits": 10682,
+            "misses": 16,
+            "undecidable": 35,
+            "abstained": 0,
+            "accuracy": 0.999,
+            "coverage": 1.0
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "g50t": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1608342600,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 1803,
+          "misses": 731,
+          "undecidable": 0,
+          "abstained": 198,
+          "accuracy": 0.712,
+          "coverage": 0.928,
+          "brier": 0.162
+        },
+        "pair": {
+          "hits": 27277,
+          "misses": 3020,
+          "undecidable": 1875,
+          "abstained": 5688,
+          "accuracy": 0.9,
+          "coverage": 0.842,
+          "brier": 0.057
+        },
+        "by_action": {
+          "ACTION4": {
+            "entity": [
+              328,
+              126
+            ],
+            "pair": [
+              5337,
+              547
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              399,
+              123
+            ],
+            "pair": [
+              5868,
+              558
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              441,
+              142
+            ],
+            "pair": [
+              6692,
+              633
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              387,
+              96
+            ],
+            "pair": [
+              5264,
+              629
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              248,
+              244
+            ],
+            "pair": [
+              4116,
+              653
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            6383,
+            0
+          ],
+          "distance": [
+            4362,
+            434
+          ],
+          "count_diff": [
+            4436,
+            360
+          ],
+          "shape_diff": [
+            317,
+            0
+          ],
+          "containment": [
+            7832,
+            1760
+          ],
+          "palette_missing": [
+            3174,
+            0
+          ],
+          "part_size_diff": [
+            773,
+            466
+          ]
+        },
+        "conditional": [
+          19016,
+          2471
+        ],
+        "unconditional": [
+          8261,
+          549
+        ],
+        "moving": {
+          "entity": [
+            376,
+            268
+          ],
+          "pair": [
+            1158,
+            1180
+          ]
+        },
+        "moved": {
+          "entity": [
+            376,
+            485
+          ],
+          "pair": [
+            1158,
+            1900
+          ]
+        },
+        "cells": {
+          "ACTION4 distance": [
+            71,
+            67
+          ],
+          "ACTION4 containment": [
+            43,
+            358
+          ],
+          "ACTION4 part_size_diff": [
+            20,
+            102
+          ],
+          "ACTION3 distance": [
+            15,
+            48
+          ],
+          "ACTION3 containment": [
+            74,
+            367
+          ],
+          "ACTION1 containment": [
+            341,
+            359
+          ],
+          "ACTION3 part_size_diff": [
+            20,
+            95
+          ],
+          "ACTION1 distance": [
+            0,
+            127
+          ],
+          "ACTION2 containment": [
+            187,
+            377
+          ],
+          "ACTION2 distance": [
+            226,
+            85
+          ],
+          "ACTION5 distance": [
+            9,
+            107
+          ],
+          "ACTION5 containment": [
+            32,
+            299
+          ],
+          "ACTION5 count_diff": [
+            14,
+            175
+          ],
+          "ACTION5 part_size_diff": [
+            3,
+            72
+          ],
+          "ACTION1 part_size_diff": [
+            52,
+            105
+          ],
+          "ACTION3 count_diff": [
+            0,
+            48
+          ],
+          "ACTION2 part_size_diff": [
+            51,
+            92
+          ],
+          "ACTION4 count_diff": [
+            0,
+            20
+          ],
+          "ACTION2 count_diff": [
+            0,
+            75
+          ],
+          "ACTION1 count_diff": [
+            0,
+            42
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 1803,
+            "misses": 731,
+            "undecidable": 0,
+            "abstained": 112,
+            "accuracy": 0.712,
+            "coverage": 0.958
+          },
+          "3": {
+            "hits": 999,
+            "misses": 1306,
+            "undecidable": 121,
+            "abstained": 171,
+            "accuracy": 0.433,
+            "coverage": 0.931
+          },
+          "10": {
+            "hits": 255,
+            "misses": 1608,
+            "undecidable": 337,
+            "abstained": 236,
+            "accuracy": 0.137,
+            "coverage": 0.888
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "ka59": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 19968363,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 3273,
+          "misses": 753,
+          "undecidable": 0,
+          "abstained": 229,
+          "accuracy": 0.813,
+          "coverage": 0.946,
+          "brier": 0.104
+        },
+        "pair": {
+          "hits": 80383,
+          "misses": 9674,
+          "undecidable": 1652,
+          "abstained": 10612,
+          "accuracy": 0.893,
+          "coverage": 0.895,
+          "brier": 0.066
+        },
+        "by_action": {
+          "ACTION3": {
+            "entity": [
+              893,
+              207
+            ],
+            "pair": [
+              22129,
+              2822
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              874,
+              182
+            ],
+            "pair": [
+              21013,
+              2382
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              731,
+              204
+            ],
+            "pair": [
+              18552,
+              2379
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              240,
+              11
+            ],
+            "pair": [
+              5328,
+              138
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              535,
+              149
+            ],
+            "pair": [
+              13361,
+              1953
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            18809,
+            0
+          ],
+          "distance": [
+            14086,
+            1250
+          ],
+          "count_diff": [
+            12692,
+            2644
+          ],
+          "containment": [
+            25708,
+            4964
+          ],
+          "shape_diff": [
+            1103,
+            0
+          ],
+          "palette_missing": [
+            6946,
+            0
+          ],
+          "part_size_diff": [
+            1039,
+            816
+          ]
+        },
+        "conditional": [
+          68344,
+          7735
+        ],
+        "unconditional": [
+          12039,
+          1939
+        ],
+        "moving": {
+          "entity": [
+            758,
+            471
+          ],
+          "pair": [
+            5613,
+            4270
+          ]
+        },
+        "moved": {
+          "entity": [
+            758,
+            426
+          ],
+          "pair": [
+            5613,
+            6002
+          ]
+        },
+        "cells": {
+          "ACTION3 count_diff": [
+            237,
+            776
+          ],
+          "ACTION3 containment": [
+            1142,
+            1360
+          ],
+          "ACTION3 distance": [
+            521,
+            438
+          ],
+          "ACTION3 part_size_diff": [
+            76,
+            248
+          ],
+          "ACTION4 count_diff": [
+            56,
+            654
+          ],
+          "ACTION4 containment": [
+            1226,
+            1104
+          ],
+          "ACTION4 distance": [
+            452,
+            411
+          ],
+          "ACTION4 part_size_diff": [
+            104,
+            213
+          ],
+          "ACTION6 containment": [
+            240,
+            85
+          ],
+          "ACTION2 containment": [
+            562,
+            1353
+          ],
+          "ACTION2 distance": [
+            58,
+            219
+          ],
+          "ACTION1 containment": [
+            682,
+            1062
+          ],
+          "ACTION1 distance": [
+            69,
+            164
+          ],
+          "ACTION1 part_size_diff": [
+            85,
+            142
+          ],
+          "ACTION6 distance": [
+            1,
+            18
+          ],
+          "ACTION6 part_size_diff": [
+            13,
+            21
+          ],
+          "ACTION2 count_diff": [
+            0,
+            615
+          ],
+          "ACTION2 part_size_diff": [
+            54,
+            192
+          ],
+          "ACTION1 count_diff": [
+            35,
+            585
+          ],
+          "ACTION6 count_diff": [
+            0,
+            14
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 3273,
+            "misses": 753,
+            "undecidable": 0,
+            "abstained": 121,
+            "accuracy": 0.813,
+            "coverage": 0.971
+          },
+          "3": {
+            "hits": 2467,
+            "misses": 1313,
+            "undecidable": 59,
+            "abstained": 228,
+            "accuracy": 0.653,
+            "coverage": 0.943
+          },
+          "10": {
+            "hits": 1997,
+            "misses": 1371,
+            "undecidable": 135,
+            "abstained": 282,
+            "accuracy": 0.593,
+            "coverage": 0.923
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "lf52": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1112099132,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 392,
+        "entity": {
+          "hits": 4072,
+          "misses": 140,
+          "undecidable": 0,
+          "abstained": 389,
+          "accuracy": 0.967,
+          "coverage": 0.915,
+          "brier": 0.022
+        },
+        "pair": {
+          "hits": 90740,
+          "misses": 1538,
+          "undecidable": 949,
+          "abstained": 14157,
+          "accuracy": 0.983,
+          "coverage": 0.867,
+          "brier": 0.012
+        },
+        "by_action": {
+          "ACTION2": {
+            "entity": [
+              545,
+              20
+            ],
+            "pair": [
+              11979,
+              185
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              634,
+              22
+            ],
+            "pair": [
+              14336,
+              235
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              1019,
+              30
+            ],
+            "pair": [
+              22696,
+              377
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              537,
+              20
+            ],
+            "pair": [
+              11824,
+              205
+            ]
+          },
+          "ACTION7": {
+            "entity": [
+              735,
+              22
+            ],
+            "pair": [
+              16349,
+              257
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              602,
+              26
+            ],
+            "pair": [
+              13556,
+              279
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            17869,
+            0
+          ],
+          "distance": [
+            17266,
+            414
+          ],
+          "count_diff": [
+            17554,
+            126
+          ],
+          "containment": [
+            34363,
+            997
+          ],
+          "shape_diff": [
+            3168,
+            0
+          ],
+          "palette_missing": [
+            378,
+            0
+          ],
+          "part_size_diff": [
+            142,
+            1
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          90740,
+          1538
+        ],
+        "moving": {
+          "entity": [
+            419,
+            135
+          ],
+          "pair": [
+            4082,
+            1119
+          ]
+        },
+        "moved": {
+          "entity": [
+            419,
+            140
+          ],
+          "pair": [
+            4082,
+            1390
+          ]
+        },
+        "cells": {
+          "ACTION2 containment": [
+            455,
+            123
+          ],
+          "ACTION2 distance": [
+            0,
+            45
+          ],
+          "ACTION3 containment": [
+            662,
+            148
+          ],
+          "ACTION3 distance": [
+            3,
+            63
+          ],
+          "ACTION3 part_size_diff": [
+            26,
+            0
+          ],
+          "ACTION6 containment": [
+            1066,
+            214
+          ],
+          "ACTION6 distance": [
+            21,
+            118
+          ],
+          "ACTION6 part_size_diff": [
+            43,
+            1
+          ],
+          "ACTION1 containment": [
+            451,
+            130
+          ],
+          "ACTION1 distance": [
+            12,
+            49
+          ],
+          "ACTION1 part_size_diff": [
+            17,
+            0
+          ],
+          "ACTION4 containment": [
+            536,
+            200
+          ],
+          "ACTION4 distance": [
+            13,
+            64
+          ],
+          "ACTION4 part_size_diff": [
+            17,
+            0
+          ],
+          "ACTION7 containment": [
+            717,
+            182
+          ],
+          "ACTION7 distance": [
+            4,
+            75
+          ],
+          "ACTION2 part_size_diff": [
+            12,
+            0
+          ],
+          "ACTION1 count_diff": [
+            0,
+            26
+          ],
+          "ACTION7 part_size_diff": [
+            27,
+            0
+          ],
+          "ACTION2 count_diff": [
+            0,
+            17
+          ],
+          "ACTION6 count_diff": [
+            0,
+            44
+          ],
+          "ACTION4 count_diff": [
+            0,
+            15
+          ],
+          "ACTION3 count_diff": [
+            0,
+            24
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4072,
+            "misses": 140,
+            "undecidable": 0,
+            "abstained": 277,
+            "accuracy": 0.967,
+            "coverage": 0.938
+          },
+          "3": {
+            "hits": 3741,
+            "misses": 128,
+            "undecidable": 32,
+            "abstained": 474,
+            "accuracy": 0.967,
+            "coverage": 0.891
+          },
+          "10": {
+            "hits": 3265,
+            "misses": 83,
+            "undecidable": 97,
+            "abstained": 579,
+            "accuracy": 0.975,
+            "coverage": 0.853
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "lp85": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 550335288,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 398,
+        "entity": {
+          "hits": 10987,
+          "misses": 297,
+          "undecidable": 0,
+          "abstained": 87,
+          "accuracy": 0.974,
+          "coverage": 0.992,
+          "brier": 0.026
+        },
+        "pair": {
+          "hits": 803194,
+          "misses": 3652,
+          "undecidable": 321,
+          "abstained": 8596,
+          "accuracy": 0.995,
+          "coverage": 0.989,
+          "brier": 0.004
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              10987,
+              297
+            ],
+            "pair": [
+              803194,
+              3652
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            147682,
+            0
+          ],
+          "distance": [
+            141366,
+            2923
+          ],
+          "count_diff": [
+            144238,
+            51
+          ],
+          "containment": [
+            287908,
+            670
+          ],
+          "shape_diff": [
+            74872,
+            0
+          ],
+          "palette_missing": [
+            6786,
+            0
+          ],
+          "part_size_diff": [
+            342,
+            8
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          803194,
+          3652
+        ],
+        "moving": {
+          "entity": [
+            0,
+            0
+          ],
+          "pair": [
+            0,
+            0
+          ]
+        },
+        "moved": {
+          "entity": [
+            0,
+            297
+          ],
+          "pair": [
+            0,
+            3652
+          ]
+        },
+        "cells": {
+          "ACTION6 containment": [
+            0,
+            670
+          ],
+          "ACTION6 distance": [
+            0,
+            2923
+          ],
+          "ACTION6 part_size_diff": [
+            0,
+            8
+          ],
+          "ACTION6 count_diff": [
+            0,
+            51
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 10987,
+            "misses": 297,
+            "undecidable": 0,
+            "abstained": 0,
+            "accuracy": 0.974,
+            "coverage": 1.0
+          },
+          "3": {
+            "hits": 10357,
+            "misses": 810,
+            "undecidable": 3,
+            "abstained": 0,
+            "accuracy": 0.927,
+            "coverage": 1.0
+          },
+          "10": {
+            "hits": 8322,
+            "misses": 2439,
+            "undecidable": 10,
+            "abstained": 0,
+            "accuracy": 0.773,
+            "coverage": 1.0
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "ls20": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 426367118,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 3401,
+          "misses": 449,
+          "undecidable": 0,
+          "abstained": 174,
+          "accuracy": 0.883,
+          "coverage": 0.957,
+          "brier": 0.073
+        },
+        "pair": {
+          "hits": 76348,
+          "misses": 3975,
+          "undecidable": 5457,
+          "abstained": 7004,
+          "accuracy": 0.951,
+          "coverage": 0.92,
+          "brier": 0.032
+        },
+        "by_action": {
+          "ACTION1": {
+            "entity": [
+              631,
+              81
+            ],
+            "pair": [
+              14392,
+              807
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              1130,
+              137
+            ],
+            "pair": [
+              25550,
+              1337
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              1083,
+              146
+            ],
+            "pair": [
+              24105,
+              1108
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              557,
+              85
+            ],
+            "pair": [
+              12301,
+              723
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            16994,
+            0
+          ],
+          "distance": [
+            11206,
+            2097
+          ],
+          "count_diff": [
+            13022,
+            281
+          ],
+          "containment": [
+            25089,
+            1517
+          ],
+          "palette_missing": [
+            7382,
+            0
+          ],
+          "part_size_diff": [
+            2655,
+            80
+          ]
+        },
+        "conditional": [
+          63684,
+          3216
+        ],
+        "unconditional": [
+          12664,
+          759
+        ],
+        "moving": {
+          "entity": [
+            1458,
+            320
+          ],
+          "pair": [
+            7535,
+            1312
+          ]
+        },
+        "moved": {
+          "entity": [
+            1458,
+            315
+          ],
+          "pair": [
+            7535,
+            2839
+          ]
+        },
+        "cells": {
+          "ACTION1 containment": [
+            984,
+            278
+          ],
+          "ACTION1 distance": [
+            569,
+            467
+          ],
+          "ACTION3 distance": [
+            646,
+            654
+          ],
+          "ACTION3 containment": [
+            1534,
+            569
+          ],
+          "ACTION4 containment": [
+            1452,
+            434
+          ],
+          "ACTION4 distance": [
+            647,
+            570
+          ],
+          "ACTION4 count_diff": [
+            0,
+            86
+          ],
+          "ACTION4 part_size_diff": [
+            114,
+            18
+          ],
+          "ACTION2 containment": [
+            807,
+            236
+          ],
+          "ACTION2 distance": [
+            464,
+            406
+          ],
+          "ACTION1 part_size_diff": [
+            90,
+            20
+          ],
+          "ACTION2 part_size_diff": [
+            67,
+            28
+          ],
+          "ACTION3 part_size_diff": [
+            161,
+            14
+          ],
+          "ACTION1 count_diff": [
+            0,
+            42
+          ],
+          "ACTION3 count_diff": [
+            0,
+            100
+          ],
+          "ACTION2 count_diff": [
+            0,
+            53
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 3401,
+            "misses": 449,
+            "undecidable": 0,
+            "abstained": 76,
+            "accuracy": 0.883,
+            "coverage": 0.981
+          },
+          "3": {
+            "hits": 2967,
+            "misses": 668,
+            "undecidable": 66,
+            "abstained": 146,
+            "accuracy": 0.816,
+            "coverage": 0.961
+          },
+          "10": {
+            "hits": 2382,
+            "misses": 854,
+            "undecidable": 215,
+            "abstained": 132,
+            "accuracy": 0.736,
+            "coverage": 0.961
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "m0r0": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 285835823,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 396,
+        "entity": {
+          "hits": 2212,
+          "misses": 1017,
+          "undecidable": 0,
+          "abstained": 237,
+          "accuracy": 0.685,
+          "coverage": 0.932,
+          "brier": 0.176
+        },
+        "pair": {
+          "hits": 54387,
+          "misses": 5668,
+          "undecidable": 1084,
+          "abstained": 7702,
+          "accuracy": 0.906,
+          "coverage": 0.886,
+          "brier": 0.059
+        },
+        "by_action": {
+          "ACTION2": {
+            "entity": [
+              710,
+              324
+            ],
+            "pair": [
+              17424,
+              1682
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              564,
+              277
+            ],
+            "pair": [
+              14288,
+              1761
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              399,
+              248
+            ],
+            "pair": [
+              10607,
+              1147
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              189,
+              24
+            ],
+            "pair": [
+              3769,
+              166
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              211,
+              102
+            ],
+            "pair": [
+              5125,
+              630
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              139,
+              42
+            ],
+            "pair": [
+              3174,
+              282
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            12904,
+            0
+          ],
+          "distance": [
+            8260,
+            1113
+          ],
+          "count_diff": [
+            8852,
+            521
+          ],
+          "containment": [
+            14716,
+            4030
+          ],
+          "shape_diff": [
+            1294,
+            0
+          ],
+          "palette_missing": [
+            7062,
+            0
+          ],
+          "part_size_diff": [
+            1299,
+            4
+          ]
+        },
+        "conditional": [
+          46048,
+          4906
+        ],
+        "unconditional": [
+          8339,
+          762
+        ],
+        "moving": {
+          "entity": [
+            655,
+            480
+          ],
+          "pair": [
+            2511,
+            1938
+          ]
+        },
+        "moved": {
+          "entity": [
+            655,
+            630
+          ],
+          "pair": [
+            2511,
+            3766
+          ]
+        },
+        "cells": {
+          "ACTION1 count_diff": [
+            0,
+            148
+          ],
+          "ACTION1 containment": [
+            228,
+            1305
+          ],
+          "ACTION1 distance": [
+            559,
+            308
+          ],
+          "ACTION2 containment": [
+            142,
+            1050
+          ],
+          "ACTION2 distance": [
+            527,
+            464
+          ],
+          "ACTION3 count_diff": [
+            1,
+            141
+          ],
+          "ACTION3 containment": [
+            203,
+            778
+          ],
+          "ACTION3 distance": [
+            121,
+            224
+          ],
+          "ACTION6 containment": [
+            0,
+            156
+          ],
+          "ACTION4 distance": [
+            147,
+            79
+          ],
+          "ACTION4 count_diff": [
+            0,
+            64
+          ],
+          "ACTION4 containment": [
+            289,
+            487
+          ],
+          "ACTION2 count_diff": [
+            0,
+            168
+          ],
+          "ACTION5 containment": [
+            248,
+            254
+          ],
+          "ACTION5 distance": [
+            2,
+            28
+          ],
+          "ACTION6 distance": [
+            0,
+            10
+          ],
+          "ACTION1 part_size_diff": [
+            22,
+            0
+          ],
+          "ACTION2 part_size_diff": [
+            18,
+            0
+          ],
+          "ACTION3 part_size_diff": [
+            0,
+            4
+          ],
+          "ACTION4 part_size_diff": [
+            4,
+            0
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 2212,
+            "misses": 1017,
+            "undecidable": 0,
+            "abstained": 112,
+            "accuracy": 0.685,
+            "coverage": 0.966
+          },
+          "3": {
+            "hits": 1177,
+            "misses": 1860,
+            "undecidable": 36,
+            "abstained": 222,
+            "accuracy": 0.388,
+            "coverage": 0.932
+          },
+          "10": {
+            "hits": 681,
+            "misses": 2035,
+            "undecidable": 100,
+            "abstained": 318,
+            "accuracy": 0.251,
+            "coverage": 0.895
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "r11l": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1871651796,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 388,
+        "entity": {
+          "hits": 3258,
+          "misses": 159,
+          "undecidable": 0,
+          "abstained": 33,
+          "accuracy": 0.953,
+          "coverage": 0.99,
+          "brier": 0.04
+        },
+        "pair": {
+          "hits": 57524,
+          "misses": 860,
+          "undecidable": 467,
+          "abstained": 1189,
+          "accuracy": 0.985,
+          "coverage": 0.98,
+          "brier": 0.011
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              3258,
+              159
+            ],
+            "pair": [
+              57524,
+              860
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            12378,
+            0
+          ],
+          "distance": [
+            9544,
+            748
+          ],
+          "count_diff": [
+            10208,
+            84
+          ],
+          "containment": [
+            20582,
+            2
+          ],
+          "shape_diff": [
+            370,
+            0
+          ],
+          "palette_missing": [
+            4172,
+            0
+          ],
+          "part_size_diff": [
+            270,
+            26
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          57524,
+          860
+        ],
+        "moving": {
+          "entity": [
+            643,
+            77
+          ],
+          "pair": [
+            2858,
+            286
+          ]
+        },
+        "moved": {
+          "entity": [
+            643,
+            115
+          ],
+          "pair": [
+            2858,
+            600
+          ]
+        },
+        "cells": {
+          "ACTION6 distance": [
+            244,
+            748
+          ],
+          "ACTION6 containment": [
+            2344,
+            2
+          ],
+          "ACTION6 count_diff": [
+            0,
+            84
+          ],
+          "ACTION6 part_size_diff": [
+            270,
+            26
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 3258,
+            "misses": 159,
+            "undecidable": 0,
+            "abstained": 0,
+            "accuracy": 0.953,
+            "coverage": 1.0
+          },
+          "3": {
+            "hits": 3062,
+            "misses": 215,
+            "undecidable": 26,
+            "abstained": 0,
+            "accuracy": 0.934,
+            "coverage": 1.0
+          },
+          "10": {
+            "hits": 2575,
+            "misses": 254,
+            "undecidable": 57,
+            "abstained": 0,
+            "accuracy": 0.91,
+            "coverage": 1.0
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "re86": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 2117497044,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 4233,
+          "misses": 986,
+          "undecidable": 0,
+          "abstained": 622,
+          "accuracy": 0.811,
+          "coverage": 0.894,
+          "brier": 0.114
+        },
+        "pair": {
+          "hits": 138452,
+          "misses": 11502,
+          "undecidable": 9062,
+          "abstained": 47535,
+          "accuracy": 0.923,
+          "coverage": 0.759,
+          "brier": 0.053
+        },
+        "by_action": {
+          "ACTION4": {
+            "entity": [
+              1189,
+              306
+            ],
+            "pair": [
+              39579,
+              3345
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              840,
+              207
+            ],
+            "pair": [
+              27593,
+              2454
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              957,
+              222
+            ],
+            "pair": [
+              31615,
+              2490
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              1050,
+              213
+            ],
+            "pair": [
+              35056,
+              2720
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              197,
+              38
+            ],
+            "pair": [
+              4609,
+              493
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            29414,
+            0
+          ],
+          "distance": [
+            22691,
+            3402
+          ],
+          "count_diff": [
+            22392,
+            3701
+          ],
+          "shape_diff": [
+            8735,
+            0
+          ],
+          "containment": [
+            47797,
+            4389
+          ],
+          "palette_missing": [
+            6664,
+            0
+          ],
+          "part_size_diff": [
+            759,
+            10
+          ]
+        },
+        "conditional": [
+          78586,
+          5186
+        ],
+        "unconditional": [
+          59866,
+          6316
+        ],
+        "moving": {
+          "entity": [
+            1317,
+            784
+          ],
+          "pair": [
+            7500,
+            5601
+          ]
+        },
+        "moved": {
+          "entity": [
+            1317,
+            544
+          ],
+          "pair": [
+            7500,
+            6570
+          ]
+        },
+        "cells": {
+          "ACTION4 distance": [
+            593,
+            1054
+          ],
+          "ACTION4 containment": [
+            1284,
+            1122
+          ],
+          "ACTION4 count_diff": [
+            28,
+            1165
+          ],
+          "ACTION4 part_size_diff": [
+            0,
+            4
+          ],
+          "ACTION2 count_diff": [
+            43,
+            729
+          ],
+          "ACTION2 containment": [
+            795,
+            1062
+          ],
+          "ACTION2 distance": [
+            697,
+            663
+          ],
+          "ACTION3 distance": [
+            468,
+            734
+          ],
+          "ACTION3 containment": [
+            857,
+            985
+          ],
+          "ACTION3 count_diff": [
+            26,
+            768
+          ],
+          "ACTION5 containment": [
+            260,
+            260
+          ],
+          "ACTION1 containment": [
+            1303,
+            960
+          ],
+          "ACTION1 distance": [
+            990,
+            831
+          ],
+          "ACTION5 distance": [
+            45,
+            120
+          ],
+          "ACTION1 count_diff": [
+            29,
+            926
+          ],
+          "ACTION5 count_diff": [
+            82,
+            113
+          ],
+          "ACTION1 part_size_diff": [
+            0,
+            3
+          ],
+          "ACTION3 part_size_diff": [
+            0,
+            3
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4233,
+            "misses": 986,
+            "undecidable": 0,
+            "abstained": 367,
+            "accuracy": 0.811,
+            "coverage": 0.934
+          },
+          "3": {
+            "hits": 3092,
+            "misses": 1528,
+            "undecidable": 299,
+            "abstained": 551,
+            "accuracy": 0.669,
+            "coverage": 0.893
+          },
+          "10": {
+            "hits": 2211,
+            "misses": 1382,
+            "undecidable": 869,
+            "abstained": 619,
+            "accuracy": 0.615,
+            "coverage": 0.853
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "s5i5": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 291567553,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 386,
+        "entity": {
+          "hits": 4109,
+          "misses": 18,
+          "undecidable": 0,
+          "abstained": 33,
+          "accuracy": 0.996,
+          "coverage": 0.992,
+          "brier": 0.005
+        },
+        "pair": {
+          "hits": 105313,
+          "misses": 897,
+          "undecidable": 957,
+          "abstained": 1292,
+          "accuracy": 0.992,
+          "coverage": 0.988,
+          "brier": 0.007
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              4109,
+              18
+            ],
+            "pair": [
+              105313,
+              897
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            22838,
+            0
+          ],
+          "distance": [
+            15871,
+            435
+          ],
+          "count_diff": [
+            16054,
+            252
+          ],
+          "containment": [
+            32574,
+            38
+          ],
+          "shape_diff": [
+            2280,
+            0
+          ],
+          "palette_missing": [
+            13064,
+            0
+          ],
+          "part_size_diff": [
+            2632,
+            172
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          105313,
+          897
+        ],
+        "moving": {
+          "entity": [
+            675,
+            14
+          ],
+          "pair": [
+            7118,
+            222
+          ]
+        },
+        "moved": {
+          "entity": [
+            675,
+            18
+          ],
+          "pair": [
+            7118,
+            847
+          ]
+        },
+        "cells": {
+          "ACTION6 containment": [
+            5964,
+            38
+          ],
+          "ACTION6 distance": [
+            34,
+            435
+          ],
+          "ACTION6 part_size_diff": [
+            1120,
+            172
+          ],
+          "ACTION6 count_diff": [
+            0,
+            252
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4109,
+            "misses": 18,
+            "undecidable": 0,
+            "abstained": 0,
+            "accuracy": 0.996,
+            "coverage": 1.0
+          },
+          "3": {
+            "hits": 3925,
+            "misses": 19,
+            "undecidable": 21,
+            "abstained": 0,
+            "accuracy": 0.995,
+            "coverage": 1.0
+          },
+          "10": {
+            "hits": 3299,
+            "misses": 29,
+            "undecidable": 35,
+            "abstained": 0,
+            "accuracy": 0.991,
+            "coverage": 1.0
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "sb26": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 2081958829,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 392,
+        "entity": {
+          "hits": 5535,
+          "misses": 44,
+          "undecidable": 0,
+          "abstained": 170,
+          "accuracy": 0.992,
+          "coverage": 0.97,
+          "brier": 0.007
+        },
+        "pair": {
+          "hits": 181287,
+          "misses": 1471,
+          "undecidable": 1598,
+          "abstained": 7778,
+          "accuracy": 0.992,
+          "coverage": 0.959,
+          "brier": 0.006
+        },
+        "by_action": {
+          "ACTION5": {
+            "entity": [
+              3866,
+              12
+            ],
+            "pair": [
+              127442,
+              1132
+            ]
+          },
+          "ACTION7": {
+            "entity": [
+              805,
+              2
+            ],
+            "pair": [
+              26132,
+              0
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              864,
+              30
+            ],
+            "pair": [
+              27713,
+              339
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            37144,
+            0
+          ],
+          "distance": [
+            31551,
+            969
+          ],
+          "count_diff": [
+            32272,
+            248
+          ],
+          "containment": [
+            64792,
+            248
+          ],
+          "shape_diff": [
+            4470,
+            0
+          ],
+          "palette_missing": [
+            9248,
+            0
+          ],
+          "part_size_diff": [
+            1810,
+            6
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          181287,
+          1471
+        ],
+        "moving": {
+          "entity": [
+            461,
+            5
+          ],
+          "pair": [
+            6154,
+            311
+          ]
+        },
+        "moved": {
+          "entity": [
+            461,
+            44
+          ],
+          "pair": [
+            6154,
+            1162
+          ]
+        },
+        "cells": {
+          "ACTION5 containment": [
+            5838,
+            80
+          ],
+          "ACTION5 distance": [
+            306,
+            968
+          ],
+          "ACTION6 count_diff": [
+            0,
+            168
+          ],
+          "ACTION6 containment": [
+            0,
+            168
+          ],
+          "ACTION5 count_diff": [
+            0,
+            80
+          ],
+          "ACTION6 part_size_diff": [
+            6,
+            2
+          ],
+          "ACTION5 part_size_diff": [
+            4,
+            4
+          ],
+          "ACTION6 distance": [
+            0,
+            1
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 5535,
+            "misses": 44,
+            "undecidable": 0,
+            "abstained": 52,
+            "accuracy": 0.992,
+            "coverage": 0.991
+          },
+          "3": {
+            "hits": 5305,
+            "misses": 51,
+            "undecidable": 17,
+            "abstained": 116,
+            "accuracy": 0.99,
+            "coverage": 0.979
+          },
+          "10": {
+            "hits": 4771,
+            "misses": 44,
+            "undecidable": 41,
+            "abstained": 131,
+            "accuracy": 0.991,
+            "coverage": 0.974
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "sc25": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1942370938,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 386,
+        "entity": {
+          "hits": 3694,
+          "misses": 577,
+          "undecidable": 0,
+          "abstained": 227,
+          "accuracy": 0.865,
+          "coverage": 0.95,
+          "brier": 0.093
+        },
+        "pair": {
+          "hits": 103231,
+          "misses": 7009,
+          "undecidable": 2482,
+          "abstained": 7467,
+          "accuracy": 0.936,
+          "coverage": 0.937,
+          "brier": 0.044
+        },
+        "by_action": {
+          "ACTION3": {
+            "entity": [
+              1577,
+              325
+            ],
+            "pair": [
+              45840,
+              4045
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              1111,
+              159
+            ],
+            "pair": [
+              30486,
+              1914
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              539,
+              52
+            ],
+            "pair": [
+              14566,
+              632
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              211,
+              33
+            ],
+            "pair": [
+              5952,
+              302
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              256,
+              8
+            ],
+            "pair": [
+              6387,
+              116
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            23799,
+            0
+          ],
+          "distance": [
+            15913,
+            2437
+          ],
+          "count_diff": [
+            17268,
+            1082
+          ],
+          "containment": [
+            33210,
+            3490
+          ],
+          "shape_diff": [
+            369,
+            0
+          ],
+          "palette_missing": [
+            10898,
+            0
+          ],
+          "part_size_diff": [
+            1774,
+            0
+          ]
+        },
+        "conditional": [
+          89985,
+          5954
+        ],
+        "unconditional": [
+          13246,
+          1055
+        ],
+        "moving": {
+          "entity": [
+            1245,
+            549
+          ],
+          "pair": [
+            10958,
+            4747
+          ]
+        },
+        "moved": {
+          "entity": [
+            1245,
+            134
+          ],
+          "pair": [
+            10958,
+            2596
+          ]
+        },
+        "cells": {
+          "ACTION3 containment": [
+            3530,
+            2150
+          ],
+          "ACTION3 distance": [
+            1888,
+            1325
+          ],
+          "ACTION3 count_diff": [
+            2,
+            570
+          ],
+          "ACTION4 containment": [
+            2624,
+            892
+          ],
+          "ACTION4 distance": [
+            1410,
+            570
+          ],
+          "ACTION1 distance": [
+            205,
+            145
+          ],
+          "ACTION2 containment": [
+            597,
+            275
+          ],
+          "ACTION2 distance": [
+            507,
+            357
+          ],
+          "ACTION4 count_diff": [
+            0,
+            452
+          ],
+          "ACTION1 containment": [
+            195,
+            145
+          ],
+          "ACTION6 distance": [
+            0,
+            40
+          ],
+          "ACTION6 count_diff": [
+            0,
+            48
+          ],
+          "ACTION6 containment": [
+            0,
+            28
+          ],
+          "ACTION1 count_diff": [
+            0,
+            12
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 3694,
+            "misses": 577,
+            "undecidable": 0,
+            "abstained": 126,
+            "accuracy": 0.865,
+            "coverage": 0.971
+          },
+          "3": {
+            "hits": 2742,
+            "misses": 1215,
+            "undecidable": 46,
+            "abstained": 211,
+            "accuracy": 0.693,
+            "coverage": 0.949
+          },
+          "10": {
+            "hits": 1772,
+            "misses": 1380,
+            "undecidable": 83,
+            "abstained": 332,
+            "accuracy": 0.562,
+            "coverage": 0.905
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "sk48": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 532952525,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 398,
+        "entity": {
+          "hits": 4453,
+          "misses": 807,
+          "undecidable": 0,
+          "abstained": 360,
+          "accuracy": 0.847,
+          "coverage": 0.936,
+          "brier": 0.094
+        },
+        "pair": {
+          "hits": 139735,
+          "misses": 8828,
+          "undecidable": 12634,
+          "abstained": 15466,
+          "accuracy": 0.941,
+          "coverage": 0.906,
+          "brier": 0.036
+        },
+        "by_action": {
+          "ACTION3": {
+            "entity": [
+              297,
+              20
+            ],
+            "pair": [
+              9317,
+              312
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              1420,
+              268
+            ],
+            "pair": [
+              45143,
+              2764
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              285,
+              8
+            ],
+            "pair": [
+              7811,
+              259
+            ]
+          },
+          "ACTION7": {
+            "entity": [
+              1003,
+              258
+            ],
+            "pair": [
+              32928,
+              2672
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              1253,
+              253
+            ],
+            "pair": [
+              38708,
+              2821
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              195,
+              0
+            ],
+            "pair": [
+              5828,
+              0
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            29804,
+            0
+          ],
+          "distance": [
+            24173,
+            2517
+          ],
+          "count_diff": [
+            22808,
+            3882
+          ],
+          "containment": [
+            51146,
+            2234
+          ],
+          "shape_diff": [
+            4404,
+            0
+          ],
+          "palette_missing": [
+            6228,
+            0
+          ],
+          "part_size_diff": [
+            1172,
+            195
+          ]
+        },
+        "conditional": [
+          124597,
+          8155
+        ],
+        "unconditional": [
+          15138,
+          673
+        ],
+        "moving": {
+          "entity": [
+            853,
+            410
+          ],
+          "pair": [
+            5440,
+            3548
+          ]
+        },
+        "moved": {
+          "entity": [
+            853,
+            634
+          ],
+          "pair": [
+            5440,
+            6691
+          ]
+        },
+        "cells": {
+          "ACTION3 containment": [
+            146,
+            258
+          ],
+          "ACTION3 distance": [
+            0,
+            43
+          ],
+          "ACTION3 part_size_diff": [
+            12,
+            11
+          ],
+          "ACTION1 distance": [
+            1638,
+            751
+          ],
+          "ACTION1 count_diff": [
+            395,
+            1248
+          ],
+          "ACTION7 count_diff": [
+            497,
+            1361
+          ],
+          "ACTION7 containment": [
+            0,
+            201
+          ],
+          "ACTION7 distance": [
+            618,
+            1046
+          ],
+          "ACTION1 containment": [
+            3,
+            713
+          ],
+          "ACTION7 part_size_diff": [
+            18,
+            64
+          ],
+          "ACTION2 count_diff": [
+            244,
+            1192
+          ],
+          "ACTION2 distance": [
+            1574,
+            616
+          ],
+          "ACTION2 containment": [
+            20,
+            948
+          ],
+          "ACTION2 part_size_diff": [
+            25,
+            65
+          ],
+          "ACTION1 part_size_diff": [
+            4,
+            52
+          ],
+          "ACTION4 containment": [
+            227,
+            114
+          ],
+          "ACTION4 distance": [
+            0,
+            61
+          ],
+          "ACTION4 part_size_diff": [
+            19,
+            3
+          ],
+          "ACTION4 count_diff": [
+            0,
+            81
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4453,
+            "misses": 807,
+            "undecidable": 0,
+            "abstained": 209,
+            "accuracy": 0.847,
+            "coverage": 0.962
+          },
+          "3": {
+            "hits": 3386,
+            "misses": 1597,
+            "undecidable": 50,
+            "abstained": 381,
+            "accuracy": 0.68,
+            "coverage": 0.929
+          },
+          "10": {
+            "hits": 2368,
+            "misses": 2198,
+            "undecidable": 177,
+            "abstained": 480,
+            "accuracy": 0.519,
+            "coverage": 0.905
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "sp80": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1556923356,
+      "levels_completed": 1,
+      "actions": 401,
+      "completion_action_indices": [
+        230
+      ],
+      "prediction": {
+        "steps": 380,
+        "entity": {
+          "hits": 3227,
+          "misses": 88,
+          "undecidable": 0,
+          "abstained": 482,
+          "accuracy": 0.973,
+          "coverage": 0.873,
+          "brier": 0.025
+        },
+        "pair": {
+          "hits": 64889,
+          "misses": 971,
+          "undecidable": 952,
+          "abstained": 11194,
+          "accuracy": 0.985,
+          "coverage": 0.855,
+          "brier": 0.01
+        },
+        "by_action": {
+          "ACTION4": {
+            "entity": [
+              812,
+              14
+            ],
+            "pair": [
+              15789,
+              210
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              100,
+              2
+            ],
+            "pair": [
+              1663,
+              25
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              706,
+              14
+            ],
+            "pair": [
+              14638,
+              213
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              715,
+              37
+            ],
+            "pair": [
+              14470,
+              236
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              68,
+              0
+            ],
+            "pair": [
+              1050,
+              10
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              826,
+              21
+            ],
+            "pair": [
+              17279,
+              277
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            13703,
+            0
+          ],
+          "distance": [
+            11087,
+            922
+          ],
+          "count_diff": [
+            11970,
+            39
+          ],
+          "containment": [
+            24008,
+            10
+          ],
+          "shape_diff": [
+            733,
+            0
+          ],
+          "palette_missing": [
+            3388,
+            0
+          ]
+        },
+        "conditional": [
+          45188,
+          567
+        ],
+        "unconditional": [
+          19701,
+          404
+        ],
+        "moving": {
+          "entity": [
+            1122,
+            85
+          ],
+          "pair": [
+            6096,
+            627
+          ]
+        },
+        "moved": {
+          "entity": [
+            1122,
+            36
+          ],
+          "pair": [
+            6096,
+            406
+          ]
+        },
+        "cells": {
+          "ACTION4 distance": [
+            238,
+            210
+          ],
+          "ACTION4 containment": [
+            1096,
+            0
+          ],
+          "ACTION6 distance": [
+            15,
+            25
+          ],
+          "ACTION6 containment": [
+            117,
+            0
+          ],
+          "ACTION1 distance": [
+            546,
+            205
+          ],
+          "ACTION1 containment": [
+            1050,
+            10
+          ],
+          "ACTION5 distance": [
+            23,
+            10
+          ],
+          "ACTION5 containment": [
+            80,
+            0
+          ],
+          "ACTION3 distance": [
+            199,
+            204
+          ],
+          "ACTION3 containment": [
+            988,
+            0
+          ],
+          "ACTION2 distance": [
+            575,
+            268
+          ],
+          "ACTION2 containment": [
+            1169,
+            0
+          ],
+          "ACTION1 count_diff": [
+            0,
+            21
+          ],
+          "ACTION2 count_diff": [
+            0,
+            9
+          ],
+          "ACTION3 count_diff": [
+            0,
+            9
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 3227,
+            "misses": 88,
+            "undecidable": 0,
+            "abstained": 302,
+            "accuracy": 0.973,
+            "coverage": 0.917
+          },
+          "3": {
+            "hits": 2586,
+            "misses": 157,
+            "undecidable": 32,
+            "abstained": 622,
+            "accuracy": 0.943,
+            "coverage": 0.815
+          },
+          "10": {
+            "hits": 1297,
+            "misses": 231,
+            "undecidable": 45,
+            "abstained": 991,
+            "accuracy": 0.849,
+            "coverage": 0.607
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "su15": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 666392983,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 390,
+        "entity": {
+          "hits": 1417,
+          "misses": 475,
+          "undecidable": 0,
+          "abstained": 35,
+          "accuracy": 0.749,
+          "coverage": 0.982,
+          "brier": 0.137
+        },
+        "pair": {
+          "hits": 10374,
+          "misses": 681,
+          "undecidable": 75,
+          "abstained": 240,
+          "accuracy": 0.938,
+          "coverage": 0.979,
+          "brier": 0.038
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              995,
+              405
+            ],
+            "pair": [
+              7507,
+              623
+            ]
+          },
+          "ACTION7": {
+            "entity": [
+              422,
+              70
+            ],
+            "pair": [
+              2867,
+              58
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            2211,
+            0
+          ],
+          "distance": [
+            1917,
+            294
+          ],
+          "count_diff": [
+            2211,
+            0
+          ],
+          "containment": [
+            4035,
+            387
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          10374,
+          681
+        ],
+        "moving": {
+          "entity": [
+            21,
+            2
+          ],
+          "pair": [
+            21,
+            0
+          ]
+        },
+        "moved": {
+          "entity": [
+            21,
+            475
+          ],
+          "pair": [
+            21,
+            681
+          ]
+        },
+        "cells": {
+          "ACTION6 containment": [
+            21,
+            387
+          ],
+          "ACTION6 distance": [
+            0,
+            236
+          ],
+          "ACTION7 distance": [
+            0,
+            58
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 1417,
+            "misses": 475,
+            "undecidable": 0,
+            "abstained": 15,
+            "accuracy": 0.749,
+            "coverage": 0.992
+          },
+          "3": {
+            "hits": 1255,
+            "misses": 573,
+            "undecidable": 10,
+            "abstained": 25,
+            "accuracy": 0.687,
+            "coverage": 0.987
+          },
+          "10": {
+            "hits": 1009,
+            "misses": 639,
+            "undecidable": 13,
+            "abstained": 30,
+            "accuracy": 0.612,
+            "coverage": 0.982
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "tn36": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 298200127,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 388,
+        "entity": {
+          "hits": 29849,
+          "misses": 12,
+          "undecidable": 0,
+          "abstained": 234,
+          "accuracy": 1.0,
+          "coverage": 0.992,
+          "brier": 0.0
+        },
+        "pair": {
+          "hits": 6342867,
+          "misses": 7555,
+          "undecidable": 4668,
+          "abstained": 66960,
+          "accuracy": 0.999,
+          "coverage": 0.99,
+          "brier": 0.001
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              29849,
+              12
+            ],
+            "pair": [
+              6342867,
+              7555
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            1111665,
+            0
+          ],
+          "distance": [
+            1103249,
+            6661
+          ],
+          "count_diff": [
+            1109016,
+            894
+          ],
+          "containment": [
+            2219820,
+            0
+          ],
+          "shape_diff": [
+            795324,
+            0
+          ],
+          "palette_missing": [
+            3510,
+            0
+          ],
+          "part_size_diff": [
+            283,
+            0
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          6342867,
+          7555
+        ],
+        "moving": {
+          "entity": [
+            665,
+            12
+          ],
+          "pair": [
+            51247,
+            1139
+          ]
+        },
+        "moved": {
+          "entity": [
+            665,
+            12
+          ],
+          "pair": [
+            51247,
+            6416
+          ]
+        },
+        "cells": {
+          "ACTION6 containment": [
+            50145,
+            0
+          ],
+          "ACTION6 distance": [
+            819,
+            6661
+          ],
+          "ACTION6 part_size_diff": [
+            283,
+            0
+          ],
+          "ACTION6 count_diff": [
+            0,
+            894
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 29849,
+            "misses": 12,
+            "undecidable": 0,
+            "abstained": 0,
+            "accuracy": 1.0,
+            "coverage": 1.0
+          },
+          "3": {
+            "hits": 28757,
+            "misses": 6,
+            "undecidable": 18,
+            "abstained": 0,
+            "accuracy": 1.0,
+            "coverage": 1.0
+          },
+          "10": {
+            "hits": 24935,
+            "misses": 6,
+            "undecidable": 42,
+            "abstained": 0,
+            "accuracy": 1.0,
+            "coverage": 1.0
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "tr87": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 570215413,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 10441,
+          "misses": 422,
+          "undecidable": 0,
+          "abstained": 435,
+          "accuracy": 0.961,
+          "coverage": 0.961,
+          "brier": 0.023
+        },
+        "pair": {
+          "hits": 889073,
+          "misses": 12396,
+          "undecidable": 1125,
+          "abstained": 40306,
+          "accuracy": 0.986,
+          "coverage": 0.957,
+          "brier": 0.008
+        },
+        "by_action": {
+          "ACTION1": {
+            "entity": [
+              1101,
+              99
+            ],
+            "pair": [
+              94207,
+              2756
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              785,
+              74
+            ],
+            "pair": [
+              66037,
+              2100
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              4476,
+              129
+            ],
+            "pair": [
+              381600,
+              3956
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              4079,
+              120
+            ],
+            "pair": [
+              347229,
+              3584
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            189010,
+            0
+          ],
+          "distance": [
+            138190,
+            1106
+          ],
+          "count_diff": [
+            139296,
+            0
+          ],
+          "containment": [
+            267722,
+            10870
+          ],
+          "shape_diff": [
+            25553,
+            0
+          ],
+          "palette_missing": [
+            99428,
+            0
+          ],
+          "part_size_diff": [
+            29874,
+            420
+          ]
+        },
+        "conditional": [
+          167017,
+          1208
+        ],
+        "unconditional": [
+          722056,
+          11188
+        ],
+        "moving": {
+          "entity": [
+            222,
+            208
+          ],
+          "pair": [
+            6175,
+            5721
+          ]
+        },
+        "moved": {
+          "entity": [
+            222,
+            253
+          ],
+          "pair": [
+            6175,
+            7589
+          ]
+        },
+        "cells": {
+          "ACTION1 containment": [
+            1238,
+            2294
+          ],
+          "ACTION1 distance": [
+            6,
+            234
+          ],
+          "ACTION1 part_size_diff": [
+            264,
+            228
+          ],
+          "ACTION3 containment": [
+            472,
+            3631
+          ],
+          "ACTION3 distance": [
+            0,
+            313
+          ],
+          "ACTION2 containment": [
+            583,
+            1778
+          ],
+          "ACTION2 distance": [
+            7,
+            154
+          ],
+          "ACTION2 part_size_diff": [
+            156,
+            168
+          ],
+          "ACTION4 containment": [
+            3447,
+            3167
+          ],
+          "ACTION4 distance": [
+            2,
+            405
+          ],
+          "ACTION3 part_size_diff": [
+            0,
+            12
+          ],
+          "ACTION4 part_size_diff": [
+            0,
+            12
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 10441,
+            "misses": 422,
+            "undecidable": 0,
+            "abstained": 263,
+            "accuracy": 0.961,
+            "coverage": 0.976
+          },
+          "3": {
+            "hits": 9604,
+            "misses": 790,
+            "undecidable": 9,
+            "abstained": 499,
+            "accuracy": 0.924,
+            "coverage": 0.954
+          },
+          "10": {
+            "hits": 8059,
+            "misses": 1097,
+            "undecidable": 30,
+            "abstained": 932,
+            "accuracy": 0.88,
+            "coverage": 0.908
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "tu93": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 81348037,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 386,
+        "entity": {
+          "hits": 24926,
+          "misses": 159,
+          "undecidable": 0,
+          "abstained": 1020,
+          "accuracy": 0.994,
+          "coverage": 0.961,
+          "brier": 0.006
+        },
+        "pair": {
+          "hits": 4867408,
+          "misses": 23988,
+          "undecidable": 6096,
+          "abstained": 215159,
+          "accuracy": 0.995,
+          "coverage": 0.958,
+          "brier": 0.005
+        },
+        "by_action": {
+          "ACTION4": {
+            "entity": [
+              6330,
+              41
+            ],
+            "pair": [
+              1224406,
+              8194
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              6124,
+              45
+            ],
+            "pair": [
+              1203460,
+              6845
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              6213,
+              31
+            ],
+            "pair": [
+              1209990,
+              4171
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              6259,
+              42
+            ],
+            "pair": [
+              1229552,
+              4778
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            846875,
+            0
+          ],
+          "distance": [
+            798984,
+            8797
+          ],
+          "count_diff": [
+            792962,
+            14819
+          ],
+          "containment": [
+            1615562,
+            0
+          ],
+          "shape_diff": [
+            718704,
+            0
+          ],
+          "palette_missing": [
+            78188,
+            0
+          ],
+          "part_size_diff": [
+            16133,
+            372
+          ]
+        },
+        "conditional": [
+          4533230,
+          22540
+        ],
+        "unconditional": [
+          334178,
+          1448
+        ],
+        "moving": {
+          "entity": [
+            1246,
+            95
+          ],
+          "pair": [
+            70450,
+            3884
+          ]
+        },
+        "moved": {
+          "entity": [
+            1246,
+            81
+          ],
+          "pair": [
+            70450,
+            20465
+          ]
+        },
+        "cells": {
+          "ACTION4 containment": [
+            10341,
+            0
+          ],
+          "ACTION4 distance": [
+            4649,
+            1813
+          ],
+          "ACTION1 containment": [
+            10674,
+            0
+          ],
+          "ACTION1 distance": [
+            5387,
+            2497
+          ],
+          "ACTION1 part_size_diff": [
+            1797,
+            85
+          ],
+          "ACTION4 part_size_diff": [
+            1703,
+            59
+          ],
+          "ACTION3 distance": [
+            4694,
+            1887
+          ],
+          "ACTION3 containment": [
+            11076,
+            0
+          ],
+          "ACTION3 part_size_diff": [
+            1898,
+            167
+          ],
+          "ACTION2 distance": [
+            5977,
+            2600
+          ],
+          "ACTION2 containment": [
+            10536,
+            0
+          ],
+          "ACTION2 part_size_diff": [
+            1718,
+            61
+          ],
+          "ACTION2 count_diff": [
+            0,
+            2117
+          ],
+          "ACTION4 count_diff": [
+            0,
+            6322
+          ],
+          "ACTION3 count_diff": [
+            0,
+            2117
+          ],
+          "ACTION1 count_diff": [
+            0,
+            4263
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 24926,
+            "misses": 159,
+            "undecidable": 0,
+            "abstained": 677,
+            "accuracy": 0.994,
+            "coverage": 0.974
+          },
+          "3": {
+            "hits": 23077,
+            "misses": 303,
+            "undecidable": 21,
+            "abstained": 1287,
+            "accuracy": 0.987,
+            "coverage": 0.948
+          },
+          "10": {
+            "hits": 18858,
+            "misses": 513,
+            "undecidable": 35,
+            "abstained": 1488,
+            "accuracy": 0.974,
+            "coverage": 0.929
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "vc33": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 966493515,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 386,
+        "entity": {
+          "hits": 4490,
+          "misses": 19,
+          "undecidable": 0,
+          "abstained": 36,
+          "accuracy": 0.996,
+          "coverage": 0.992,
+          "brier": 0.004
+        },
+        "pair": {
+          "hits": 124034,
+          "misses": 925,
+          "undecidable": 951,
+          "abstained": 1440,
+          "accuracy": 0.993,
+          "coverage": 0.989,
+          "brier": 0.005
+        },
+        "by_action": {
+          "ACTION6": {
+            "entity": [
+              4490,
+              19
+            ],
+            "pair": [
+              124034,
+              925
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            27705,
+            0
+          ],
+          "distance": [
+            19302,
+            715
+          ],
+          "count_diff": [
+            19898,
+            119
+          ],
+          "containment": [
+            39998,
+            36
+          ],
+          "shape_diff": [
+            380,
+            0
+          ],
+          "palette_missing": [
+            15376,
+            0
+          ],
+          "part_size_diff": [
+            1375,
+            55
+          ]
+        },
+        "conditional": [
+          0,
+          0
+        ],
+        "unconditional": [
+          124034,
+          925
+        ],
+        "moving": {
+          "entity": [
+            675,
+            14
+          ],
+          "pair": [
+            7432,
+            457
+          ]
+        },
+        "moved": {
+          "entity": [
+            675,
+            19
+          ],
+          "pair": [
+            7432,
+            514
+          ]
+        },
+        "cells": {
+          "ACTION6 distance": [
+            554,
+            715
+          ],
+          "ACTION6 containment": [
+            6635,
+            36
+          ],
+          "ACTION6 part_size_diff": [
+            243,
+            55
+          ],
+          "ACTION6 count_diff": [
+            0,
+            119
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4490,
+            "misses": 19,
+            "undecidable": 0,
+            "abstained": 0,
+            "accuracy": 0.996,
+            "coverage": 1.0
+          },
+          "3": {
+            "hits": 4288,
+            "misses": 22,
+            "undecidable": 21,
+            "abstained": 0,
+            "accuracy": 0.995,
+            "coverage": 1.0
+          },
+          "10": {
+            "hits": 3581,
+            "misses": 57,
+            "undecidable": 35,
+            "abstained": 0,
+            "accuracy": 0.984,
+            "coverage": 1.0
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "wa30": {
+      "state": "GameState.GAME_OVER",
+      "seed": 2131860076,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 398,
+        "entity": {
+          "hits": 2481,
+          "misses": 451,
+          "undecidable": 0,
+          "abstained": 153,
+          "accuracy": 0.846,
+          "coverage": 0.95,
+          "brier": 0.098
+        },
+        "pair": {
+          "hits": 40450,
+          "misses": 2239,
+          "undecidable": 148,
+          "abstained": 2526,
+          "accuracy": 0.948,
+          "coverage": 0.944,
+          "brier": 0.034
+        },
+        "by_action": {
+          "ACTION2": {
+            "entity": [
+              317,
+              35
+            ],
+            "pair": [
+              4599,
+              278
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              389,
+              31
+            ],
+            "pair": [
+              5897,
+              283
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              811,
+              205
+            ],
+            "pair": [
+              13921,
+              830
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              223,
+              9
+            ],
+            "pair": [
+              3257,
+              61
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              741,
+              171
+            ],
+            "pair": [
+              12776,
+              787
+            ]
+          }
+        },
+        "by_relation": {
+          "palette_diff": [
+            8698,
+            0
+          ],
+          "distance": [
+            6709,
+            614
+          ],
+          "count_diff": [
+            7287,
+            36
+          ],
+          "shape_diff": [
+            1124,
+            0
+          ],
+          "containment": [
+            13326,
+            1320
+          ],
+          "palette_missing": [
+            2750,
+            0
+          ],
+          "part_size_diff": [
+            556,
+            269
+          ]
+        },
+        "conditional": [
+          36089,
+          1974
+        ],
+        "unconditional": [
+          4361,
+          265
+        ],
+        "moving": {
+          "entity": [
+            470,
+            236
+          ],
+          "pair": [
+            367,
+            344
+          ]
+        },
+        "moved": {
+          "entity": [
+            470,
+            299
+          ],
+          "pair": [
+            367,
+            1999
+          ]
+        },
+        "cells": {
+          "ACTION4 distance": [
+            73,
+            75
+          ],
+          "ACTION1 distance": [
+            98,
+            273
+          ],
+          "ACTION1 containment": [
+            15,
+            460
+          ],
+          "ACTION2 count_diff": [
+            0,
+            15
+          ],
+          "ACTION2 distance": [
+            144,
+            38
+          ],
+          "ACTION2 containment": [
+            9,
+            189
+          ],
+          "ACTION4 containment": [
+            2,
+            168
+          ],
+          "ACTION3 distance": [
+            19,
+            227
+          ],
+          "ACTION3 containment": [
+            4,
+            452
+          ],
+          "ACTION3 part_size_diff": [
+            0,
+            93
+          ],
+          "ACTION1 part_size_diff": [
+            2,
+            91
+          ],
+          "ACTION5 containment": [
+            0,
+            51
+          ],
+          "ACTION4 part_size_diff": [
+            1,
+            40
+          ],
+          "ACTION2 part_size_diff": [
+            0,
+            36
+          ],
+          "ACTION5 part_size_diff": [
+            0,
+            9
+          ],
+          "ACTION1 count_diff": [
+            0,
+            6
+          ],
+          "ACTION3 count_diff": [
+            0,
+            15
+          ],
+          "ACTION5 distance": [
+            0,
+            1
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 2481,
+            "misses": 451,
+            "undecidable": 0,
+            "abstained": 91,
+            "accuracy": 0.846,
+            "coverage": 0.97
+          },
+          "3": {
+            "hits": 1721,
+            "misses": 1104,
+            "undecidable": 5,
+            "abstained": 165,
+            "accuracy": 0.609,
+            "coverage": 0.945
+          },
+          "10": {
+            "hits": 1352,
+            "misses": 1235,
+            "undecidable": 19,
+            "abstained": 291,
+            "accuracy": 0.523,
+            "coverage": 0.899
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    }
+  },
+  "scored": [
+    {
+      "game_id": "tu93-0768757b",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 7,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        19,
+        16,
+        34,
+        42,
+        123,
+        80,
+        14,
+        23,
+        111
+      ],
+      "message": null
+    },
+    {
+      "game_id": "ar25-0c556536",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 5,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        32,
+        50,
+        75,
+        37,
+        89,
+        159,
+        233,
+        73
+      ],
+      "message": null
+    },
+    {
+      "game_id": "re86-8af5384d",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        26,
+        42,
+        86,
+        108,
+        189,
+        139,
+        424,
+        241
+      ],
+      "message": null
+    },
+    {
+      "game_id": "su15-1944f8ab",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 5,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        22,
+        42,
+        26,
+        115,
+        36,
+        31,
+        8,
+        40,
+        41
+      ],
+      "message": null
+    },
+    {
+      "game_id": "m0r0-492f87ba",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 2,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        30,
+        111,
+        203,
+        26,
+        500,
+        237
+      ],
+      "message": null
+    },
+    {
+      "game_id": "cn04-2fe56bfb",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 5,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        29,
+        54,
+        85,
+        300,
+        208,
+        113
+      ],
+      "message": null
+    },
+    {
+      "game_id": "ft09-0d8bbf25",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 12,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        43,
+        12,
+        23,
+        28,
+        65,
+        37
+      ],
+      "message": null
+    },
+    {
+      "game_id": "tr87-cd924810",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        54,
+        58,
+        40,
+        45,
+        71,
+        146
+      ],
+      "message": null
+    },
+    {
+      "game_id": "sc25-635fd71a",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 7,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        36,
+        6,
+        32,
+        83,
+        143,
+        50
+      ],
+      "message": null
+    },
+    {
+      "game_id": "lp85-305b61c3",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 1,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        17,
+        38,
+        31,
+        16,
+        41,
+        60,
+        26,
+        159
+      ],
+      "message": null
+    },
+    {
+      "game_id": "dc22-fdcac232",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        59,
+        102,
+        67,
+        98,
+        324,
+        578
+      ],
+      "message": null
+    },
+    {
+      "game_id": "sp80-589a99af",
+      "score": 0.1369160140426681,
+      "levels_completed": 1,
+      "actions": 401,
+      "resets": 10,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        2.87523629489603,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        230,
+        171,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        39,
+        58,
+        25,
+        148,
+        96,
+        152
+      ],
+      "message": null
+    },
+    {
+      "game_id": "ka59-38d34dbb",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        28,
+        109,
+        51,
+        51,
+        33,
+        132,
+        326
+      ],
+      "message": null
+    },
+    {
+      "game_id": "g50t-5849a774",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        78,
+        175,
+        179,
+        230,
+        96,
+        54,
+        67
+      ],
+      "message": null
+    },
+    {
+      "game_id": "sb26-7fbdac44",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 4,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        18,
+        28,
+        18,
+        19,
+        31,
+        23,
+        58,
+        18
+      ],
+      "message": null
+    },
+    {
+      "game_id": "lf52-271a04aa",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 4,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        32,
+        81,
+        60,
+        71,
+        205,
+        148,
+        244,
+        109,
+        164,
+        225
+      ],
+      "message": null
+    },
+    {
+      "game_id": "bp35-0a0ad940",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 8,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        21,
+        48,
+        44,
+        38,
+        33,
+        87,
+        86,
+        131,
+        163
+      ],
+      "message": null
+    },
+    {
+      "game_id": "s5i5-18d95033",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 7,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        20,
+        89,
+        106,
+        54,
+        162,
+        38,
+        86,
+        83
+      ],
+      "message": null
+    },
+    {
+      "game_id": "r11l-495a7899",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 6,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        22,
+        33,
+        51,
+        26,
+        52,
+        49
+      ],
+      "message": null
+    },
+    {
+      "game_id": "sk48-d8078629",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 1,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        61,
+        177,
+        101,
+        103,
+        230,
+        181,
+        125,
+        92
+      ],
+      "message": null
+    },
+    {
+      "game_id": "wa30-ee6fef47",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 1,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        71,
+        119,
+        183,
+        98,
+        368,
+        68,
+        79,
+        442,
+        415
+      ],
+      "message": null
+    },
+    {
+      "game_id": "vc33-5430563c",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 7,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        7,
+        18,
+        44,
+        61,
+        131,
+        34,
+        152
+      ],
+      "message": null
+    },
+    {
+      "game_id": "ls20-9607627b",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        22,
+        123,
+        73,
+        84,
+        96,
+        192,
+        186
+      ],
+      "message": null
+    },
+    {
+      "game_id": "cd82-fb555c5d",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        55,
+        8,
+        41,
+        21,
+        23,
+        23
+      ],
+      "message": null
+    },
+    {
+      "game_id": "tn36-ef4dde99",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 6,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        32,
+        72,
+        26,
+        40,
+        30,
+        55,
+        62
+      ],
+      "message": null
+    }
+  ],
+  "notes": null
+}

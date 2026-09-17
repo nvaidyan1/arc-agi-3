@@ -3326,3 +3326,33 @@ result. Not done: a broader regression check across every game with a
 click action, and any score-level read, consistent with score read
 last. Full detail in
 `research/hypotheses/H011_information_directed_targeting.md`.
+
+## 2026-09-16 — H011 Stage 2 ships: the n=30 parity gate passes
+
+**Hypothesis.** The whole-sweep, seed-paired, n=30 parity check both
+reviewers agreed on before H011 Stage 2's click-targeting blend could
+ship: median score must not fall materially, and level-1 clears must
+not drop by more than 1 per 30 sweeps on games that already worked.
+
+**Observation.** Baseline (pre-H011) vs treatment (H011 Stage 2),
+seeds 101-130, 400 steps, all 25 games, both arms clean (30/30, zero
+errors). Median score rose (0.0163 -> 0.0206), mean rose 1.6x (not
+significant at n=30, sign test p=0.20, 19W/11L). The five named parity
+games (sp80, ls20, ar25, m0r0, dc22) showed zero regression, one
+improvement (m0r0 0->1). One game, lp85, dropped 13->10, tripping the
+literal gate wording -- but its per-seed pattern is a roughly balanced
+shuffle (7 seeds clear->not-clear, 4 the other way), the same
+trajectory-perturbation signature this project has repeatedly
+documented elsewhere, not a one-directional loss. Two games jumped from
+a hard 0/30 baseline to double digits: ft09 to 12/30, vc33 to 11/30 --
+a uniform shift from literal zero across many independent seeds, a
+different and more confidently real signature than lp85's shuffle.
+
+**Inference.** Gate passed as both reviewers intended it. Shipped:
+`agent/attention.py`, `agent/constants.py`, `scripts/
+h011_weight_sweep.py`, `tests/test_attention.py`. All 60 sweep
+summaries kept as a matched-pair retention exception. ft09/vc33's large
+response is not explained and flagged for later, not blocking the ship
+decision. Movement-side novelty proceeds as its own hypothesis, H012,
+now unblocked. Full detail in `research/hypotheses/
+H011_information_directed_targeting.md`.

@@ -25,6 +25,25 @@ EXPLORATION_EPSILON = 0.25
 # How many past steps' diffed cells to keep as "recently active" targets.
 RECENT_DIFF_STEPS = 5
 
+# H011: how much weight a click target's novelty (1 / (1 + times tried))
+# carries against its salience tier (1 / (1 + tier index), so tier 0 is
+# 1.0, tier 1 is 0.5, ...) in ClickTargeting.pick(). A live sweep on cd82
+# (docs/history.md 2026-09-15, "H011 Stage 2") found this value nearly
+# irrelevant in isolation, over {0, 0.5, 1, 2, 4}: strip clicks moved
+# from 1.6% (the old hard-tier cutoff) to 42-52% at EVERY weight tested,
+# including 0. The fix is almost entirely the move from "the top
+# non-empty tier wins outright" to "every live candidate gets summed
+# weight, drawn proportionally" — a tier with hundreds of cells now
+# carries real total mass even at low per-cell salience, regardless of
+# novelty. 1.0 (equal footing between one tier step and full novelty) is
+# kept as the least arbitrary choice given that near-flat sensitivity,
+# not because it measurably outperformed the others. The sweep also
+# found a real, modest trade-off: clicks in the single most-active 8x8
+# region fell from ~20% to 14-18% of all clicks — some of the
+# concentration that made the old design's "interest always wins" rule
+# correct in the first place is traded away by removing the hard cutoff.
+CLICK_NOVELTY_WEIGHT = 1.0
+
 # ── Thing I control ─────────────────────────────────────────────────────
 # Evidence needed before calling an action's effect a consistent "move":
 # this many sightings of the same offset, and that share of all sightings.

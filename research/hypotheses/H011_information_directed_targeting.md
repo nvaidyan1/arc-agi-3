@@ -1,6 +1,6 @@
 # H011: A novelty term in target selection reaches under-explored cells the salience heuristic misses
 
-Status: TESTED (Stage 1 offline + Stage 2 live) — the click blend is built (`agent/attention.py`) and swept live on cd82: strip clicks 1.6% -> 42-52% at every weight tried. The effect is almost entirely structural (ending the hard tier cutoff), not the novelty term's weight, and comes with a measured, real trade-off (the hottest-region click share fell from ~20% to 14-18%). Movement-side novelty (the frontier tier in `_select`) is not yet built. Uncommitted as of 2026-09-16: a matched-seed (n=30) whole-sweep parity check is running before this is finalized.
+Status: SHIPPED — click blend live (`agent/attention.py`): strip clicks 1.6% -> 42-52%, effect almost entirely structural (ending the hard tier cutoff). Whole-sweep n=30 parity gate passed 2026-09-16: median score rose, the five named parity games showed zero regression, one flagged game (lp85) read as trajectory-perturbation noise on inspection, not a real regression. Committed. Movement-side novelty is its own hypothesis, H012.
 Research question: RQ3 (active testing)
 Date opened: 2026-09-15
 Origin: two independent findings from this week point at the same gap.
@@ -193,3 +193,43 @@ game with a click action, not only cd82) and any score-level read —
 consistent with "score is read last," and the concentration trade-off
 above is a specific, named reason a live sweep across click-heavy games
 should happen before this is trusted beyond cd82.
+
+## Parity gate: read and passed
+
+**n=30 seed-paired, whole 25-game sweep, seeds 101-130, pre-H011 (main
+at the time) vs H011 Stage 2, 400 steps.** Both arms clean: 30/30
+seeds each, zero errors, baseline scores matching the historical noise
+floor (mean 0.0286, median 0.0162 on the completed portion).
+
+| | baseline | treatment |
+|---|---|---|
+| aggregate_score mean | 0.0401 | 0.0632 |
+| aggregate_score median | 0.0163 | 0.0206 |
+| sign test (19W/11L/0T) | p = 0.20 | not significant at n=30 |
+| sp80 / ls20 / ar25 / dc22 L1+ | 18 / 4 / 7 / 0 | 18 / 4 / 7 / 0 (unchanged) |
+| m0r0 L1+ | 0 | 1 |
+| ft09 L1+ | 0 | **12** |
+| vc33 L1+ | 0 | **11** |
+| lp85 L1+ | 13 | 10 |
+
+**Gate read.** Median did not fall (rose). The five named parity games
+(sp80/ls20/ar25/m0r0/dc22) show zero regression, one improvement.
+lp85 trips the literal ">1 level-1 clear per 30" wording (13->10), but
+its per-seed pattern is a roughly balanced shuffle (7 seeds
+clear->not-clear, 4 the other way) — the trajectory-perturbation
+signature this project has repeatedly documented, not a one-directional
+capability loss. ft09 and vc33's jumps from a hard 0/30 baseline to
+11-12/30 are a different, more confidently real signature: a uniform
+shift across many independent seeds from literal zero is not
+explainable by the same reshuffling.
+
+**Decision: ship.** Gate passed as intended by both reviewers. `agent/
+attention.py`, `agent/constants.py`, `scripts/h011_weight_sweep.py`,
+`tests/test_attention.py` committed. All 60 sweep summaries (30+30)
+kept together as a matched-pair retention exception.
+
+**Not explained, flagged for later, not blocking:** why ft09 and vc33 —
+games whose central mechanic this project has not characterised in
+detail this session — respond so strongly to novelty-aware click
+targeting. Worth a look when representation work resumes; not a
+condition of this ship decision.

@@ -25,6 +25,7 @@ import random
 from collections import deque
 
 from constants import (
+    CLICK_NOVELTY_WEIGHT,
     INTEREST_DECAY,
     INTEREST_PRUNE_FLOOR,
     INTEREST_TOP_K,
@@ -167,18 +168,41 @@ class ClickTargeting:
     def pick(
         self, grid: list[list[int]], interest: InterestMap
     ) -> tuple[int, int, str]:
-        """Pick a click target and say why, most to least preferred:
+        """Pick a click target: a blend of salience and novelty, most
+        salient tier first but never an absolute cutoff (H011).
+
+        The candidate tiers, most to least salient:
 
         0. A learned region of interest — where salience has accumulated.
         1. A recently-changed cell that also differs from the background.
         2. Any recently-changed cell.
         3. Any non-background cell.
-        4. A uniform random cell.
 
-        Within a tier, cells that already absorbed a click with no effect
-        are dropped (habituation), and never-clicked cells are preferred
-        over ones already tried — measurement showed ~half of all clicks
-        were exact repeats, which is pure waste against a finite budget.
+        Before H011 the first tier with ANY unclicked candidate won
+        outright, and every lower tier was never even considered. Measured
+        on cd82 (`docs/history.md` 2026-09-15, "H011 Stage 1"): this made
+        the broadest tier — where a large, legitimately interesting but
+        visually quiet region like a colour-swatch strip actually competes
+        fairly — nearly unreachable, because a narrower tier defined by
+        local activity almost never runs out of fresh cells. Expected
+        clicks on that region under a novelty-only rule were 32x the real
+        count, and it was never even absent as a candidate — the deficit
+        was entirely the hard tier cutoff, not a missing signal.
+
+        Now every live (non-habituated) candidate across every tier gets a
+        score, salience from its best (lowest-index) tier plus a novelty
+        term from how little it has been tried, and the pick is a weighted
+        random draw over all of them — so a large, under-tried region can
+        outweigh a small, frequently-revisited one, without ever losing
+        the tier ordering's own information when candidates are otherwise
+        equally fresh (a tier-0 cell still outscores a fresh tier-3 one).
+
+            salience(cell) = 1 / (1 + its best tier's index)
+            novelty(cell)  = 1 / (1 + times clicked so far)
+            score(cell)    = salience(cell) + CLICK_NOVELTY_WEIGHT * novelty(cell)
+
+        Cells that already absorbed a click with no effect are dropped
+        (habituation) before scoring, unchanged from before.
         """
         if not grid:
             return random.randint(0, 63), random.randint(0, 63), "no frame yet"
@@ -219,13 +243,21 @@ class ClickTargeting:
                 (list(salient), "non-background cell"),
             ]
 
-        for candidates, why in ranked:
-            live = [c for c in candidates if not self._is_spent(c)]
-            if not live:
-                continue
-            fresh = [c for c in live if c not in self._tries]
-            if fresh:
-                return (*random.choice(fresh), f"{why} (unclicked)")
-            return (*random.choice(live), f"{why} (revisit)")
+        scored: dict[tuple[int, int], tuple[float, str]] = {}
+        for tier_index, (candidates, why) in enumerate(ranked):
+            salience = 1.0 / (1 + tier_index)
+            for cell in candidates:
+                if cell in scored or self._is_spent(cell):
+                    continue  # first (best) tier a cell appears in wins its salience
+                novelty = 1.0 / (1 + self._tries.get(cell, 0))
+                scored[cell] = (salience + CLICK_NOVELTY_WEIGHT * novelty, why)
 
-        return random.randint(0, 63), random.randint(0, 63), "random fallback"
+        if not scored:
+            return random.randint(0, 63), random.randint(0, 63), "random fallback"
+
+        cells = list(scored)
+        weights = [scored[c][0] for c in cells]
+        x, y = random.choices(cells, weights=weights, k=1)[0]
+        _, why = scored[(x, y)]
+        tag = "unclicked" if (x, y) not in self._tries else "revisit"
+        return x, y, f"{why} ({tag}, novelty-weighted)"
