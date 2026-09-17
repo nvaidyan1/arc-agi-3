@@ -3421,3 +3421,360 @@ criterion (the oracle's joint-satisfaction rate rising on the
 walk-blocked seeds) was not met, and the reason is a separate,
 undiagnosed coverage issue, not either bug fixed here. Full detail in
 `research/hypotheses/H010_position_graph_model.md`.
+
+## 2026-09-17 — The fifth reviewer pass, four corrections, and a confound named
+
+**Hypothesis.** A fifth reviewer-C pass
+(`docs/expert-reviews/reviewer_c_09_17_2026.md`) claimed the bottleneck has
+moved past exploration and navigation to *state satisfaction*, and proposed
+a state-sufficiency audit, an alias analysis on cd82, a `StateManager`, and
+an LMU sidecar, with H012 postponed as too incremental. Before adopting any
+of it, check each claim against what is actually on disk.
+
+**Observation.** Three of the four load-bearing claims were stale or wrong,
+and the fourth was circular.
+
+- The proposed Stage-1 audit asks four questions that H006 Days 1-3 and H008
+  already answer: `alias_probe.py`, `latent_probe.py`, `latent_splitter.py`,
+  `latent_rollout.py`; k=1/3/10 with and without Z1; 1,252 pixel-aliased
+  contexts reduced to 162 under S_t; Z1 confirmed with repeats above a
+  shuffle null, zero contradictions on six games.
+- cd82, named as the alias testbed, was measured at 35 aliased contexts, 35
+  meter-line, **0 mechanic**, Z1 resolving 82/0 against a null of 3.8 (H006
+  Day 1). Its frame is sufficient; its second factor is visible-persistent,
+  which is H007's condition kind and already built. The flagship experiment
+  has a known answer on the game it names.
+- The reprioritisation ran: H010 fixed navigation, joint satisfaction did
+  not rise, therefore navigation is not the bottleneck, therefore state is.
+  H010 Stage 2's own text refuses that step -- it establishes only that *the
+  two bugs it fixed* did not raise joint satisfaction, and names graph
+  coverage at the oracle's critical step as the leading unexamined cause,
+  explicitly undetermined. H012, proposed for postponement, is the candidate
+  fix for that exact cause.
+
+Put back as four questions. The reviewer retracted the audit and the cd82
+testbed outright, accepted the confound ("not a footnote -- a confound"),
+and withdrew "state selection is the central problem" as a claim it would
+hold independent of the outcome.
+
+**Inference.** The next experiment is not a new architecture but H010 Stage
+3: offline, on data already held, determine at the exact action where
+cd82's two-condition bet expired on seeds 1 and 3 whether the required edge
+was absent (coverage -> H012, with its success criterion upgraded to
+joint-condition satisfaction), the target was wrong (-> goal/state
+representation, earned rather than assumed), or the edge and target were
+both right and selection failed (-> planner / lever formation). A fourth
+reading, none-of-these, means investigate the transition model -- latent
+state is explicitly not claimed by elimination. H006's unresolved mechanic
+remainder (su15/sk48/sc25/g50t, ~72 contexts at ~2 visits) runs in parallel
+as H013 and needs a repeat sweep before any splitter can confirm rather
+than merely refute. The LMU becomes H014, a control condition asking
+whether generic temporal compression recovers what explicit state selection
+misses, with its failure as informative as its success.
+
+Two things deliberately not done. "No consumer without a state model" was
+offered as a third governing principle and is held as a candidate instead --
+it is the claim the ladder tests. And the level-2 funnel (L1 completions, L2
+entries, L2 completions, actions-to-L2/L3) is adopted immediately above the
+aggregate score in every sweep summary: the scoring analysis has said depth
+dominates speed since 2026-09-13, yet every gate since, H011 and H010
+included, was read median-score-first anyway. Ladder in `docs/plan.md`
+START HERE (2026-09-17).
+
+## 2026-09-17 — A third read reorders the ladder, and finds a queued test nobody ran
+
+**Hypothesis.** The 09-17 ladder (entry above) was drafted from one
+reviewer exchange. Read it against a colleague's independent note, which
+argued from a different altitude: not "which layer is the bottleneck" but
+"the skill-acquisition loop is not closing on the flagship case, and every
+gate should be judged by whether it closes it." Then put that note back to
+reviewer C. Where do three reads disagree, and does anything survive that
+none of them individually caught?
+
+**Observation.** Three substantive changes, one of them a plain error in
+the ladder as first written.
+
+- **A queued experiment was never run, and the 09-17 draft wrongly recorded
+  it as folded forward.** Item 3 of the 09-15 converged list — re-test
+  H007 P2 standalone on cd82 under the shipped H011 click distribution —
+  became runnable when H011 cleared its parity gate on 09-16. `history.md`
+  contains no P2 re-test. The colleague's note caught it; the supersession
+  header claiming items 1-7 were all done was wrong and is corrected. It is
+  now gate 2, at equal priority with the H010 diagnostic, and it is the
+  cheapest open item in the project. It asks whether H011 changed the
+  *input distribution* to the learning machinery without changing the
+  machinery: if the lever now forms, that is a causal chain from coverage
+  to representation discovery to lever formation, which is better evidence
+  for the architecture than any score movement.
+- **The internal roll-out gate moves from last-but-one to gate 4**, ahead of
+  the alias and memory work. The argument that moved it: prediction is
+  currently *unused* — the agent still acts first and observes second
+  despite holding a live position-dependent transition model and a rich
+  residual language. If a temporal-memory arm runs before prediction is
+  operational, a gain cannot be attributed between "compressed history
+  helped" and "we finally used prediction at all." Level 1 before Level 2.
+- **H012 becomes conditional rather than next.** Reviewer C declined to
+  grant the colleague's ordering: two cheaper discriminating tests (gates 1
+  and 2) now stand between the plan and H012, and either can mandate it.
+
+Two corrections recorded against claims that would otherwise be miscited
+later. "The proposer is the weak consumer" is a **future risk, not an
+established bottleneck** — what is established is that H002's current
+proposer is weak, and whether it becomes binding depends on gates 4-6,
+which change its inputs. And exploration is not free: H011's hottest-region
+dilution (20% -> 14-18%) was accepted at its gate, and the same trade-off
+will recur on the movement side and again when hypotheses compete for the
+action stream.
+
+**Inference.** Eight gates, with gates 1 and 2 independent and parallel.
+The milestone the ladder serves is now written down above it, because the
+named failure mode is a sequence of individually-sensible hypotheses none
+of which closes the loop: *can the agent meet a novel multi-factor
+mechanic, identify a discriminating experiment, predict what it should do,
+execute it, update its model, and exploit the learned relation to reach the
+next level?* A second standing metric joins the level-2 funnel:
+**useful-transition yield** — not how many new things were touched, but how
+many exploratory actions produced information that subsequently entered a
+predictive model, a hypothesis, or a skill. Without it the project can
+build a very effective exploration robot that learns nothing. Also noted
+stale and left for a real number rather than an invented one: `README.md`
+still cites the 2026-09-15 aggregate of 0.1431, while H011's n=30 parity
+sweep on 09-16 is the more recent 25-game run. Ladder in `docs/plan.md`
+START HERE (2026-09-17).
+
+## 2026-09-17 — Gate 2: H007 P2 re-tested, and H011's headline metric was measuring the wrong cells
+
+**Hypothesis.** Gate 2 of the 09-17 ladder, queued since 09-15 and never
+run. H011 shipped a click-novelty blend that raised swatch-strip clicks on
+cd82 from 1.6% to a reported 42-52%. H007 Day 4 had declined to build the
+enumerator's state-conditioned tally for one stated reason: "the state never
+varies under exploration (6 strip clicks / 4,000 steps)". If H011 removed
+that blocker, a state-conditioned lever should now form with no oracle and
+no new representation. 10 seeds, 400 steps, cd82, `ARC_PROPOSER=1`, ~90 s.
+
+**Observation.** 1,372 hypotheses formed across 10 seeds. 309 carried an
+adjacency precondition. **Zero carried a `state:` precondition.** P2 is not
+met.
+
+The reason is not the enumerator. Strip clicks reproduced exactly as H011
+advertised — 101 of 238 ACTION6 decisions, 42.4%, inside the strip's bbox.
+But the strip's visible state changed after **1 of those 101 clicks**, and 8
+of 10 seeds show exactly one strip configuration across the whole run (the
+two that show more are the two that cleared a level).
+
+Classifying each click by the colour actually under it explains this. The
+strip *entity*'s bbox (x 18-63, y 0-8, from the S_t traces, and what
+`h011_click_novelty.py` measures) is 414 cells: ~391 are inert backing of
+colour '3', and ~23 are the two interactive swatches ('4'-outlined boxes
+filled '0' and 'f'). Of the 101 bbox clicks, **93 landed on inert backing
+and 8 on an actual swatch.** Measured identically on pre-H011 recordings
+(`recordings/latent/seed*`, 09-15) and on these:
+
+| | pre-H011 | post-H011 |
+|---|---|---|
+| ACTION6 decisions | 608 | 238 |
+| clicks in strip bbox | 131 (21.5%) | 101 (42.4%) |
+| **clicks on an actual swatch** | **20 (3.29%)** | **8 (3.36%)** |
+
+H011 roughly doubled clicks into the bounding box and **did not move
+swatch coverage at all**.
+
+**Inference.** The chain breaks earlier than the ladder assumed, and one
+hop earlier than this session's own first reading of the same run (stated
+as "coverage delivered -> tally/lever-formation logic", then retracted when
+the colour breakdown was computed). Corrected: H011 raised coverage of a
+bounding box, not of the ~23 cells that set the state; the state therefore
+still does not vary; no tally can form over a constant; no lever forms.
+H007's original justification survives intact — for a different reason than
+it gave.
+
+This is not a defect in H011's shipped mechanism, which does what it says
+and cleared its own parity gate on score. It is a defect in H011's
+**success metric**: "strip clicks" was defined over an entity bbox that is
+94% inert, so the headline 1.6% -> 42-52% overstates what was achieved on
+the thing the hypothesis was for. Recorded against H011 as a measurement
+correction, not a retraction.
+
+Consequences for the ladder: gate 3's reading C (tally / lever-formation)
+is **not** where this lands, and H012 is not the fix either — movement
+novelty does not touch ACTION6 targeting. The live question is now whether
+novelty can be made to prefer cells that are *plausibly interactive* rather
+than merely non-background, since the tied-set that novelty draws from is
+94% backing on this entity. Gate 1 (H010 Stage 3) is unaffected and still
+open. Evidence: `scripts/h007_p2_retest.py`, 10 runs under
+`recordings/20260917-022*` / `-023*` and their sweep summaries.
+
+## 2026-09-17 — Gate 1: the cd82 oracle burns its whole budget pressing a lever it knows is unpressable
+
+**Hypothesis.** Gate 1 of the 09-17 ladder. H010 Stage 2 shipped the
+position-graph router, proved the mechanism, and still watched the cd82
+two-condition oracle expire unmet on seeds 1 and 3 — recording the reason as
+"graph coverage incompleteness at the exact moment the oracle needs it, not
+chased further". That undetermined diagnosis blocks any claim about where the
+bottleneck now is. Chase it: at the exact steps the bet is live, is the
+required edge absent, is the target wrong, or is a usable route present and
+not taken? `scripts/h010_stage3_diagnosis.py` taps `_plan_route` and
+`_condition_met` and records both routing arms every live step. Seeds 1 and 3,
+at the default injection (step 24) and at a warmed-up injection (step 154),
+since the oracle's own note says the graph is barely covered that early.
+
+**Observation.** Four runs, all four identical in outcome: `spent=8/8`,
+`unmet=8`, `jointly_met=0`.
+
+- **The state condition held on every live step of every run** (`state:9c84ef30`
+  True throughout). H007's condition kind is not implicated in any way.
+- **Adjacency was met on 0 steps of 4 runs.**
+- The controlled thing never closes on the target. Minimum |pos − target|
+  over each live window: 40, 44 (injection 24) and 16, 10 (injection 154).
+- Coverage is thin early and better later, exactly as H009's viability curve
+  predicted: graph paths found on 0 of 8 live steps at injection 24, and on
+  1 of 7 (seed 1) and 3 of 7 (seed 3) at injection 154. **It improves and it
+  does not rescue the bet.**
+- The dominant pattern, in three of four runs: after one or two moves the
+  position freezes and the agent spends every remaining budget press on
+  ACTION5 — the lever — with adjacency known false and the target 10–48
+  units away. i20/s1: frozen at [22,22], 7 presses. i20/s3: frozen at
+  [11,0], 8 presses. i150/s1: one move, then frozen at [11,11], 6 presses.
+
+**Mechanism, confirmed in code rather than inferred.** `_hypothesis_action`
+computes `unmet` for the bet, and when `unmet` is non-empty routes toward the
+first unmet condition. But `_route_to` returns `(None, "")` when `_plan_route`
+finds no path in either model, and the `if step is not None:` branch then
+**falls through to the lever** — the comment says so plainly: "Falls back to
+the lever when no path." `Hypothesis.spent` is `len(self.history)`, which those
+presses append to, so each one consumes budget and the bet reaches EXPIRED
+having tested nothing. The bookkeeping is honest throughout (every press is
+filed UNMET, and `proposer.record` already flags an expiry that was mostly
+precondition-chasing) — the defect is the spending, not the accounting.
+
+**Inference. Reading A (coverage) is real but not sufficient, and the
+dominant cause is a fifth reading the ladder did not enumerate: the bet
+spends live budget on its lever while its own precondition is known false
+and unreachable.** Even with a perfect graph the bet must still *arrive*, and
+it never gets within 10 units before the budget is gone. So:
+
+- **H012 does not get a clean mandate from gate 1.** Coverage contributes,
+  improves with warm-up, and does not explain the failure. Combined with
+  gate 2 (which found cd82's gap is ACTION6 targeting, untouched by movement
+  novelty), H012 now has *no* gate pointing at it. It stays conditional.
+- **Gate 4 is validated as the right next architectural step**, and the
+  minimal version is smaller than a predictive roll-out: the agent already
+  computes `unmet` one line above the fall-through. Declining to spend when
+  the precondition is unmet *and* no route exists needs no predictor at all.
+  The roll-out gate generalises it; this case does not need the generalisation.
+- H010's Stage 2 open thread is closed as a *confound*: navigation is not
+  exonerated, but it is not what expired these bets either.
+
+Evidence: `scripts/h010_stage3_diagnosis.py`, four runs, traces kept in the
+session scratchpad; reproduce with `--seed 1 --seed 3` and
+`H007_INJECT_AFTER=150`.
+
+## 2026-09-17 — Gate 4 minimal (H015): the wasted presses stop, and the real budget defect surfaces
+
+**Hypothesis.** Gate 1 found the cd82 oracle expiring with `spent=8/8`,
+`unmet=8`, `jointly_met=0`, the controlled thing frozen and the target 10-48
+units away, because `_hypothesis_action` falls through to the lever when no
+route to an unmet precondition exists. Declining that decision needs no
+predictor — the agent computes `unmet` on the line above. Build the minimal
+gate 4 and measure whether the wasted presses become useful actions.
+
+**Observation.** Built behind `ARC_BUDGET_GATE`, default OFF:
+`Hypothesis.stall()` / `reached()`, an `UNREACHABLE` status distinct from
+`EXPIRED` ("never tested" and "tested, inconclusive" are different facts),
+the short cooldown for it, and the decline in `_hypothesis_action`. 5 tests,
+301 total, green with the flag both off and on.
+
+cd82 oracle, seed 1, injection 154, gate off vs on:
+
+| | off | on |
+|---|---|---|
+| ACTION5 pressed with the precondition false | 6 | **0** |
+| routing moves | 1 | **7** |
+| clicks | 1 | 1 |
+| distinct positions visited while live | 2 | **6** |
+| graph paths found / route requests | 1 of 7 | **7 of 15** |
+
+P1 met: the presses become movement, and the agent stops freezing.
+
+**P2 not met, and that is the finding.** The bet still expires at 8/8 —
+because the routing steps charge the budget too. `_learn_from` observes the
+live bet on every `hypothesis`-tier decision, precondition-chasing moves
+included, filing each as `PRECONDITION_UNMET`. With the gate on, the 8
+budget-charging steps are 0 presses + 7 routing moves + 1 click.
+
+**Inference. `HYPOTHESIS_BUDGET` prices travel as though it were testing.**
+A precondition 10+ units away cannot be reached inside 8 steps however good
+the router is, so the bet dies before it is ever tested. This is not a bug:
+it is the council's "price every test in actions" applied to a step that is
+not a test. It is left unfixed deliberately — separating travel from testing
+in the budget is a real design decision with its own risk (bets living far
+longer, monopolising the action stream) and needs its own hypothesis and its
+own gate, not a second behavioural change folded in under the same flag.
+
+Nothing is shipped. The n>=30 seed-paired parity sweep has not been run, and
+the gate is only reachable under `ARC_PROPOSER=1`, which is off in the
+submission. Two notes for the record: seed 3 at injection 154 now exits on
+the oracle's own pre-existing guard (entity 10 not live at that step) —
+expected divergence once behaviour changes, not a fault in the new code. And
+the first A/B looked like a null result because the oracle's summary line
+reports only `spent`/`unmet`, which are unchanged; the mechanism only shows
+up in the per-step trace. Detail in `research/hypotheses/H015_budget_gate.md`.
+
+## 2026-09-17 — H015 parity gate: the mechanism works at scale and buys nothing
+
+**Hypothesis.** The n>=30 seed-paired gate standing between H015's
+flag-gated budget gate and a default flip. Seeds 601-630, both arms, whole
+25-game sweep, 400 steps, `ARC_PROPOSER=1` on both (the gate is unreachable
+without it), `--no-log`. 60 runs, 5.0 h, zero failures, zero missing
+summaries, all 30 seeds paired.
+
+**Observation**, in the standing read order.
+
+*Level-2 funnel.* L1 clears 99 -> 97 over 750 game-sweeps; **L2 clears
+0 -> 0**; L3 0 -> 0; mean actions-to-L2 182.9 -> 177.9. The -2 is a balanced
+shuffle, not a loss: per-seed 5W/7L/18T, p = 0.77; per-game cd82 +2,
+cn04 -2, sp80 -1, ar25 -1.
+
+*Status mix.* `unreachable` 0 -> 235, `expired` 5109 -> 4873 (-236). Near
+1:1 — 235 bets that would have burned a budget being unroutable now retire
+without spending it. The mechanism does at scale exactly what the oracle
+showed it doing on one seed.
+
+*Parity.* sp80 24 -> 23, ar25 8 -> 7, ls20/m0r0/dc22 flat. Worst case -1,
+at the "> 1 per 30 sweeps" bar rather than past it.
+
+*Aggregate score, last.* median 0.0521 -> 0.0538, mean 0.0881 -> 0.0908,
+sign test 12W/9L/9T, p = 0.66. Not significant.
+
+**Inference. The gate passes and is deliberately not promoted.** P1 (the
+mechanism) is met at scale, P3 (parity) is met, P2 (the consumer) is not.
+235 reclaimed budgets converted into zero additional depth — which is what
+gate 4's own finding predicted: stopping the wasted lever presses cannot
+help while a bet still dies *travelling*, because `_learn_from` charges
+every precondition-chasing routing step to `HYPOTHESIS_BUDGET`. A change
+with no measured benefit does not earn a default, and leaving it OFF costs
+nothing (unreachable without `ARC_PROPOSER`) while keeping one variable out
+of the next comparison. The next experiment is the budget-pricing decision
+H015 named and deliberately left alone: separate travel from testing, then
+re-run this pair together.
+
+**A limitation of this sweep, recorded rather than buried.** Run `--no-log`
+to avoid ~3 GB of recordings, and the summaries carry no click coordinates
+— so the exploration-cost set adopted the same morning (concentration,
+novelty, useful-transition yield) **could not be computed from it at all**.
+The nearest available proxy, the predictor's own accuracy, is identical
+between arms (entity 0.8893 vs 0.8898, pair 0.9564 vs 0.9565 over 750
+game-sweeps each). A sweep meant to read those metrics needs logs on, or
+the summary needs to carry the counters. Evidence:
+`scripts/h015_parity_report.py`, manifest and 60 summaries.
+
+**Two process notes.** The first launch was killed after 12 minutes: the
+runner assigned a captured filename to a shell variable named `path`, which
+in zsh is tied to `PATH`, so from iteration two every `date`/`grep`/`tail`
+failed silently while the sweeps themselves kept running on an absolute
+python path. It would have produced 60 valid summaries with no way to tell
+the arms apart. Relaunched after verifying the fixed loop on a fast stand-in
+through four iterations. And the arm labelling only exists because the
+runner wrote a manifest: the sweep summary's `config` records `max_steps`
+only, so two arms differing by an env flag are indistinguishable from their
+summaries — the same gap that made H011's arms unrecoverable after the fact.

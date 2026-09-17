@@ -49,6 +49,386 @@ recognised a maze.
 
 ---
 
+## START HERE (handoff, 2026-09-17) — close the confound before choosing the next architecture
+
+**State.** `main` at `46367e5` (H010 Stage 2 wired, shipped, kept open).
+Uncommitted: this section, `docs/expert-reviews/reviewer_c_09_17_2026.md`,
+one `history.md` entry. `ARC_PROPOSER` / `ARC_LLM_PROPOSER` still OFF by
+default. Nothing runs in the background.
+
+**What changed the plan.** A fifth reviewer-C pass
+(`docs/expert-reviews/reviewer_c_09_17_2026.md`) argued the bottleneck has
+moved past exploration and navigation to *state satisfaction*, and proposed:
+a state-sufficiency audit, an alias analysis on cd82, a `StateManager`, an
+LMU sidecar — with H012 postponed as too incremental. Four corrections were
+put back to it. It retracted three of its own items and reversed the fourth.
+The settled position, and the reason this section exists:
+
+1. **The state-sufficiency audit is already done.** H006 Days 1–3 and H008
+   answer all four of its Stage-1 questions on disk: `alias_probe.py`,
+   `latent_probe.py`, `latent_splitter.py`, `latent_rollout.py` — k=1/3/10
+   with and without Z1, 1,252 pixel-aliased contexts reduced to 162 under
+   S_t, `Z1 = actions since reset` confirmed with repeats above a shuffle
+   null with zero contradictions on six games. Retracted as new work: it
+   would re-derive results we hold.
+2. **cd82 is the wrong alias testbed.** H006 Day 1: 35 aliased contexts, 35
+   meter-line, **0 mechanic**; Z1 resolves 82/0 against a null of 3.8. Its
+   frame *is* sufficient and its second factor is visible-persistent — which
+   is H007's condition kind, already built. The genuinely unresolved set is
+   **su15 / sk48 / sc25 / g50t**: ~72 contexts at ~2 visits each, where the
+   history-derived family is refuted or below null.
+3. **H010's unresolved coverage diagnosis is a confound, not a footnote.**
+   The reprioritisation rested on "H010 fixed navigation, joint satisfaction
+   did not rise, therefore navigation is not the bottleneck." H010 Stage 2
+   establishes only that *the two navigation bugs it fixed* did not raise
+   joint satisfaction, and names graph-coverage incompleteness at the
+   oracle's critical step as the leading unexamined cause. Postponing H012 —
+   whose entire purpose is movement coverage — on the strength of that
+   result is circular. The two are parallel hypotheses to be killed
+   experimentally, not ranked philosophically.
+4. **"State selection is the central problem" is withdrawn as a standing
+   claim.** The reviewer will not hold it independent of gates 1 and 2.
+   A coverage result is evidence against it.
+
+**Not adopted, deliberately.** "No consumer without a state model" was
+offered as a third governing principle. It is precisely the claim the ladder
+below tests, so it stays a *candidate* until gate 3 branches. Promoting it
+now would repeat the error this exchange just corrected.
+
+**The unit of progress, and what the ladder is for.** Added 2026-09-17 from
+a third read (a colleague's note, then reviewer C against it). Every gate
+below is infrastructure toward one milestone, and that milestone is the
+thing to measure, not the gates:
+
+> **Can the agent encounter a novel multi-factor mechanic, identify a
+> discriminating experiment, predict what that experiment should do,
+> execute it, update its model, and then exploit the learned relation to
+> reach the next level?**
+
+The named failure mode this guards against: `H011 → H012 → H013 → H014 →
+H002`, where every hypothesis is individually sensible, each clears its own
+gate, and **none closes the loop from information to skill**. The record
+shows this is not hypothetical — three consecutive repairs at three layers
+(H011 exploration access, H010 navigation execution, H007 state
+satisfaction) and the flagship cd82 oracle still does not close end to end.
+
+**Three loops, and only one is substantially closed.** Useful for placing
+any proposed work before agreeing to it:
+
+| loop | path | state |
+|---|---|---|
+| 1 — perceptual / relational | observation → lenses → relations → evidence → belief | mature |
+| 2 — exploration / spatial | uncertainty → action → coverage → graph → routing | functional, incomplete (H010/H011/H012 live here) |
+| 3 — **skill acquisition** | hypothesis → discriminating action → **predicted** outcome → observed outcome → updated model → reusable skill | **the frontier; the predicted-outcome step does not exist yet** |
+
+Loop 3's missing step is the point. The agent still acts first and observes
+second: a position-dependent transition model is live and the residual
+language is rich, but **no live hypothesis budget is gated on an internal
+roll-out**. That gap is more glaring now precisely because the substrate for
+closing it exists.
+
+**The ladder. Eight gates. Each result selects the next; gates 1 and 2 are
+independent and run in parallel. Do not start gates 5+ ahead of gate 3's
+branch.**
+
+1. **Gate 1 — RUN AND RESOLVED 2026-09-17. Not coverage; a budget-economy defect.** Offline, no live
+   behavioural change, on data already on disk. cd82 seeds 1 and 3, at the
+   exact action where the two-condition bet expired unmet, answer four
+   questions:
+
+   | question | artifact |
+   |---|---|
+   | what controlled position/relation did the oracle require? | ground-truth target |
+   | what target did the agent believe it needed? | agent decision trace |
+   | was a path to the required position represented? | `PositionModel` graph snapshot at that step |
+   | if represented, why was it not chosen? | route candidates + selector trace |
+
+   The fourth matters as much as the third: *edge absent* and *edge present
+   but not selected* are different failures with different fixes.
+
+   **RESULT (`scripts/h010_stage3_diagnosis.py`; seeds 1 and 3 x injection at
+   step 24 and step 154).** All four runs: `spent=8/8`, `unmet=8`,
+   `jointly_met=0`.
+   - The **state condition held on every live step of every run**. H007's
+     condition kind is not implicated.
+   - **Adjacency was met on 0 steps of 4 runs**, and the controlled thing
+     never closes: min |pos − target| = 40, 44 (early) and 16, 10 (warmed up).
+   - Coverage behaves exactly as H009's viability curve predicted — 0 graph
+     paths of 8 live steps at injection 24; 1 of 7 and 3 of 7 at injection
+     154. **It improves, and it does not rescue the bet.**
+   - In three of four runs the position freezes after one or two moves and
+     every remaining press goes to ACTION5 with adjacency known false.
+
+   **Mechanism, confirmed in code.** `_hypothesis_action` computes `unmet`,
+   routes toward the first unmet condition, and `_route_to` returns `None`
+   when `_plan_route` finds no path in either model — at which point the
+   branch **falls through to the lever** ("Falls back to the lever when no
+   path"). `Hypothesis.spent` is `len(self.history)`, so each such press
+   consumes budget and the bet expires having tested nothing. The
+   bookkeeping is honest (every press is filed UNMET); the spending is the
+   defect.
+
+   **READING: a fifth one, not among the four fixed above — the bet spends
+   live budget on its lever while its own precondition is known false and
+   unreachable.** Reading A (coverage) contributes and is not sufficient:
+   even with a perfect graph the bet must still arrive, and it never gets
+   within 10 units before the budget is gone.
+
+2. **Gate 2 — RUN AND RESOLVED 2026-09-17. P2 not met; H011 did not unblock it.**
+   Independent of gate 1, same priority, different question. **This was
+   already queued as item 3 of the 09-15 converged list, became runnable
+   when H011 cleared its parity gate on 2026-09-16, and has not been run** —
+   `history.md` contains no P2 re-test. It is the cheapest open item in the
+   project.
+   Rerun the enumerator on cd82, 10 seeds, 400 steps, and ask **only**
+   whether a state-conditioned lever for the paint action now forms. The
+   chain under test:
+
+   ```text
+   H011 → more useful click interactions → more observations of the paint
+        → mechanic effects vary under observation → H007 P2 becomes formable
+   ```
+
+   Measure: lever formed? condition correctly grounded? third-entity
+   relation discovered? usable route generated? **Aggregate score is not the
+   primary metric here.**
+   Why it matters beyond cd82: H011 may have changed the *input
+   distribution* to the existing learning machinery without changing the
+   machinery. If P2 now forms, that is a causal chain from coverage to
+   representation discovery to lever formation — stronger evidence for the
+   architecture than any score bump. If it does not, the residual gap is in
+   tally / lever-formation logic, a smaller and better-located follow-up
+   than assumed. Either answer is worth more than its cost.
+   Standing note from `system_architecture.md`, still accurate and directly
+   relevant: **an action that has never moved a residual can never become a
+   lever**, and cd82's paint action is still mostly reached by the random
+   bandit.
+
+   **RESULT (10 seeds, 400 steps, `ARC_PROPOSER=1`, ~90 s,
+   `scripts/h007_p2_retest.py`).** 1,372 hypotheses formed; 309 carried an
+   adjacency precondition; **0 carried a `state:` precondition.**
+   The cause is one hop earlier than this gate anticipated, and one hop
+   earlier than this session's own first reading of the same run. H011's
+   headline metric counts clicks into the strip *entity*'s 414-cell bbox,
+   which is ~391 cells of inert backing and ~23 interactive swatch cells.
+   Measured identically before and after H011: bbox clicks 21.5% -> 42.4%,
+   **actual swatch clicks 3.29% -> 3.36% — flat.** 93 of 101 post-H011 bbox
+   clicks hit backing; the strip's state changed after 1 of 101.
+   So: the state still does not vary, nothing can be tallied over a
+   constant, and no lever forms. H007's day-4 justification survives, for a
+   finer-grained reason than it gave. **This is a measurement correction
+   against H011, not a retraction** — its mechanism and n=30 score gate
+   stand (recorded in that file's status log).
+   **What this rules out.** Gate 3's reading C (tally / lever-formation
+   logic) is *not* where this lands: the enumerator conditions levers
+   freely, 309 times, just never over a variable that never varies. **H012
+   is not the fix either** — movement novelty does not touch ACTION6
+   targeting.
+   **What it opens, unnumbered and not yet a hypothesis.** Novelty draws
+   uniformly from the cells tied for fewest clicks among *non-background*
+   cells. On an entity that is 94% inert backing that is nearly a uniform
+   draw over backing. Preferring cells that are plausibly *interactive* —
+   rather than merely non-background — is the natural follow-up, and it is
+   a targeting change of the same size and risk class as H011 Stage 2. It
+   should be written up as its own hypothesis before anything is built.
+
+3. **Gate 3 — DECIDED 2026-09-17: H012 stays parked. Neither gate mandates
+   it.** Gate 1 found coverage contributory but not sufficient; gate 2 found
+   cd82's gap to be ACTION6 targeting, which movement novelty does not touch.
+   H012 is not refuted — it remains a plausible intervention with an offline
+   counterfactual still unrun — but **no gate now points at it**, and it must
+   not be built on momentum. Original framing kept below for the record. H012 is a
+   plausible intervention, not yet a mandated one; two cheaper tests now
+   stand between us and it. It proceeds if **either** gate 1 shows the
+   required edge absent at the critical step (coverage is the demonstrated
+   limiting factor) **or** gate 2 shows coverage still preventing the
+   state-conditioned evidence from accumulating. Then, and only then, build
+   it behind its flag, offline counterfactual first, same n>=30 parity bar —
+   and **evaluate it on joint-condition satisfaction, not merely orbit
+   coverage** (an edit to `research/hypotheses/H012_movement_novelty.md`,
+   not yet made).
+   Gate 1's four readings, fixed in advance:
+   - **A — required edge absent → coverage.** H012 gets a causal mandate
+     rather than a plausibility argument.
+   - **B — edge present, target wrong → goal/state representation.** The
+     strongest available evidence for the state-selection direction, and it
+     *earns* that direction rather than assuming it. Especially so if the
+     required relation is *controlled thing relative to the clicked or moved
+     thing* — the same shape as gate 5's candidate family.
+   - **C — edge present, target correct, route or lever not selected →
+     planner / conditional-lever formation.** The agent holds the state and
+     the geometry and fails to convert them into an action sequence. Note
+     this is also where gate 2 lands if P2 still does not form.
+   - **D — none of the three explains it →** investigate the transition
+     model or the mechanic itself. **"Latent state" is not claimed by
+     elimination.** D means investigate, not conclude.
+
+4. **Gate 4 — MINIMAL FORM BUILT 2026-09-17 (H015), flag-gated, parity NOT yet run. Validated by gate 1, and the minimal
+   version is smaller than a predictive roll-out.** Gate 1 showed the agent
+   spending a bet's whole budget pressing a lever whose precondition it had
+   *already computed* to be false, because no route existed. Declining to
+   spend in exactly that case needs no predictor: the information is on the
+   line above the fall-through in `_hypothesis_action`. Build that first as
+   its own small, flag-gated change with the level-2 funnel and the
+   exploration-cost metrics read on it; the roll-out gate below generalises
+   it, and this case does not need the generalisation.
+   **BUILT (`research/hypotheses/H015_budget_gate.md`, `ARC_BUDGET_GATE=1`,
+   default OFF).** `Hypothesis.stall()` / `reached()`, a new `UNREACHABLE`
+   status distinct from `EXPIRED`, and the decline itself in
+   `_hypothesis_action`. 5 tests, 301 green with the flag off and on.
+   Mechanism proven on the cd82 oracle, seed 1 at injection 154: lever
+   presses with the precondition known false **6 -> 0**, routing moves
+   **1 -> 7**, distinct positions visited while live **2 -> 6**. Nothing is
+   shipped: the n>=30 seed-paired parity sweep has not been run, and the
+   gate is only reachable under `ARC_PROPOSER=1` anyway.
+
+   **It exposed the larger defect underneath, deliberately left unfixed.**
+   With the gate on the bet *still* expires at 8/8 — because the routing
+   steps themselves charge the budget. `_learn_from` observes the live bet
+   on every `hypothesis`-tier decision, precondition-chasing moves included,
+   filing each as `PRECONDITION_UNMET`. Measured with the gate on: 8
+   budget-charging steps = 0 lever presses + 7 routing moves + 1 click. So
+   **`HYPOTHESIS_BUDGET` prices travel as though it were testing**, and a
+   target 10+ units away cannot be reached inside 8 however good the router
+   is. That is the council's "price every test in actions" applied to a step
+   that is not a test. Changing it is a real design decision with its own
+   risk (bets living far longer, monopolising the action stream), so it
+   needs its own hypothesis and its own gate — not a second change folded in
+   under the same flag.
+
+   The general form, still unbuilt: Moved ahead of the state and
+   memory work on 2026-09-17, deliberately: this is loop 3's missing step,
+   and it must exist *before* any temporal-memory arm is run, or a gain
+   cannot be attributed between "compressed history helped" and "we finally
+   used prediction at all."
+
+   ```text
+   candidate hypothesis → short internal roll-out → predicted residual
+                        → live budget spent only if the residual is
+                          expected to fall
+   ```
+
+   Three levels, named so the ordering is explicit. **Level 0** `S_t →
+   action → observe` is the current regime. **Level 1** is the above — the
+   smallest "plan through the model" that stays inside the residual
+   language, using H008's predictor and H010's now-live position-dependent
+   transitions. **Level 2** is `history → LMU → temporal state → transition
+   model → multi-step roll-out` (gate 6). **Make Level 1 operational before
+   Level 2 is run at all.**
+
+5. **Gate 5 — H013 (to open): H006's unresolved mechanic remainder, on the
+   four games that have one.** su15 / sk48 / sc25 / g50t; ~72 contexts at
+   ~2 visits each, where the history-derived family is refuted or below
+   null. This is where the state-selection hypothesis is *earned*.
+   Claim: a candidate family referencing the controlled thing's *relation*
+   to the clicked or moved entity resolves contexts the history-derived
+   family could not. Needs first: **more repeats** — a targeted non-LLM
+   sweep of those four games (10 seeds, ~30 s each), because at ~2 visits a
+   splitter can currently only be refuted, never confirmed. H006 named both
+   requirements; S_t is now available, which is what relational candidates
+   need.
+   Falsifier: relational candidates stay at or below the shuffle null after
+   the repeat sweep.
+   Discipline: surviving S_t does **not** prove a latent variable exists.
+   Six readings stay live — unrepresented persistent variable, a relation
+   absent from S_t, geometry/configuration, target-selection error,
+   insufficient repeats, genuinely stochastic — and `latent_splitter.py`
+   already discriminates among them. Use it; do not introduce a new
+   representation system to answer a question the existing one can answer.
+
+6. **Gate 6 — H014 (to open): the LMU as a control condition, not a
+   representation.** Only after gate 4 is operational. Untrained, fixed,
+   offline, structured-event input, never in the action loop. Arms at
+   k=1/3/10 on the existing harness: `S_t` / `S_t + Z1` / `S_t + R_t`
+   (gate 5's relational candidates) / `S_t + LMU(H_t)` / everything.
+   The question is not "does the LMU improve state representation" but
+   **"does generic temporal compression contain useful predictive
+   information beyond the variables our evidence-gated system has
+   selected?"**
+   The sharper read is not the error rates: **cluster LMU states over the
+   unresolved aliased pairs.** If `LMU(A) ≠ LMU(B)` where explicit S_t is
+   identical and futures differ, temporal information exists in the history
+   the explicit layer is not retaining — and what distinguishes those
+   histories names the variable to add.
+   Failure is as informative as success: no gain means generic temporal
+   memory is not the gap, and state *selection* is. The caveat stands — a
+   fixed sliding window is a questionable inductive bias for discrete,
+   irregularly-informative, reset-punctuated ARC events.
+
+7. **Gate 7 — a `StateManager` only if gates 4–6 earn it.** Three readings,
+   fixed in advance so the answer is not chosen by preference: if state
+   variables are repeatedly *discovered but not systematically promoted or
+   retired*, build it; if explicit state is fine and the transition model
+   simply was not being used, gate 4 was the whole fix and do not build it;
+   if the LMU supplies substantial missing predictive information,
+   investigate temporal compression instead.
+   What survived the exchange is not "add memory" but that the *set* of
+   variables treated as state changes as evidence accumulates: not
+   `S_t → S_{t+1}` but `(S_t, e_t) → S_{t+1}`, where `e_t` is evidence
+   changing which variables are predictive enough to retain. H006's
+   `admit()` is a one-shot gate with no retirement and no re-evaluation; the
+   missing piece is a **principled promotion mechanism from "observed fact /
+   hypothesis" to "state variable worth maintaining"**, and a matching
+   demotion. Most ingredients exist (perception → candidate relation →
+   hypothesis → falsifier → predictive consequence). Build only on evidence,
+   not because it is architecturally elegant.
+
+8. **Gate 8 — reopen H002 last, with better inputs.** The standing risk, and
+   why it is last: a stronger proposer without the above produces more
+   hypotheses → more live experiments → **more wasted budget**, which H002
+   has already demonstrated (39–47% unmet routing, 50.9% of budget wasted).
+   Recorded as a correction, because it will otherwise be miscited later:
+   **"the proposer is the weak consumer" is a future risk, not an
+   established bottleneck.** What is established is that H002's *current*
+   proposer is weak. Whether the proposer becomes the binding constraint
+   depends on gates 4–6, which change its inputs. After them it receives
+   current state, known transitions, prediction errors, unresolved aliases,
+   residuals, available actions and candidate discriminating experiments —
+   a dramatically better problem than "invent a conditional lever from
+   observations."
+
+**Standing metrics, adopted 2026-09-17. Two additions, both above aggregate
+score in every sweep summary.**
+
+1. **The level-2 funnel** (reviewer C §13, undisputed): L1 completions, L2
+   entries, L2 completions, actions-to-L2, actions-to-L3. Every gate is read
+   on the funnel first. A change moving L1 0.02 → 0.04 while L2 stays 0/30
+   is worth less than one moving L2 0 → 2/30 at flat L1. The scoring
+   analysis above has said depth dominates speed since 2026-09-13, yet every
+   gate since — H011 and H010 included — was read median-score-first anyway.
+2. **Exploration is not free, and its cost is now tracked.** H011 measured
+   the hottest 8x8 region's click share falling 20% → 14–18%. That was
+   acceptable at its gate, but the same trade-off will reappear on the
+   movement side (H012) and again when several hypotheses compete for the
+   action stream. Stop treating `coverage ↑ = good`. Track together:
+   coverage, **concentration**, novelty, **useful-transition yield**, level
+   progression, actions-to-level.
+   **Useful-transition yield** is the one that connects this ladder to the
+   thesis. Not "how many new things did we touch?" but **"how many
+   exploratory actions produced information that subsequently entered a
+   predictive model, a hypothesis, or a skill?"** Without it we risk
+   building a very effective exploration robot that learns nothing.
+
+**Follow-up edits this section implies, not yet made:** H012's success
+criterion (orbit coverage → joint-condition satisfaction, conditional on
+gate 3); `research/hypotheses/README.md` rows; the H013 and H014 files,
+opened when a build is about to test them, per that README's own rule;
+`README.md`'s headline sweep line, still citing the 2026-09-15 aggregate of
+0.1431 and now stale — H011's n=30 parity sweep (2026-09-16) is the more
+recent 25-game run, and the replacement figure should be taken from its
+summaries rather than invented here.
+
+
+**Operating rules, carried forward unchanged.** One live behavioural change
+at a time, behind a flag. n>=30 seed-paired parity with the "> 1 level-1
+clear per 30 sweeps" regression bar on games that already work — now read
+after the level-2 funnel, not before it. Offline / oracle / counterfactual
+first whenever a claim is representational or about ranking; live only once
+the mechanism is proven. `research/hypotheses/README.md` is the single
+source of truth for hypothesis status. Never gate a commit on a piped test
+command. Never edit `agent/` while a sweep runs. Same seeds for both arms.
+Commit/push only when asked, per batch.
+
 Living checklist — check items off as they're done, add new ones as they
 come up. Don't delete completed items (they're the record of what's
 built); don't rewrite history here beyond fixing errors — narrative of
@@ -473,7 +853,7 @@ falsifiable and UNASSIGNED is a real answer.
       bounding-box extent, not size. cd82's bucket and ls20's sprite both
       read `control 100%` with a four-way map. See `history.md` 2026-09-14.
 
-## START HERE (handoff, 2026-09-15 evening) — the latent-state week
+## Handoff, 2026-09-15 evening — the latent-state week (superseded — see START HERE above. Its Days 1–7 are done and its converged-reviewer list is folded into that section's gates, with one correction: **item 3, the standalone H007 P2 re-test, was never run** — it became runnable when H011 cleared its gate on 2026-09-16 and was mistakenly recorded as folded-forward on 09-17. It is now gate 2.)
 
 **State.** `main` at `04fdfbb` pushed (H005 Stage 3, README, full sweep
 0.1431). Uncommitted: this section, `scripts/alias_probe.py`,

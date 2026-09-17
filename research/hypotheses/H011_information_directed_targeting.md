@@ -1,6 +1,6 @@
 # H011: A novelty term in target selection reaches under-explored cells the salience heuristic misses
 
-Status: SHIPPED — click blend live (`agent/attention.py`): strip clicks 1.6% -> 42-52%, effect almost entirely structural (ending the hard tier cutoff). Whole-sweep n=30 parity gate passed 2026-09-16: median score rose, the five named parity games showed zero regression, one flagged game (lp85) read as trajectory-perturbation noise on inspection, not a real regression. Committed. Movement-side novelty is its own hypothesis, H012.
+Status: SHIPPED — **measurement correction 2026-09-17: the headline "strip clicks" metric counts clicks into the strip ENTITY's 414-cell bbox, which is ~94% inert backing; swatch coverage, the thing the hypothesis was for, did not move (3.29% -> 3.36%). The shipped mechanism and its parity gate stand; the success metric overstated the gain. See the status log and `scripts/h007_p2_retest.py`.** Original: click blend live (`agent/attention.py`): strip clicks 1.6% -> 42-52%, effect almost entirely structural (ending the hard tier cutoff). Whole-sweep n=30 parity gate passed 2026-09-16: median score rose, the five named parity games showed zero regression, one flagged game (lp85) read as trajectory-perturbation noise on inspection, not a real regression. Committed. Movement-side novelty is its own hypothesis, H012.
 Research question: RQ3 (active testing)
 Date opened: 2026-09-15
 Origin: two independent findings from this week point at the same gap.
@@ -233,3 +233,28 @@ games whose central mechanic this project has not characterised in
 detail this session — respond so strongly to novelty-aware click
 targeting. Worth a look when representation work resumes; not a
 condition of this ship decision.
+
+- 2026-09-17 **Measurement correction, found by H007's P2 re-test (gate 2).
+  Not a retraction — the mechanism works and its n=30 parity gate stands.**
+  This hypothesis's headline number, "swatch strip clicks 1.6% -> 42-52%",
+  is computed over the strip ENTITY's bounding box (x 18-63, y 0-8), taken
+  from the S_t traces and used by `scripts/h011_click_novelty.py`. That box
+  is 414 cells, of which ~391 are inert backing of colour '3' and only ~23
+  are the two interactive swatches. Classifying each click by the colour
+  actually under it, across 10 fresh seeds and the pre-H011 traces measured
+  identically: bbox clicks rose 21.5% -> 42.4%, while **clicks on an actual
+  swatch went 3.29% -> 3.36%, i.e. did not move.** 93 of 101 post-H011 bbox
+  clicks landed on backing. The consequence the project cared about —
+  making the swatch's state vary often enough for the enumerator to tally
+  it — did not happen: 1 of 101 bbox clicks was followed by any change in
+  the strip.
+  What this does and does not touch. The click blend still ends the hard
+  tier cutoff, still passed its n=30 seed-paired gate on score, and ft09 /
+  vc33's 0/30 -> 12/30 and 11/30 are unaffected by any of this. What is
+  corrected is the inference that this hypothesis had unblocked H007 P2. It
+  had not. The open question it leaves: novelty draws uniformly from cells
+  tied for fewest clicks, over *non-background* cells — and on an entity
+  that is 94% inert backing, that is close to a uniform draw over the
+  backing. Preferring cells that are plausibly interactive, rather than
+  merely non-background, is the natural follow-up and does not yet exist as
+  a hypothesis.

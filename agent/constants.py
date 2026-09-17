@@ -244,6 +244,25 @@ HYPOTHESIS_COOLDOWN = 40
 # winning moves: a blanket floor over every action was measured and lost
 # (see `_probe_action`).
 HYPOTHESIS_PROBE_TRIES = 4
+# H010 Stage 3 / gate 4 (2026-09-17). `_hypothesis_action` computes which of
+# a bet's preconditions are unmet, tries to route to the first one, and --
+# when no route exists in either transition model -- falls through and
+# presses the lever anyway, with the precondition known false. Each such
+# press consumes budget, so a bet can reach EXPIRED having tested nothing:
+# measured at 8/8 presses unmet on all four cd82 oracle runs of gate 1,
+# frozen in place, target 10-48 units away.
+#
+# With the gate on, that decision is DECLINED instead: nothing is spent and
+# the tiers below decide. A bet that cannot be routed to forever would then
+# never expire (`spent` stops rising), so a declined decision is counted,
+# and HYPOTHESIS_STALL of them in a row retire the bet as UNREACHABLE --
+# a distinct verdict from EXPIRED, which means "tested and inconclusive".
+#
+# Set below HYPOTHESIS_BUDGET deliberately rather than tuned: a bet that
+# cannot even be reached should free its slot sooner than one that is being
+# tested. Behind a flag, default OFF, per the one-change-at-a-time rule.
+HYPOTHESIS_STALL = 6
+USE_BUDGET_GATE = os.environ.get("ARC_BUDGET_GATE", "0") == "1"
 # The language-model proposer (agent/proposer_llm.py). Default OFF. It is a
 # hypothesis generator behind the same `Hypothesis` type as the enumerator,
 # called at most LLM_MAX_CALLS_PER_LEVEL times per level — never per step —

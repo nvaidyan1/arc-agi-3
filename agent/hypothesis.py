@@ -36,9 +36,16 @@ from constants import (
     HYPOTHESIS_BUDGET,
     HYPOTHESIS_COOLDOWN,
     HYPOTHESIS_PATIENCE,
+    HYPOTHESIS_STALL,
 )
 
 LIVE, HELD, FALSIFIED, EXPIRED = "live", "held", "falsified", "expired"
+# H010 Stage 3 / gate 4: the bet was never tested because its precondition
+# stayed unmet and no route to it existed. Distinct from EXPIRED on purpose
+# -- EXPIRED means "we spent the budget and learned nothing decisive",
+# UNREACHABLE means "we never got to spend it", and those should not be
+# read as the same evidence about the residual.
+UNREACHABLE = "unreachable"
 # Per-step outcomes, so a failure says WHICH way it failed (reviewer C,
 # 2026-09-14: a boolean verifier collapses "the hypothesis is wrong" into
 # "its precondition was not met", and those are different layers).
@@ -123,10 +130,30 @@ class Hypothesis:
     rival: "Hypothesis | None" = field(default=None, repr=False, compare=False)
     mets: list = field(default_factory=list)       # per step: was the precondition met
     strikes: int = 0                               # exclusive: falls seen without the precondition
+    stalled: int = 0                               # gate 4: consecutive decisions declined as unroutable
 
     @property
     def spent(self) -> int:
         return len(self.history)
+
+    def stall(self) -> str:
+        """Record a decision declined because the precondition is unmet and
+        no route to it exists (gate 4), and report the resulting status.
+
+        Not a press: nothing is spent, `history` does not grow, and nothing
+        is learned about the residual -- so this must not be filed as
+        evidence either way. HYPOTHESIS_STALL of these in a row and the bet
+        is retired UNREACHABLE, which frees the slot for one the agent can
+        actually act on. Reset by `reached()` the moment a route appears."""
+        self.stalled += 1
+        if self.stalled >= HYPOTHESIS_STALL:
+            self.status = UNREACHABLE
+        return self.status
+
+    def reached(self) -> None:
+        """A route to the unmet precondition exists again; forget the stall
+        run. Only consecutive unroutable decisions retire a bet."""
+        self.stalled = 0
 
     @property
     def current(self) -> int | None:
@@ -271,7 +298,10 @@ class Proposer:
         # nothing about the residual; a short cooldown, not the full one.
         if h.status == FALSIFIED or (h.status == EXPIRED and h.unmet * 2 < max(h.spent, 1)):
             self.cool(h.key, step)
-        elif h.status == EXPIRED:
+        elif h.status in (EXPIRED, UNREACHABLE):
+            # UNREACHABLE learned nothing about the residual either, so it
+            # takes the same short cooldown rather than the full one: the
+            # key is not discredited, it was just not reachable this time.
             self._cooldown[h.key] = step + HYPOTHESIS_COOLDOWN // 4
 
     def rival(self, h: Hypothesis, rec, control: set[int] = frozenset()) -> Hypothesis | None:

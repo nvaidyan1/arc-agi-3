@@ -1,6 +1,6 @@
 # ARC-AGI-3 — Evidence-Gated Agent
 
-**Latest full sweep (25 games, 400 steps): 2026-09-15 16:08 ET — aggregate score 0.1431** — update this line after every full sweep. Details: [`docs/plan.md`](docs/plan.md), [`docs/history.md`](docs/history.md).
+**Latest full sweep (25 games, 400 steps): 2026-09-16, H011 Stage 2 parity gate — n=30 seed-paired, median aggregate 0.0206 (shipped arm) vs 0.0163 (baseline).** Report the n>=30 median, never a single sweep: the noise floor at one unchanged commit is median 0.0131, range 0.0-0.194, so any individual sweep's aggregate is uninformative. (This line previously cited 0.1431 — a single 2026-09-15 sweep at one seed, near the top of that range.) Read the level-2 funnel above the aggregate: level 2 remains essentially unsolved, and depth dominates speed in the scoring function. Details: [`docs/plan.md`](docs/plan.md), [`docs/history.md`](docs/history.md).
 
 A from-scratch agent for the [ARC Prize 2026 — ARC-AGI-3](https://www.kaggle.com/competitions/arc-prize-2026-arc-agi-3)
 competition, plus a starter-kit toolchain (local play, recap viewer, Kaggle
@@ -14,7 +14,7 @@ space, avatars, or a fixed pixel taxonomy. See [`docs/plan.md`](docs/plan.md)
 
 | file | what's in it |
 |---|---|
-| [`docs/plan.md`](docs/plan.md) | Living checklist + governing principles. **Start here.** `START HERE` section at the bottom is the handoff for the next session. |
+| [`docs/plan.md`](docs/plan.md) | Governing principles, then the `START HERE` handoff (second section, right after the principles — moved up from the bottom on 2026-09-17), then the living checklist. **Start here**, and read START HERE before doing anything: it sequences the open work as eight gates and names the milestone they serve. |
 | [`docs/history.md`](docs/history.md) | Append-only research log — every experiment, hypothesis/observation/inference, including failures. |
 | [`docs/system_architecture.md`](docs/system_architecture.md) | How the agent actually works, no code-reading required. |
 | [`docs/glossary.md`](docs/glossary.md) | Naming convention for features/modules. |

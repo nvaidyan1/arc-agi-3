@@ -95,6 +95,7 @@ from constants import (
     LLM_MAX_CALLS_PER_LEVEL,
     LLM_MODEL,
     USE_LLM_PROPOSER,
+    USE_BUDGET_GATE,
     USE_PROPOSER,
     USE_SHIFT_FALLBACK,
     VANISH_WEIGHT,
@@ -611,7 +612,8 @@ class MyAgent(Agent):
                 status = g.observe(rec.residual if rec is not None else None, met=g.pending_met)
                 if status != hypothesis.LIVE:
                     self.proposer.close(g, self._level_step)
-                    if self.llm is not None and status in (hypothesis.FALSIFIED, hypothesis.EXPIRED):
+                    if self.llm is not None and status in (hypothesis.FALSIFIED, hypothesis.EXPIRED,
+                                                          hypothesis.UNREACHABLE):
                         self.llm.falsified_since_call += 1
                     if g is h:
                         self.hypothesis = None
@@ -884,12 +886,27 @@ class MyAgent(Agent):
                 else:
                     step, note = self._route_to(member, candidates, side=cond.partition(":")[2])
                 if step is not None:
+                    h.reached()
                     step.reasoning = f"hypothesis: {h.describe()} — {note}"
                     self._arm_riders(step.name)
                     if step is not GameAction.ACTION6:
                         self._last_click = None
                     self._last_action = step
                     return step
+                if USE_BUDGET_GATE:
+                    # Gate 4 (H010 Stage 3): no route to a precondition we
+                    # have ALREADY computed to be false. Pressing the lever
+                    # here spends budget to learn nothing — measured at 8/8
+                    # presses unmet on every cd82 oracle run — so decline the
+                    # decision and let the tiers below use the action. The
+                    # information needed is on the line above; no predictor
+                    # is required for this case.
+                    if h.stall() is not hypothesis.LIVE:
+                        self.proposer.close(h, self._level_step)
+                        if self.llm is not None:
+                            self.llm.falsified_since_call += 1
+                        self.hypothesis = None
+                    return None
         else:
             h.pending_met = True
         # A distance hypothesis is a destination, and the router already

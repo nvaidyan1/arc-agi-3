@@ -1,6 +1,6 @@
 # H012: Sighting-count novelty in the frontier tier raises orbit coverage
 
-Status: OPENED — not built
+Status: OPENED — not built; CONDITIONAL, not next. Resequenced 2026-09-17 to gate 3 of the `docs/plan.md` START HERE ladder: two cheaper discriminating tests (gate 1, H010 Stage 3's exact-failure diagnosis; gate 2, the H007 P2 re-test under H011) now stand ahead of it, and this hypothesis proceeds only if one of them shows movement coverage to be the limiting factor. Primary success criterion upgraded from orbit coverage to joint-condition satisfaction — see P0.
 Research question: RQ3 (active testing)
 Date opened: 2026-09-16
 Origin: the movement-side symmetric counterpart to H011 (click novelty),
@@ -57,6 +57,15 @@ gap H011 Stage 2 left uncorrected (built unconditionally, no flag).
 
 ## Prediction
 
+- P0 (**primary, added 2026-09-17**). Joint satisfaction of the
+  two-condition cd82 oracle rises on the seeds that gate 1 shows to be
+  coverage-blocked. This, not orbit coverage, is the criterion this
+  hypothesis is judged on. The reason for the upgrade: H010 Stage 2
+  proved a navigation mechanism and moved no joint-satisfaction rate,
+  which is exactly the failure mode of measuring the mechanism instead
+  of the thing the mechanism was for. Orbit coverage (P1) is now the
+  *mechanism* check; P0 is the *consumer* check, and P1 passing while
+  P0 fails is a negative result for this hypothesis, not a partial win.
 - P1. On the ten seeds used for H009's live-episode closing experiment,
   the previously-missing orbit position on cd82 appears in >= 9 of 10
   seeds by decision 150 (H009's own bar: 8/10 at that checkpoint
@@ -73,6 +82,12 @@ gap H011 Stage 2 left uncorrected (built unconditionally, no flag).
   Re-testing H007 P2 is its own check, decoupled from H012, and can run
   as soon as H011 Stage 2 clears its own parity gate — it does not need
   to wait for this hypothesis.
+  **Update 2026-09-17: H011 cleared that gate on 2026-09-16 and the P2
+  re-test was still never run** — it was mistakenly recorded as folded
+  forward in the first 09-17 plan draft. It is now gate 2 of the ladder,
+  ahead of this hypothesis and at equal priority with gate 1. This
+  paragraph's decoupling claim was correct and is unchanged; what was
+  wrong was the assumption that the decoupled check had happened.
 
 ## Falsifier
 
@@ -98,12 +113,39 @@ ten H009-seed live-episode replay (P1), then the n>=30 parity sweep
 
 ## Metrics
 
-Orbit-position coverage by decision checkpoint (matching H009's closing
-table); n>=30 parity: level-1 clears per game, whole-sweep median score,
-sign test.
+Joint-condition satisfaction rate on the coverage-blocked seeds (P0, the
+primary read); orbit-position coverage by decision checkpoint (P1,
+matching H009's closing table); n>=30 parity: level-1 clears per game,
+whole-sweep median score, sign test.
+
+**The standing metrics apply here and are not optional** (`docs/plan.md`
+START HERE, 2026-09-17). Report the **level-2 funnel** — L1 completions,
+L2 entries, L2 completions, actions-to-L2/L3 — above the aggregate. And
+report the **exploration-cost set**, because this is the movement-side
+analogue of exactly the trade-off H011 measured on the click side (the
+hottest 8x8 region's share fell 20% -> 14-18%): coverage, concentration,
+novelty, **useful-transition yield**, level progression, actions-to-level.
+Useful-transition yield is the one that connects this hypothesis to the
+thesis — not "how many new positions did we touch?" but "how many
+exploratory actions produced information that subsequently entered a
+predictive model, a hypothesis, or a skill?" A coverage rise with no
+yield rise is a negative result.
 
 ## Status log
 
 - 2026-09-16 opened, per both reviewers' converged sequencing. Not
   built; waiting on H011 Stage 2's own n=30 parity result first (the
   explicit, agreed gate before any further live behavioural change).
+- 2026-09-17 **resequenced to conditional, and its success criterion
+  upgraded**, after a third read (a colleague's note against reviewer C's
+  fifth pass, then C against the note). Two changes. (i) This is no longer
+  "the next behavioural change": gates 1 and 2 of the new ladder are
+  cheaper, are both diagnostics on data largely already held, and either
+  can establish or remove the mandate for it. H012 proceeds if gate 1
+  finds the required edge absent at the oracle's critical step, or if
+  gate 2 shows coverage still preventing state-conditioned evidence from
+  accumulating. (ii) P0 supersedes P1 as the criterion: measure joint-
+  condition satisfaction, not orbit coverage. Both changes come from the
+  same lesson in H010 Stage 2 — a mechanism can be proven while the thing
+  it was built for does not move. Still not built; nothing here is
+  invalidated, only reordered and re-pointed at the consumer.

@@ -19,7 +19,12 @@ sys.path.insert(0, str(ROOT / "vendor" / "ARC-AGI-3-Agents"))
 
 import hypothesis  # noqa: E402
 import relations  # noqa: E402
-from constants import HYPOTHESIS_BUDGET, HYPOTHESIS_PATIENCE  # noqa: E402
+from constants import (  # noqa: E402
+    HYPOTHESIS_BUDGET,
+    HYPOTHESIS_COOLDOWN,
+    HYPOTHESIS_PATIENCE,
+    HYPOTHESIS_STALL,
+)
 
 
 def rec(residual, **levers):
@@ -519,3 +524,80 @@ def test_route_next_action_never_crashes_on_an_unknown_action():
     action = route.next_action((0, 0), {}, edges={})
     assert action is UP
     assert route.expected_position is None
+
+
+# --- Gate 4 (H010 Stage 3): a bet that cannot be routed to does not spend ---
+#
+# Gate 1 measured the defect this pins: `_hypothesis_action` computed that a
+# precondition was unmet, found no route to it in either transition model,
+# and pressed the lever anyway -- 8/8 presses unmet on every cd82 oracle run,
+# the bet reaching EXPIRED having tested nothing. The stall counter is what
+# lets the agent decline those presses without the bet becoming immortal.
+
+
+def _bet():
+    return hypothesis.Hypothesis(key=("distance", 1, 2), action="ACTION5", lift=0.5,
+                                 start=10, precondition=(("adjacent:-x", 2),))
+
+
+def test_stall_does_not_spend_budget():
+    """A declined decision is not a press: nothing is spent, nothing is
+    filed as evidence about the residual."""
+    h = _bet()
+    for _ in range(HYPOTHESIS_STALL - 1):
+        assert h.stall() == hypothesis.LIVE
+    assert h.spent == 0
+    assert h.history == []
+    assert h.outcomes == []
+
+
+def test_stall_retires_the_bet_as_unreachable():
+    """HYPOTHESIS_STALL consecutive unroutable decisions retire it -- and as
+    UNREACHABLE, not EXPIRED: it was never tested."""
+    h = _bet()
+    for _ in range(HYPOTHESIS_STALL - 1):
+        assert h.stall() == hypothesis.LIVE
+    assert h.stall() == hypothesis.UNREACHABLE
+    assert h.status == hypothesis.UNREACHABLE
+    assert h.status != hypothesis.EXPIRED
+    assert h.spent == 0
+
+
+def test_reached_resets_the_stall_run():
+    """Only CONSECUTIVE unroutable decisions retire a bet; one successful
+    route forgives the run."""
+    h = _bet()
+    for _ in range(HYPOTHESIS_STALL - 1):
+        h.stall()
+    h.reached()
+    assert h.stalled == 0
+    for _ in range(HYPOTHESIS_STALL - 1):
+        assert h.stall() == hypothesis.LIVE
+    assert h.status == hypothesis.LIVE
+
+
+def test_unreachable_takes_the_short_cooldown_not_the_full_one():
+    """An unreachable bet learned nothing about the residual, so its key is
+    not discredited -- same short cooldown an unmet-heavy expiry gets."""
+    p = hypothesis.Proposer()
+    h = _bet()
+    for _ in range(HYPOTHESIS_STALL):
+        h.stall()
+    assert h.status == hypothesis.UNREACHABLE
+    p.close(h, step=100)
+    assert p._cooldown[h.key] == 100 + HYPOTHESIS_COOLDOWN // 4
+
+
+def test_a_spent_bet_still_expires_the_old_way():
+    """The gate must not change how a bet that DOES get tested dies: a bet
+    still falling at budget expires, and its stall counter stays untouched.
+    (A FLAT residual would be FALSIFIED by patience well before budget --
+    the same shape as `test_expires_at_budget_while_still_falling`.)"""
+    h = make(100)
+    v = 100
+    for _ in range(HYPOTHESIS_BUDGET - 1):
+        v -= 1
+        assert h.observe(v) == hypothesis.LIVE
+    assert h.observe(v - 1) == hypothesis.EXPIRED
+    assert h.spent == HYPOTHESIS_BUDGET
+    assert h.stalled == 0

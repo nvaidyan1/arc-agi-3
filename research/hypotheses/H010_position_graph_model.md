@@ -1,6 +1,6 @@
 # H010: A position-graph transition model closes the gap H009 found
 
-Status: STAGE 2 SHIPPED, MECHANISM PROVEN — LIVE OUTCOME UNRESOLVED. Persistence and crash-safety proven (unit tests + live trace + a corrected n=30 sweep with zero errors); named parity games hold (one, sp80, at the exact gate boundary, not past it); cd82 moved +1/30 level-1 clears. But the two-condition cd82 oracle this stage was meant to finally close still did not close end-to-end — see "Stage 2" below. Not marked TESTED/CLOSED because its own stated success criterion (H007's oracle joint-satisfaction rate) was not met.
+Status: STAGE 3 DONE 2026-09-17 — **the Stage 2 open thread is closed, and it was not coverage.** The oracle expires because the bet spends its whole budget pressing the lever while its precondition is known false and no route exists (`_hypothesis_action` falls through when `_route_to` returns None); coverage contributes but is not sufficient — the controlled thing never closes within 10 units of the target even with a warmed-up graph. Navigation is neither exonerated nor implicated as the cause. See Stage 3 below and `scripts/h010_stage3_diagnosis.py`. Prior: STAGE 2 SHIPPED, MECHANISM PROVEN — LIVE OUTCOME UNRESOLVED. Persistence and crash-safety proven (unit tests + live trace + a corrected n=30 sweep with zero errors); named parity games hold (one, sp80, at the exact gate boundary, not past it); cd82 moved +1/30 level-1 clears. But the two-condition cd82 oracle this stage was meant to finally close still did not close end-to-end — see "Stage 2" below. Not marked TESTED/CLOSED because its own stated success criterion (H007's oracle joint-satisfaction rate) was not met.
 Research question: RQ2 (predictive world modelling) / RQ4 (planning)
 Date opened: 2026-09-15
 Origin: `H009`'s reading B — cd82's controlled thing is a deterministic
@@ -271,3 +271,40 @@ mechanism is real, tested, safe to merge (inert by default), and an
 improvement over what existed. The oracle's continued failure means
 H010's own originally-stated success criterion is not yet met, so this
 stays open rather than being marked TESTED/CLOSED outright.
+
+## Stage 3 (gate 1): why the oracle still expired — measured, 2026-09-17
+
+Stage 2 left one thread: the two-condition cd82 oracle still expired unmet
+on seeds 1 and 3, diagnosed as "graph coverage incompleteness at the exact
+moment the oracle needs it" and explicitly not chased. Chased now.
+
+`scripts/h010_stage3_diagnosis.py` runs the H007 oracle unchanged and taps
+`_plan_route` and `_condition_met`, recording both routing arms at every
+live step. Seeds 1 and 3, at the default injection (step 24) and warmed up
+(`H007_INJECT_AFTER=150`, step 154), because the oracle's own note says the
+graph is barely covered at 24.
+
+| | i=24 s1 | i=24 s3 | i=154 s1 | i=154 s3 |
+|---|---|---|---|---|
+| spent / budget | 8/8 | 8/8 | 8/8 | 8/8 |
+| unmet | 8 | 8 | 8 | 8 |
+| jointly met | 0 | 0 | 0 | 0 |
+| state condition met | every step | every step | every step | every step |
+| adjacency met | 0 steps | 0 steps | 0 steps | 0 steps |
+| graph path found | 0 of 8 | 0 of 8 | 1 of 7 | 3 of 7 |
+| min abs(pos − target) | 40 | 44 | 16 | 10 |
+
+Three things follow. **The state kind is fine** — met on every live step of
+every run, so H007's layer is not implicated. **Coverage is real but not
+sufficient** — it improves exactly as H009's viability curve predicted and
+still leaves the bet 10+ units short. **The actual cause is budget economy**:
+`_hypothesis_action` computes `unmet`, tries to route, and when
+`_plan_route` finds no path in either model `_route_to` returns `None` and
+the branch falls through to the lever ("Falls back to the lever when no
+path"). `Hypothesis.spent` is `len(self.history)`, so each of those presses
+consumes budget; three of four runs freeze in place and burn 6–8 presses
+with adjacency known false.
+
+This closes Stage 2's open thread and closes H010's own confound: navigation
+is not what expired these bets. It does **not** exonerate navigation — the
+graph is genuinely sparse early — and it does not give H012 a mandate.

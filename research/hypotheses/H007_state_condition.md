@@ -1,6 +1,6 @@
 # H007: A `state` condition kind — a two-factor rule becomes jointly satisfiable
 
-Status: TESTED — the `state` condition kind is built and works: mechanism confirmed 3/3 seeds live on cd82 (state restored in one action every time). P1 (jointly met >= 3/8) met on 1 of 3 seeds; the other two are blocked by the walk (`navigation.plan`'s offset model), not by the state condition — see H009. P2 (the enumerator forms a state-conditioned lever) is blocked by an exploration gap, not a representation one — see H011.
+Status: TESTED — the `state` condition kind is built and works: mechanism confirmed 3/3 seeds live on cd82 (state restored in one action every time). P1 (jointly met >= 3/8) met on 1 of 3 seeds; the other two are blocked by the walk (`navigation.plan`'s offset model), not by the state condition — see H009. P2 (the enumerator forms a state-conditioned lever) is blocked by an exploration gap, not a representation one — see H011. **P2 RE-TESTED 2026-09-17 AND NOT MET — but the original justification survives.** 10 seeds, 400 steps, cd82: 1,372 hypotheses formed, 309 adjacency-conditioned, **0 state-conditioned**. Cause is not the enumerator: H011 raised clicks into the strip ENTITY's bbox (21.5% -> 42.4%) but not onto the ~23 interactive swatch cells inside it (3.29% -> 3.36%), so the strip's state changed after 1 of 101 bbox clicks and there is still nothing varying to tally. `scripts/h007_p2_retest.py`.
 Research question: RQ3 (active testing)
 Date opened: 2026-09-15
 Origin: `H001` falsifier 2 (cd82's second factor is *another entity's
@@ -128,3 +128,42 @@ precondition-unmet rate by condition kind; hypothesis outcomes.
   under its own exploration and no tally can contrast it. That is an
   exploration / information-gain problem (week 2), not a representation
   one; the tally extension waits for it.
+
+- 2026-09-17 **P2 re-test formally queued as gate 2 of the 09-17 ladder.**
+  Not a new finding — a correction. When H011 Stage 2 cleared its n=30
+  parity gate on 2026-09-16, the precondition P2 was blocked on was
+  removed, and the standalone re-test (item 3 of the 09-15 converged
+  reviewer list) became runnable. It was never run, and the first draft of
+  the 09-17 plan wrongly recorded it as folded forward; a colleague's
+  independent read caught the omission. The test is unchanged from how it
+  was specified: rerun the enumerator on cd82, 10 seeds, 400 steps, and
+  ask only whether a state-conditioned lever for the paint action forms
+  under the new click distribution. Read it on lever formation, condition
+  grounding, third-entity relation discovery and route usability — **not**
+  on aggregate score. What makes it worth running ahead of anything
+  larger: H011 may have changed the *input distribution* to the existing
+  learning machinery without changing the machinery. If the lever now
+  forms, the chain coverage -> representation discovery -> lever formation
+  is demonstrated end to end, which is stronger evidence for the
+  architecture than any score movement. If it does not, the remaining gap
+  is located in tally / lever-formation logic — smaller and better-placed
+  than the alternative assumption that representation is at fault.
+
+- 2026-09-17 **P2 re-test run (gate 2). Not met; the day-4 reasoning holds
+  for a newly-identified reason.** Day 4 declined to build the enumerator's
+  state-conditioned tally because "the state never varies under exploration
+  (6 strip clicks / 4,000 steps)". H011 appeared to remove that blocker.
+  It did not. 10 seeds x 400 steps with `ARC_PROPOSER=1`: **0 of 1,372
+  hypotheses carried a `state:` precondition**, while 309 carried an
+  adjacency one, so the enumerator is forming conditioned levers freely —
+  just never over this kind. The strip's visible state changed after 1 of
+  101 strip-bbox clicks; 8 of 10 seeds saw exactly one strip configuration
+  all run. Classifying clicks by the colour under them: 93 of 101 landed on
+  the strip's inert backing (colour '3'), 8 on an actual swatch. Measured
+  the same way pre- and post-H011, swatch coverage is 3.29% -> 3.36% — flat.
+  **P2 is therefore still blocked by an exploration gap, exactly as this
+  file said, but the gap is finer-grained than "the strip is rarely
+  clicked": it is that the strip entity is 94% inert backing, and novelty
+  drawn uniformly over non-background cells lands there.** No change to the
+  `state` condition kind is implied — it works (mechanism 3/3 under oracle
+  injection). Evidence: `scripts/h007_p2_retest.py`.
