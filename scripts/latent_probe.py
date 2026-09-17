@@ -47,7 +47,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "agent"))
 
 from alias_probe import _action_key, _hash, _load  # noqa: E402
-import predictor as _predictor  # noqa: E402
+import predictor as _predictor
+from arcengine import GameAction as _GameAction  # noqa: E402
 
 
 # ── trace ───────────────────────────────────────────────────────────────
@@ -97,6 +98,14 @@ def state_of(agent) -> dict:
         "effects": {str(rid): {a: [list(e), round(c, 3)] for a, (e, c) in row.items()}
                     for rid, row in _predictor.effect_table(agent.belief).items()},
         "last_effects": {str(rid): list(e) for rid, e in agent.belief.last_effects.items()},
+        # H017: the ObstacleMap's verdict for every action from where the
+        # controlled thing stands NOW. `is_blocked` is keyed by (position,
+        # action) -- the position dimension the effect table, keyed by
+        # (entity, action), does not have. Dumped as-is; the detector is not
+        # touched, which is the whole point of the H017 experiment.
+        "blocked": {a.name: bool(agent.obstacles.is_blocked(
+                        tuple(agent.moves.displacement), a))
+                    for a in _GameAction if a.name.startswith("ACTION")},
     }
 
 

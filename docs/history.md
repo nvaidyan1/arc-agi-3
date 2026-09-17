@@ -4254,3 +4254,81 @@ consumer -> gameplay like everything else. One labelling error found and
 fixed mid-analysis: low confidence was first described as a sampling
 problem, which inverts what the 83-94% mass means. Evidence:
 `scripts/h017_rollout_error_audit.py`.
+
+## 2026-09-17 — H018: per-entity position passes every link of the chain except gameplay
+
+**Hypothesis.** H017's audit found the instrumental misses concentrated on
+CONTROL entities and dominated by the aliased case. The CONTROL/displacement
+audit then found that a per-entity position already exists — every entity
+carries a bbox each step, ids persist 99.8-100% — but the predictor cannot
+see it: `by_action_given` is keyed by (entity, action), and
+`MoveModel.displacement` is a single **colour-keyed** quantity from
+`perception.detect_translation` that never touches entity ids. Rather than
+build bookkeeping on that observation, test whether position would survive
+the chain at all.
+
+**Observation.**
+
+*Offline, instrumental target, meter-excluded, seed-paired:* raw per-entity
+position lifts held-out accuracy +0.035 / +0.106 / +0.062 (sk48 / sc25 /
+g50t) and +0.075 / +0.257 / +0.090 on CONTROL entities, with **coverage
+holding at 0.97-1.00 at every resolution**. It does not fragment because
+entities occupy a small discrete set of positions — median 2, CONTROL median
+5-6. That is H009's cd82 orbit structure generalised per entity.
+
+*At the real consumer* (`predictor.rollout`, H006's admit rule): +0.028 sc25,
++0.017 g50t, +0.001 sk48 at k=1, with Z1 and `last_changer` controls at
++0.000. A key mismatch was found and fixed en route: the inherited harness
+keyed its admit rule on the variable ALONE, asking "is the effect a function
+of position", where H018's claim is about `(entity, action, position)`. Under
+the variable-only key POS scored +0.000 everywhere — the fix is the
+difference between a null and a result. Re-run under the corrected key,
+`last_changer` and Z1 are still +0.000, so their rejections stand.
+
+*Persistence:* with true future position the gain GROWS with horizon instead
+of decaying — sc25 +0.028 -> +0.075, g50t +0.017 -> +0.039. The attenuation
+was the frozen-position assumption, not position ceasing to matter.
+
+*Implementable forward model:* a learned per-entity
+`(entity, position, action) -> position'` recovers **93-100% of the oracle**
+(sc25 k=10 +0.070 vs +0.075; g50t +0.039 vs +0.039), at transition accuracy
+0.908 / 0.817 / 0.893 measured only on the transitions the rollout used. So
+neither failure mode this was built to separate arises: the model is accurate
+AND the information transports. `PositionModel` is NOT reusable for it — it
+keys on the global colour-derived displacement, so entity identity has to
+enter the transition.
+
+*Safety:* POS fixes 2,587 predictions and breaks 7 on sc25 (369:1), 795 vs 3
+on g50t. *Error types:* g50t is 97% movement (expected-move vs blocked), but
+**sc25 is ~58% size transformation** — `unchanged -> grew` alone is 35% — so
+position is a precondition for non-movement interactions there, not only a
+collision constraint.
+
+*Negative control:* sk48 is null under every arm **including the oracle**
+(+0.002 at k=10). A mechanic whose effects do not depend on position gains
+nothing, which is evidence for per-(entity, action) admission and against
+installing position globally.
+
+**Inference.** Every link passes except gameplay: retrospective signal,
+held-out mechanic signal, meter firewall, action-conditional admission, real
+rollout consumer, future-position oracle, implementable forward model,
+no-harm, and a negative control that behaves as predicted. `agent/` is
+untouched, so this remains a **predictive** improvement and not an accuracy
+improvement in the agent until it changes action selection and moves depth.
+
+The abstraction it supports is not `state = position`. Position earned
+admission on two games and was refused on a third by the same rule, so the
+shape is `(entity, action, context) -> effect` with position as one candidate
+context — the conditional-affordance framing extended one level down into
+the effect model.
+
+**One process failure, recorded.** The first forward-position arm was built
+by editing `h018_consumer.py` a fifth time by string substitution, and it
+silently moved the BASE arm from 0.876 to 0.793 while turning k=10 into
+`nan`. A baseline cannot move when an unrelated arm is added; the numbers
+were discarded rather than reported, and the arm was rewritten clean as
+`scripts/h018_ablation.py` with the invariant **asserted** —
+`--check-invariant` re-runs BASE-only and compares raw cells, and passes on
+all three games. The mechanism of the original defect was never found. That
+is the sixth probe bug of this branch and the second caught by a number that
+could not be true.
