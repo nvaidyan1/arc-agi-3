@@ -171,6 +171,45 @@ separate the g50t contexts that every explicit candidate we can enumerate
 has failed to separate?** One game, one well-posed question, offline, with
 the explicit alternatives already ruled out rather than assumed away.
 
-Caveat, stated: only single candidates were scored. A *conjunction* (say
-`n_level` AND `G_ngram3`) was not tested, and could resolve more than either
-alone. That is cheaper than an LMU and should be tried first.
+## The conjunction test: g50t's remainder was a missing PAIR, not a missing representation
+
+The cheaper thing, tried first as the gate required. Scoring **pairs** of the
+top-8 single candidates (28 pairs) on g50t's 400 mechanic contexts:
+
+| candidate | resolved | still | null | lift |
+|---|---|---|---|---|
+| `n_level` (best single) | 44 | 217 | 2.8 | +40.4 |
+| **`G_ngram3` AND `n_reset`** | **81** | **100** | 1.0 | **+80.0** |
+| `G_ngram3` AND `presses_since_click` | 81 | 100 | 1.3 | +79.7 |
+| `presses_since_click` AND `G_last2_changers` | 62 | 52 | 1.0 | +61.0 |
+
+**The best pair nearly doubles resolution (44 -> 81) and more than halves the
+unresolved remainder (217 -> 100), against a null of 1.0.** Both halves are
+explicit candidates the machinery already enumerates: a three-action n-gram
+AND actions-since-reset.
+
+So g50t's remainder was **not** a representational gap needing an
+order-sensitive memory. It was a missing *conjunction* of two variables we
+already had. The machinery held both pieces and never combined them.
+
+**This retires H014's last narrow mandate.** The condition under which an
+LMU stayed interesting was "every explicit candidate we can enumerate fails
+on g50t". That is now false — a pair of them succeeds. H014 is parked with
+no live question. Revisit only if the residual 100 contexts prove resistant
+to further conjunction and to triples.
+
+**The concrete upgrade this implies**, and the real value of the result:
+H006's admission machinery scores **single** candidates only. H005 already
+built conjunctive *preconditions* for hypotheses — the same idea, one layer
+up — but the splitter that promotes a variable into predictive state never
+learned it. Scoring conjunctions at admission is cheap, uses only what
+exists, and is worth 37 extra resolved contexts on the one game we thought
+needed new representation.
+
+**Caveat, stated honestly.** The pair fragments the context space:
+singletons rise from 139 to 219 as still falls from 217 to 100, so part of
+the movement is contexts becoming vacuously unique rather than genuinely
+explained. `resolved` (which requires at least one value-group with >= 2
+visits) is the honest measure, and at 81 against a null of 1.0 it is far
+above chance — but the conjunction is not free, and triples would fragment
+further. Diminishing returns should be expected.

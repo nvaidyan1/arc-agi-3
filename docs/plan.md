@@ -222,8 +222,20 @@ it: `G_ngram3` reaches only +7.0 over its null and leaves 200 of 400
 refuted. So H014's question is now exactly: *does an order-sensitive history
 representation separate the g50t contexts that every explicit candidate we
 can enumerate has failed to separate?* One game, offline, alternatives ruled
-out rather than assumed. Try the cheaper thing first: conjunctions of
-existing candidates were not tested.
+out rather than assumed. **CONJUNCTIONS TESTED — and they close it.** `G_ngram3 AND n_reset`
+resolves **81** of g50t's 400 mechanic contexts against a null of 1.0,
+versus 44 for the best single, and cuts the unresolved remainder from 217 to
+100. Both halves are explicit candidates the machinery already enumerates.
+g50t's remainder was a missing *pair*, not a missing representation.
+**H014's last mandate is retired**: the condition for it was "every explicit
+candidate fails on g50t", and that is now false.
+**The upgrade this implies:** H006's admission machinery scores SINGLE
+candidates only. H005 already built conjunctive preconditions one layer up;
+the splitter that promotes a variable into predictive state never learned
+it. Scoring conjunctions at admission is cheap, uses only what exists, and
+is worth 37 extra resolved contexts on the one game we thought needed new
+representation. Caveat: singletons rise 139 -> 219, so the pair fragments
+the space and triples would fragment further.
 
 **THE SAMPLE-COMPLEXITY RESULT — the more consequential half of H013.**
 Rescoring each winner using only the first N traces gives three different

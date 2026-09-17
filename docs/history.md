@@ -3949,3 +3949,43 @@ alternatives ruled out rather than assumed. Cheaper thing first, and not yet
 tried: conjunctions of existing candidates (`n_level` AND `G_ngram3`), since
 only single candidates were scored. Evidence:
 `scripts/h013_family_splitter.py --max-traces N --candidate NAME`.
+
+## 2026-09-17 — The conjunction test: g50t needed a pair, not a representation
+
+**Hypothesis.** H013 left one narrow mandate for an LMU: no explicit
+candidate, families A-G, resolved more than ~11% of g50t's 400 mechanic
+contexts. But only SINGLE candidates had been scored. The gate before
+appealing to any new representation is to rule out the cheaper thing —
+score pairs of what we already enumerate.
+
+**Observation.** 28 pairs from the top-8 singles:
+
+| candidate | resolved | still | null | lift |
+|---|---|---|---|---|
+| `n_level` (best single) | 44 | 217 | 2.8 | +40.4 |
+| **`G_ngram3` AND `n_reset`** | **81** | **100** | 1.0 | **+80.0** |
+| `presses_since_click` AND `G_last2_changers` | 62 | 52 | 1.0 | +61.0 |
+
+The best pair nearly doubles resolution and more than halves the unresolved
+remainder, against a null of 1.0. Both halves are explicit candidates the
+machinery already generates: a three-action n-gram and actions-since-reset.
+
+**Inference. g50t's remainder was a missing conjunction, not a missing
+representation.** The machinery held both pieces and never combined them.
+This retires H014's last live question: the condition under which an LMU
+stayed interesting was "every explicit candidate we can enumerate fails on
+g50t", and a pair of them does not fail.
+
+The upgrade it implies is concrete and cheap. H006's admission machinery
+scores single candidates only. H005 already built conjunctive *preconditions*
+for hypotheses — the same idea one layer up — but the splitter that promotes
+a variable into predictive state never learned it. Scoring conjunctions at
+admission uses only what exists and is worth 37 extra resolved contexts on
+the one game we believed needed new representation.
+
+Caveat kept in view: the pair fragments the context space, singletons rising
+139 -> 219 as still falls 217 -> 100, so some movement is contexts becoming
+vacuously unique rather than explained. `resolved` requires a value-group
+with >= 2 visits and is the honest measure; at 81 against a null of 1.0 it is
+far above chance. Triples would fragment further, and diminishing returns
+should be expected.
