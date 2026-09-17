@@ -373,3 +373,120 @@ history-derived variable, admit one per game on the evidence the machinery
 already computes, and measure. The three-state promotion ladder
 (rejected / provisional / promoted) is a refinement of a mechanism that does
 not yet exist — build the mechanism first.
+
+## THE METER CONFOUND — E1's headline retracted, and one result survives (2026-09-17)
+
+Before wiring anything, one design-gating check. The outcome E1 and E2
+predict is the **whole next-frame hash**, and the quantised meter line is
+part of every frame. A variable that predicts only the meter therefore
+scores as predicting the frame — even on contexts my filter called
+"mechanic", because that filter tested the *diff* and let through any
+context whose outcomes differed on the meter *and* elsewhere.
+
+The correct control is to blank the game's meter line before hashing the
+outcome (H006's documented lines: g50t row 63, sk48 row 53, sc25 cols 62-63,
+cd82 row 63).
+
+| game | candidate | unmasked lift | **meter-masked lift** | masked coverage |
+|---|---|---|---|---|
+| g50t | `n_reset` | +0.234 | **-0.019** | 0.66 |
+| g50t | `n_level` | +0.078 | **-0.041** | 0.40 |
+| sk48 | `last_changer` | +0.234 | **+0.281** | **0.98** |
+| sk48 | `G_ngram3` | +0.055 | **+0.210** | 0.89 |
+
+**RETRACTED: "a single explicit temporal variable carries real held-out
+predictive lift (`n_reset`, +0.234 on g50t)".** With the meter masked it is
+**-0.019** — worse than the no-state baseline. Its entire lift was
+predicting the meter, which H006 established is real, deterministic and
+**goal-irrelevant**. E2's g50t curve (best at 5 seeds, rising to +0.253) is
+measuring meter prediction throughout and carries the same retraction.
+g50t's aliased-mechanic count falls from 284 to 58 under masking: most of
+what the diff-based filter called mechanic was meter-contaminated.
+
+**SURVIVES, and gets stronger: sk48's `last_changer`, +0.281 at 98%
+coverage.** This is the first candidate in the entire branch to pass every
+filter in sequence:
+
+```text
+retrospective discovery   +68.2 over null   (H013)
+        -> holdout        +0.234            (E1/E2)
+        -> meter-masked   +0.281 at 0.98    (this check)
+```
+
+It is explicit, interpretable and history-derived: *which action last
+changed the frame*.
+
+**And it is cheap to key on.** `last_changer` has ~8 values (the actions
+plus None). `n_reset` has ~400 and is strictly increasing within an attempt,
+so H006's own note applies — keying a tally by it produces singletons, not
+tallies, and it would have fragmented `by_action_given` below
+`PREDICT_MIN_TRIES = 4` exactly as the conjunction fragmented in E1. **The
+variable that survives the evidence is also the one that fits the
+mechanism.** That is a coincidence worth not relying on, but it removes the
+obstacle to the next step.
+
+**Revised next step, now well-founded:** let the tally key carry
+`last_changer`, admitted per game on the evidence the machinery already
+computes. It must still pass the remaining links of the chain — downstream
+consumer, then gameplay — before it means anything for score.
+
+## DOWNSTREAM CONSUMER — `last_changer` FAILS, and H008's Z1 result is revealed as the meter
+
+The third link of the chain. `last_changer` had passed discovery (+68.2 over
+null), holdout (+0.234) and the meter-masked control (+0.281 at 98%
+coverage) — all of which score a **frame-hash** target. The agent's actual
+consumer is different: `predictor.rollout` forecasts **per-entity effects**
+at k = 1/3/10. `scripts/h013_consumer.py` runs `latent_rollout.py`'s method
+unchanged, with the variable swapped and H006's admit rule as the same bar
+Z1 had to clear, and reports every number twice — all entities, and
+excluding meter-like entities (thin bars).
+
+| game | | k=1 | k=3 | k=10 |
+|---|---|---|---|---|
+| sk48 | base / **LC** / Z1 | 0.872 / **+0.000** / +0.000 | 0.763 / **+0.000** / +0.000 | 0.650 / **+0.000** / +0.000 |
+| su15 | (no-meter) | 0.927 / **+0.000** / +0.000 | 0.873 / **+0.000** / +0.000 | 0.772 / **+0.000** / +0.000 |
+| g50t | (no-meter) | 0.779 / **+0.000** / +0.000 | 0.541 / **+0.000** / +0.000 | 0.220 / **+0.000** / +0.000 |
+| sc25 | (no-meter) | 0.865 / **+0.000** / +0.000 | 0.750 / **+0.000** / +0.000 | 0.656 / **+0.000** / +0.000 |
+
+**`last_changer` fails the downstream-consumer link: +0.000 on every game,
+every horizon, with and without the meter control.** It passed three filters
+and does not improve the thing the agent actually uses.
+
+Why, most likely: the effect table is *already keyed by the action being
+taken*, and `last_changer` is largely redundant given the action. It
+predicted frame hashes because knowing which action last changed things
+correlates with whole-frame configuration; it adds nothing to "what will
+ACTION2 do to entity 5". Stated as interpretation, not established.
+
+### And the control result is the bigger finding
+
+On g50t, **all** entities: Z1 gains +0.024 / +0.044 / **+0.055** at k=1/3/10.
+That reproduces H008's headline — *"Z1 gains 2-7 points of k=10 accuracy on
+5 of 10 aliased games"*. On the same game with meter-like entities excluded:
+**+0.000 / +0.000 / +0.000**.
+
+**H008's Z1 gain was the meter entity.** The variable was predicting the
+quantised resource bar, which H006 characterised as real, deterministic and
+**goal-irrelevant**, and the predictor scores every entity alike so it
+counted as accuracy. Under the meter control it is exactly zero.
+
+That makes three results retracted or qualified by the same confound in one
+day — `n_reset`'s frame-hash lift, H008's k-step gain, and (differently) the
+strip bbox of gate 2. The rule earned: **a predictive score is only about
+the mechanic once the goal-irrelevant part of the target is removed.**
+
+### Consequence
+
+**Do not wire `last_changer`.** It fails the link that decides whether
+wiring is worth anything, so the E3 finding ("there is no slot in the tally
+key") no longer has a candidate worth building a slot for. Nothing in
+families A-G has now passed the full chain on any game.
+
+Caveat, stated: the negative is conditional on H006's admit rule (a function
+on >= 3 points with >= 2 visits each). On these traces that rule admits
+`last_changer` only for entities whose effect is constant, where the
+override necessarily matches the baseline. A laxer rule might admit it
+where it could matter — but relaxing the bar that Z1 cleared, in order to
+rescue a candidate that failed at it, is exactly the move this project's
+discipline exists to prevent. It would need its own hypothesis and its own
+justification.

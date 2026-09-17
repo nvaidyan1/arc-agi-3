@@ -95,6 +95,92 @@ offered as a third governing principle. It is precisely the claim the ladder
 below tests, so it stays a *candidate* until gate 3 branches. Promoting it
 now would repeat the error this exchange just corrected.
 
+**STATE, 2026-09-17 (late): stop improving the representation. Audit the
+action-effect model's errors instead.**
+
+The recurring failure is in the research loop, not the architecture: **we
+have repeatedly found variables that predict an observation, and never one
+that predicts the controllable mechanic.** Three results were retracted or
+qualified by that confound in a single day.
+
+> ### The target firewall — permanent, adopted 2026-09-17
+>
+> Every representation experiment gets two evaluations:
+>
+> | target | question | use |
+> |---|---|---|
+> | **A — observational** | does it predict the frame? | diagnostic only |
+> | **B — instrumental** | does it predict the consequence of an action on the controllable mechanic? | **the promotion gate** |
+>
+> **Only B may justify changing the agent.** A candidate can be excellent at
+> A and irrelevant to B; `n_reset` and H008's Z1 both were. And **error
+> attribution comes before candidate generation** — start from the
+> predictor's mistakes, not from a library of plausible variables.
+
+**Where every candidate now stands.**
+
+| candidate / mechanism | discovery | holdout | goal-irrelevant target removed | actual consumer | status |
+|---|---|---|---|---|---|
+| `n_reset` (g50t) | yes | yes | **fails** | — | **retracted** |
+| `G_ngram3 AND n_reset` | yes | **no** | — | — | rejected |
+| `last_changer` (sk48) | yes | yes | yes | **+0.000** | **rejected** |
+| H008 `Z1` | yes | yes | **meter-only** | +0.000 | **headline retracted** |
+| relational candidates | weak | — | — | — | not supported |
+| LMU | — | — | — | — | retired |
+| StateManager | — | — | — | — | not earned |
+
+> **We currently have no demonstrated latent-state variable that improves
+> prediction of the mechanic the agent needs to control.** That is more
+> valuable than five mediocre candidates.
+
+**H017 — the mechanic-target audit (done, no candidate proposed by design).**
+k=1 on non-meter entities, 30 traces per game:
+
+1. **The dominant error is the aliased case**: 83-94% of misses (51% on
+   su15) are on (entity, action) pairs whose effect history is
+   *inconsistent*. `confidence` is a majority rate over pairs already tried
+   >= 4 times, so this means the effect VARIES, not that data is thin. It is
+   H006's premise measured on the instrumental target for the first time.
+2. **The agent is worst at the thing it controls**: CONTROL-entity miss rate
+   0.262 vs 0.073 on sk48 (**3.6x**) and 0.312 vs 0.061 on sc25 (**5.1x**).
+3. **The confidently-wrong residue is blocked movement** — `moved ->
+   unchanged` dominates on all three readable games. That needs current-frame
+   **occupancy**, which the agent already computes (`obstacles.is_blocked`,
+   used by `navigation.plan`/`plan_graph`) and **never gives the predictor**.
+   Current-frame geometry, not hidden history: the opposite of what the last
+   two days searched for.
+
+**Two kinds of uncertainty, previously conflated** — and this explains the
+run of "mechanism proven, consumer unmoved" results:
+
+```text
+predictive uncertainty   "I don't know what the next frame will look like"
+                         -> the meter solves this. H011/H015/H013/n_reset/
+                            last_changer/Z1 all improved OBSERVABILITY.
+control uncertainty      "I don't know what this action will do to the thing
+                         I care about"  -> this is the one that matters, and
+                         nothing has improved it yet.
+```
+
+**Next experiment**, and the loop it belongs to — note attribution precedes
+candidate generation:
+
+```text
+rollout error -> error attribution -> identify missing information
+   -> form candidate -> holdout on the MECHANIC target -> rollout improvement
+   -> gameplay test
+```
+
+The first candidate that loop produces is finding 3's: condition the effect
+table on occupancy for the CONTROL entity. Not yet run, not yet wired.
+
+**Explicitly preserved** (weakening any of these would destroy the value of
+the day's results): do not relax the admit bar to rescue `last_changer`; do
+not restore the frame target to rescue `n_reset`; do not reopen the LMU
+because the explicit candidates failed; do not weaken Z1.
+
+---
+
 **REVISED AGAIN 2026-09-17 (evening): the fork is resolved, and the research
 question has changed.** Both branches returned, and between them they removed
 four architectural explanations rather than adding any. What is left is a
@@ -242,6 +328,44 @@ metric it used**.
 retrospective winner there, was never scored. At the same split it reaches
 **+0.297**. "Best variable differs per game" survives; the sk48 figure was
 wrong.
+
+**THE METER CONFOUND — E1's headline RETRACTED, one result survives
+(2026-09-17).** Before wiring anything, the design-gating check: the outcome
+E1/E2 predict is the whole next-frame hash, and the quantised meter line is
+part of every frame, so a variable predicting only the meter scores as
+predicting the frame. The context filter tested the *diff* and let through
+any context differing on the meter *and* elsewhere. Correct control: blank
+the game's meter line before hashing the outcome.
+
+| game | candidate | unmasked | **masked** | masked coverage |
+|---|---|---|---|---|
+| g50t | `n_reset` | +0.234 | **-0.019** | 0.66 |
+| g50t | `n_level` | +0.078 | **-0.041** | 0.40 |
+| sk48 | `last_changer` | +0.234 | **+0.281** | **0.98** |
+| sk48 | `G_ngram3` | +0.055 | **+0.210** | 0.89 |
+
+**RETRACTED: "`n_reset` carries +0.234 real held-out lift on g50t".** Masked
+it is **-0.019**, worse than no state at all. The whole lift was the meter —
+which H006 established is deterministic and **goal-irrelevant**. E2's g50t
+curve carries the same retraction. g50t's aliased-mechanic count falls 284
+-> 58 under masking.
+
+**SURVIVES and strengthens: sk48's `last_changer`, +0.281 at 98% coverage** —
+the first candidate in this branch to pass every filter in sequence:
+retrospective (+68.2 over null) -> holdout (+0.234) -> meter-masked (+0.281).
+Explicit, interpretable, history-derived: *which action last changed the
+frame*.
+
+**It is also cheap to key on** — ~8 values, against `n_reset`'s ~400 which
+is strictly increasing within an attempt and would fragment
+`by_action_given` below `PREDICT_MIN_TRIES = 4`, exactly as the conjunction
+fragmented in E1. H006 flagged that property and it is why raw `n_reset`
+could never have been a tally key regardless of its lift.
+
+**Next step, now well-founded and small:** let the tally key carry
+`last_changer`, admitted per game on evidence the machinery already
+computes. It must still pass downstream-consumer and gameplay before it
+means anything for score.
 
 **E3 — promotion audit: DONE, and the answer is "there is no pathway".**
 Traced through `agent/`:
@@ -1037,7 +1161,13 @@ contingency awareness) for the full framing and `glossary.md` for terms.
       knowing time is short only helps if there is something to rush
       toward.
 - [ ] **THE OPEN PROBLEM: level 2.** Across every sweep on record, exactly
-      **one** game-run has reached level 2 (tu93, once). Budget is not the
+      **one** game-run has reached level 2 (tu93, once). **Reconfirmed
+      2026-09-17 at n=30 seed-paired, both arms of the H015 sweep: L2
+      clears 0 of 750 game-sweeps in each arm.** The level-2 funnel adopted
+      that day therefore has no resolution yet — it is a floor, not a
+      measurement, and every parity gate is in practice being decided on L1
+      plus the hypothesis-status mix. Worth remembering before reading
+      another "no regression". Budget is not the
       cause: a ladder at 400/800/1600 raises games clearing level 1
       cleanly (1.63 → 2.33 → 3.83 per sweep) and leaves level 2 at zero.
       Two distinct failure modes, measured per-attempt (`history.md`,

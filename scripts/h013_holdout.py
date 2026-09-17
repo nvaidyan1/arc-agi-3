@@ -38,6 +38,28 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import latent_splitter as ls            # noqa: E402
+
+# H006's documented meter lines, per game. The outcome we predict is the
+# WHOLE next-frame hash, and the meter is part of every frame -- so a
+# variable that predicts only the meter still scores as predicting the
+# frame. Masking these lines asks whether the lift is about the MECHANIC.
+METER_LINES = {"g50t": {"rows": [63]}, "cd82": {"rows": [63]},
+               "sk48": {"rows": [53]}, "sc25": {"cols": [62, 63]},
+               "m0r0": {"rows": [0, 63]}, "su15": {}}
+
+
+def mask_meter(frame: list, game: str) -> list:
+    spec = METER_LINES.get(game) or {}
+    rows, cols = set(spec.get("rows", [])), set(spec.get("cols", []))
+    out = []
+    for y, row in enumerate(frame):
+        if y in rows:
+            out.append("#" * len(row))
+        elif cols:
+            out.append("".join("#" if x in cols else c for x, c in enumerate(row)))
+        else:
+            out.append(row)
+    return out
 from h013_family_splitter import extra_candidates, is_meter_context  # noqa: E402
 
 
@@ -46,12 +68,17 @@ def seed_of(path: str) -> int:
     return int("".join(c for c in d if c.isdigit()) or 0)
 
 
-def build(files: list[str]):
+def build(files: list[str], game: str = "", mask: bool = False):
     """Per-visit context, outcome and candidate values across a set of traces."""
     rows = []
     for fp in files:
         steps = ls._load(Path(fp))
-        H = [ls._hash(s["frame"]) if s.get("frame") else None for s in steps]
+        def _h(s):
+            if not s.get("frame"):
+                return None
+            f = mask_meter(s["frame"], game) if mask else s["frame"]
+            return ls._hash(f)
+        H = [_h(s) for s in steps]
         A = [ls._action_key(s) for s in steps]
         feats = ls.candidates_for(steps)
         feats.update(extra_candidates(steps))
@@ -112,6 +139,8 @@ def main() -> None:
                          "growing --split also shrinks the held-out set and the "
                          "curve conflates two changes.")
     ap.add_argument("--only", default=None, help="comma-separated candidates")
+    ap.add_argument("--mask-meter", action="store_true",
+                    help="blank the game's meter line before hashing the outcome")
     ap.add_argument("--mechanic-only", action="store_true", default=True)
     a = ap.parse_args()
 
@@ -121,7 +150,10 @@ def main() -> None:
     held_f = [f for f in files if seed_of(f) >= hold_from]
     print(f"{a.game}: discovery seeds {len(disc_f)}, held-out seeds {len(held_f)}")
 
-    disc, held = build(disc_f), build(held_f)
+    disc = build(disc_f, a.game, a.mask_meter)
+    held = build(held_f, a.game, a.mask_meter)
+    if a.mask_meter:
+        print("  [meter lines MASKED: asking whether the lift is about the mechanic]")
 
     # Contexts that are ALIASED in the DISCOVERY data -- where state matters.
     # Anything deterministic is predicted perfectly by the baseline and would

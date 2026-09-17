@@ -1,6 +1,6 @@
 # H008: State in the tallies raises k-step predictive sufficiency, and only where state exists
 
-Status: TESTED — the predictor scores its own k=1/3/10 rollouts live now. Z1 (H006) gains 2-7 points of k=10 accuracy on 5 of 10 aliased games, 0 on the three 0%-aliased controls, exactly as predicted; games with a real move map separate cleanly from those without at k=10, and cd82 sits mid-table, foreshadowing H009.
+Status: TESTED, **HEADLINE QUALIFIED 2026-09-17 — the Z1 gain was the meter entity.** `scripts/h013_consumer.py` reproduces it exactly on g50t (+0.024/+0.044/+0.055 at k=1/3/10, matching "2-7 points") and then, excluding meter-like entities, measures **+0.000 at every horizon**. Z1 was predicting the quantised resource bar — real and deterministic, and goal-irrelevant per H006. The predictor scores every entity alike, so it counted as accuracy. P1's positive half does not survive the meter control. Original: TESTED — the predictor scores its own k=1/3/10 rollouts live now. Z1 (H006) gains 2-7 points of k=10 accuracy on 5 of 10 aliased games, 0 on the three 0%-aliased controls, exactly as predicted; games with a real move map separate cleanly from those without at k=10, and cd82 sits mid-table, foreshadowing H009.
 Research question: RQ2 (predictive world modelling)
 Date opened: 2026-09-15
 Origin: `H003` (one-step forecast in the vocabulary; its largest error is
@@ -127,3 +127,13 @@ the ladder's per-arm table.
   g50t: +2 to +7 points at k=10 from one history-derived variable,
   free, no new perception, no score claim. Matches H006's prediction
   exactly ("one certain, small H008 gain... should not expect more").
+
+- 2026-09-17 **Headline qualified by the meter control.** H013's
+  downstream-consumer test re-ran this hypothesis's own comparison with one
+  addition: report accuracy twice, over all entities and excluding
+  meter-like entities (thin bars). On g50t the Z1 arm gains +0.024 / +0.044
+  / +0.055 at k=1/3/10 over all entities — reproducing "2-7 points at k=10"
+  — and **+0.000 / +0.000 / +0.000** with the meter excluded. The gain was
+  entirely the resource bar. Nothing here was measured wrongly; the target
+  simply included a goal-irrelevant component that Z1 predicts perfectly.
+  P2 (k=10 separates games with a learned move map) is untouched by this.
