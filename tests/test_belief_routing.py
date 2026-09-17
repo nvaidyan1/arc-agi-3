@@ -178,7 +178,10 @@ def test_level_proven_dies_with_the_level_but_action_credit_does_not():
     import predictor
     agent.predictor = predictor.Predictor()
     agent.moves = MoveModel()
+    from control import PositionModel
+    agent.position_model = PositionModel()
     agent.route = navigation.Route()
+    agent.precondition_route = navigation.Route()
     agent.clicks = ClickTargeting()
     agent._interaction_sites = {}
     agent._background = 0

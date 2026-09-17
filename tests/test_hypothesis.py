@@ -315,3 +315,207 @@ def test_an_unmet_state_condition_is_satisfied_by_acting_not_walking():
     assert a._route_by_acting(7, "k0", legal) == (None, "")
     a._setters[7]["k0"] = ("ACTION3", None)                             # not legal now
     assert a._route_by_acting(7, "k0", legal) == (None, "")
+
+
+# ── the position-graph planner preference (H010 Stage 2) ─────────────────
+
+def test_plan_route_prefers_the_position_graph_when_it_has_a_path():
+    """A position-dependent orbit `plan` (one offset per action) cannot
+    express: RIGHT means something different at each of three positions.
+    `_plan_route` must find the graph's path, not the offset model's
+    (wrong) one."""
+    import my_agent
+    from control import MoveModel, PositionModel
+    from constraints import ObstacleMap
+    from arcengine import GameAction
+    RIGHT = GameAction.ACTION4
+    a = object.__new__(my_agent.MyAgent)
+    a.moves = MoveModel()
+    a.moves.observe_translation(RIGHT, (5, 0), 4, (0, 0), "")  # -> learned_moves[RIGHT] = (5,0), wrong for this orbit
+    a.position_model = PositionModel()
+    for _ in range(2):
+        a.position_model.observe((0, 0), RIGHT, (5, 0))
+        a.position_model.observe((5, 0), RIGHT, (5, 5))
+    a.moves.displacement = (0, 0)  # observe_translation's own side effect moved this; start fresh
+    a.obstacles = ObstacleMap()
+    path = a._plan_route((5, 5), {RIGHT})
+    assert path == [RIGHT, RIGHT]
+
+
+def test_plan_route_falls_back_to_the_offset_model_without_graph_coverage():
+    import my_agent
+    from control import MoveModel, PositionModel
+    from constraints import ObstacleMap
+    from arcengine import GameAction
+    RIGHT = GameAction.ACTION4
+    a = object.__new__(my_agent.MyAgent)
+    a.moves = MoveModel()
+    for _ in range(3):
+        a.moves.observe_translation(RIGHT, (5, 0), 4, (0, 0), "")
+    a.position_model = PositionModel()  # no edges at all
+    a.moves.displacement = (0, 0)
+    a.obstacles = ObstacleMap()
+    path = a._plan_route((10, 0), {RIGHT})
+    assert path == [RIGHT, RIGHT]
+
+
+def test_plan_route_falls_back_when_the_graph_has_no_path_from_here():
+    """The graph has edges, but none from the CURRENT position -- must
+    fall back rather than report no route (plan_graph correctly refuses
+    to extrapolate; that must not be mistaken for "unreachable")."""
+    import my_agent
+    from control import MoveModel, PositionModel
+    from constraints import ObstacleMap
+    from arcengine import GameAction
+    RIGHT = GameAction.ACTION4
+    a = object.__new__(my_agent.MyAgent)
+    a.moves = MoveModel()
+    for _ in range(3):
+        a.moves.observe_translation(RIGHT, (5, 0), 4, (0, 0), "")
+    a.position_model = PositionModel()
+    for _ in range(2):
+        a.position_model.observe((99, 99), RIGHT, (104, 99))  # nowhere near displacement (0,0)
+    a.moves.displacement = (0, 0)
+    a.obstacles = ObstacleMap()
+    path = a._plan_route((5, 0), {RIGHT})
+    assert path == [RIGHT]
+
+
+def test_plan_route_returns_none_with_neither_model():
+    import my_agent
+    from control import MoveModel, PositionModel
+    from constraints import ObstacleMap
+    a = object.__new__(my_agent.MyAgent)
+    a.moves = MoveModel()
+    a.position_model = PositionModel()
+    a.obstacles = ObstacleMap()
+    assert a._plan_route((5, 0), {"ACTION4"}) is None
+
+
+# ── route persistence across decisions (H010 Stage 2, route survival) ────
+
+def _agent_for_routing():
+    import my_agent, navigation
+    from control import MoveModel, PositionModel
+    from constraints import ObstacleMap
+    a = object.__new__(my_agent.MyAgent)
+    a.moves = MoveModel()
+    a.position_model = PositionModel()
+    a.obstacles = ObstacleMap()
+    a.precondition_route = navigation.Route()
+    return a
+
+
+def test_advance_route_persists_across_a_call_that_does_not_move_anything():
+    """The exact live failure this stage fixes: a route is found, then a
+    later decision that never touches position (a click, in the real
+    agent) must not have thrown the route away."""
+    import navigation
+    from arcengine import GameAction
+    RIGHT = GameAction.ACTION4
+    a = _agent_for_routing()
+    for _ in range(3):
+        a.moves.observe_translation(RIGHT, (5, 0), 4, (0, 0), "")
+    a.moves.displacement = (0, 0)
+    action1, left1 = a._advance_route((10, 0), {RIGHT})
+    assert action1 is RIGHT and left1 == 1
+    # Simulate the step actually happening (position moves as the route expected)...
+    a.moves.displacement = (5, 0)
+    # ...then something else entirely happens for a step that never
+    # touches position (an interrupting click, say) -- _advance_route is
+    # simply not called that decision, exactly as the real agent behaves.
+    # On the NEXT hypothesis decision, the route must still be there:
+    action2, left2 = a._advance_route((10, 0), {RIGHT})
+    assert action2 is RIGHT and left2 == 0
+
+
+def test_advance_route_replans_when_position_has_drifted():
+    """An interruption that DID move the agent (a different action, or an
+    obstacle) must be caught, not silently followed as if nothing changed
+    -- verified by spying on _plan_route rather than inferring from step
+    counts, which can coincidentally match by construction."""
+    from arcengine import GameAction
+    RIGHT = GameAction.ACTION4
+    a = _agent_for_routing()
+    for _ in range(3):
+        a.moves.observe_translation(RIGHT, (5, 0), 4, (0, 0), "")
+    a.moves.displacement = (0, 0)
+    calls = []
+    real_plan_route = a._plan_route
+    a._plan_route = lambda *args, **kw: (calls.append(1), real_plan_route(*args, **kw))[1]
+    a._advance_route((10, 0), {RIGHT})
+    assert len(calls) == 1  # the only route computed so far
+    a.moves.displacement = (5, 0)       # exactly where that first step lands
+    a._advance_route((10, 0), {RIGHT})  # no drift, same target: must NOT replan
+    assert len(calls) == 1
+    a.moves.displacement = (3, 3)       # somewhere the route did not expect
+    a._advance_route((10, 0), {RIGHT})
+    assert len(calls) == 2  # drift detected -> a fresh plan was computed
+
+
+def test_advance_route_replans_when_the_target_changes():
+    """H007's routing can switch from satisfying one condition to another
+    between decisions; the stored route must not be mistaken for the new
+    target's route just because it still has steps left."""
+    from arcengine import GameAction
+    RIGHT = GameAction.ACTION4
+    a = _agent_for_routing()
+    for _ in range(3):
+        a.moves.observe_translation(RIGHT, (5, 0), 4, (0, 0), "")
+    a.moves.displacement = (0, 0)
+    a._advance_route((15, 0), {RIGHT})   # a 3-step route toward (15,0)
+    assert len(a.precondition_route) == 2
+    a.moves.displacement = (5, 0)        # exactly where that route expects
+    action, left = a._advance_route((10, 0), {RIGHT})  # but a DIFFERENT target now
+    assert action is RIGHT
+    assert a.precondition_route.target == (10, 0)
+
+
+def test_position_graph_edge_is_preferred_over_a_stale_offset_mid_route():
+    """`Route.next_action` (agent/navigation.py, H010) must use a graph
+    edge for the exact (position, action) pair over the route's own
+    offset-based guess, since the graph may have learned more since the
+    route was planned."""
+    import navigation
+    from arcengine import GameAction
+    RIGHT = GameAction.ACTION4
+    route = navigation.Route()
+    route.set([RIGHT], (99, 99))
+    action = route.next_action((5, 0), {RIGHT: (5, 0)}, edges={((5, 0), RIGHT): (5, 5)})
+    assert action is RIGHT
+    assert route.expected_position == (5, 5)  # the graph's real edge, not (10, 0)
+
+
+def test_advance_route_replans_when_the_stored_action_becomes_illegal():
+    """The exact live crash this closes (cd82, 2026-09-17): a stored
+    route's next action fell out of `candidates` (or out of both models'
+    coverage for the current position) between decisions. Must replan,
+    never call Route.next_action with an action neither model knows."""
+    from arcengine import GameAction
+    RIGHT, UP = GameAction.ACTION4, GameAction.ACTION1
+    a = _agent_for_routing()
+    for _ in range(3):
+        a.moves.observe_translation(RIGHT, (5, 0), 4, (0, 0), "")
+    a.moves.displacement = (0, 0)
+    a._advance_route((10, 0), {RIGHT})           # plans and stores a RIGHT-only route
+    assert a.precondition_route.actions and a.precondition_route.actions[0] is RIGHT
+    # RIGHT is no longer legal this decision (e.g. available_actions changed).
+    action, left = a._advance_route((10, 0), {UP})
+    # UP has no offset and no graph edge here either -- must not crash,
+    # and since nothing routes with UP alone, must report no route.
+    assert action is None and left == 0
+
+
+def test_route_next_action_never_crashes_on_an_unknown_action():
+    """Route.next_action (agent/navigation.py) must degrade gracefully,
+    not KeyError, when neither the graph nor the offset model has this
+    (position, action) -- the caller's own pre-check is the primary
+    defence, this is the second line of it."""
+    import navigation
+    from arcengine import GameAction
+    UP = GameAction.ACTION1
+    route = navigation.Route()
+    route.set([UP], (0, 0))
+    action = route.next_action((0, 0), {}, edges={})
+    assert action is UP
+    assert route.expected_position is None

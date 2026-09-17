@@ -212,12 +212,27 @@ class Route:
         )
 
     def next_action(
-        self, position: tuple[int, int], moves: dict[GameAction, tuple[int, int]]
+        self,
+        position: tuple[int, int],
+        moves: dict[GameAction, tuple[int, int]],
+        edges: dict[tuple[tuple[int, int], GameAction], tuple[int, int]] | None = None,
     ) -> GameAction:
-        """Pop the next action and record where it should land us."""
+        """Pop the next action and record where it should land us.
+
+        `edges` (H010) is checked first for the CURRENT position — the
+        position-graph model may have learned a real transition for
+        exactly this (position, action) since the route was planned, and
+        that is a fact, not a guess; `moves`' fixed offset is the
+        fallback a caller without a graph, or without coverage here,
+        still gets. Optional and defaulting to none so every existing
+        caller (offset-only) is unaffected.
+        """
         action = self.actions.pop(0)
-        offset = moves[action]
-        self.expected_position = (position[0] + offset[0], position[1] + offset[1])
+        expected = (edges or {}).get((position, action))
+        if expected is None:
+            offset = moves.get(action)
+            expected = (position[0] + offset[0], position[1] + offset[1]) if offset is not None else None
+        self.expected_position = expected
         return action
 
     def clear(self) -> None:

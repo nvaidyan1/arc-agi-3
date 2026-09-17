@@ -1,6 +1,6 @@
 # H010: A position-graph transition model closes the gap H009 found
 
-Status: STAGE 1 TESTED — offline, through the real production code; Stage 2 (live wiring) not built
+Status: STAGE 2 SHIPPED, MECHANISM PROVEN — LIVE OUTCOME UNRESOLVED. Persistence and crash-safety proven (unit tests + live trace + a corrected n=30 sweep with zero errors); named parity games hold (one, sp80, at the exact gate boundary, not past it); cd82 moved +1/30 level-1 clears. But the two-condition cd82 oracle this stage was meant to finally close still did not close end-to-end — see "Stage 2" below. Not marked TESTED/CLOSED because its own stated success criterion (H007's oracle joint-satisfaction rate) was not met.
 Research question: RQ2 (predictive world modelling) / RQ4 (planning)
 Date opened: 2026-09-15
 Origin: `H009`'s reading B — cd82's controlled thing is a deterministic
@@ -165,3 +165,109 @@ replayed decisions, against `plan`'s own numbers on the same set.
   routes was chosen. Lesson recorded for the standing rules: never gate
   a commit on `make test | tail -N`; the pipeline's exit code is the
   last command's, not `make`'s.
+
+## Stage 2: wired live, two real bugs caught, and one claim that stays open
+
+**What this stage set out to answer** (per both reviewers' converged
+sequencing, `docs/plan.md` 2026-09-16): does wiring the proven Stage-1
+model into the live router actually let cd82's two-condition oracle
+(H007) close, and does it hold up under a real matched-seed sweep on the
+games that already work.
+
+**Built.** `PositionModel.observe()` feeds the graph from `_learn_from`
+on every confirmed translation/shift, exactly as `MoveModel.
+observe_translation` already does (same evidence, no new perception).
+`_route_to`/`_route_for` prefer `plan_graph` over the offset model when
+the graph has edges from the current position, falling back gracefully
+otherwise (`_plan_route`). `PositionModel` persists across RESET and
+clears on a new level, matching `MoveModel`'s own game-vs-attempt
+distinction.
+
+**Bug 1, found live: no persistence.** The first oracle retest showed
+the router honouring a first step correctly (a real change — the old
+offset model never did this, 0 of 1,244 in H009's own measurement) but
+never completing a multi-step walk, because `_route_to` recomputed a
+fresh path every decision with no memory of one already in progress. A
+single interrupting action that never even moved the agent (an epsilon
+click) was enough to erase all progress. **Fixed**: `Route.next_action`
+generalised to accept the position-graph edges alongside the offset
+model (preferring whichever has real evidence for the exact current
+position); a new `self.precondition_route` (a persistent `Route`,
+separate from the one `_maintain_route` already owns) is continued
+across decisions unless the target changed or the position drifted from
+what it expected. Verified via unit tests and a live trace where the
+agent visibly chained multiple route steps and survived an interruption
+that would have derailed the pre-fix code.
+
+**Bug 2, found live, more serious: a crash.** Retesting the oracle at
+this point still didn't close it (see below), so the work moved to the
+real n=30 statistical test — where the first treatment run crashed on 5
+of 30 seeds with a `KeyError`. Root cause: a stored route's next action
+fell out of legality (or out of both models' coverage for the current
+position) between decisions, and `Route.next_action` had no fallback for
+that case. `_maintain_route` — the agent's other, pre-existing routing
+system — already carried the exact defensive check this needed
+(`actions[0] not in candidates or actions[0] not in moves or has_
+drifted`); it was never replicated for the new persistent route. **The
+whole first treatment run, including the 25 seeds that hadn't crashed,
+was discarded as invalid** — it ran under code proven capable of
+crashing, so none of its output could be trusted, successful-looking or
+not. Fixed by mirroring that same three-part check before ever calling
+`next_action`, plus hardening `next_action` itself to degrade instead of
+raising if a caller ever fails to check first. Two regression tests
+reproduce the exact crash; all five previously-crashed seeds verified
+clean afterward; the full n=30 treatment sweep was rerun from scratch
+against the fixed code.
+
+**The corrected n=30 result** (seeds 501-530, 400 steps, `ARC_PROPOSER=1`
+— the only condition under which any of this code is ever reached; it
+is off by default in the actual submission, so this result has zero
+bearing on the current leaderboard score either way):
+
+| | baseline | treatment |
+|---|---|---|
+| aggregate_score mean (6 games) | 0.2096 | 0.2029 |
+| aggregate_score median (6 games) | 0.1864 | 0.1727 |
+| sign test (7W/10L/13T) | — | p = 0.63, not significant |
+| ar25 / m0r0 / ls20 / dc22 L1+ | 10 / 10 / 1 / 0 | 10 / 10 / 1 / 0 (unchanged) |
+| sp80 L1+ | 18/30 | 17/30 (−1, at the gate's exact edge) |
+| **cd82 L1+ (the target game)** | 6/30 | 7/30 (+1) |
+
+Gate read: the four named parity games besides sp80 are untouched;
+sp80's drop of exactly 1 does not exceed the pre-agreed ">1" bar, though
+it sits precisely on it rather than comfortably inside it. cd82 moved in
+the predicted direction, modestly. The 6-game aggregate is flat to
+slightly negative and not significant — expected, since only cd82 among
+these six games is a plausible beneficiary of a position-dependent
+transition model; the other five already have simple, uniform move maps
+the old offset model already served well, so any real cd82-specific
+effect is diluted by five games with nothing to gain.
+
+**What Stage 2 proves, and what it does not — kept explicitly separate,
+per council review (2026-09-17), which found the first draft of this
+result was at risk of conflating them:**
+
+- PROVEN: the position-graph model is honoured at the first step where
+  the offset model never was; a persistent route survives a
+  non-moving interruption where the old code always lost it; the
+  wiring does not crash and does not measurably regress the four
+  parity games with headroom, one game at the boundary; cd82 moved in
+  the right direction.
+- NOT PROVEN: the specific two-condition cd82 oracle that originally
+  motivated this whole thread (H007 + H009 + H010 together) still did
+  not close end-to-end after both bugs were fixed. Seeds 1 and 3 of
+  the retest still expired unmet; the joint-satisfaction rate did not
+  rise on the walk-blocked seeds H007 specifically named as this
+  stage's success criterion. The reason is diagnosed as different from
+  either bug fixed here — graph coverage incompleteness at the exact
+  point in the episode the oracle needs it — but that diagnosis was
+  not chased further this stage. **This is the one open thread from
+  Stage 2**: whether it is a coverage problem H012 will incidentally
+  fix, a genuine gap needing its own follow-up, or something else has
+  not been determined.
+
+**Decision: ship the infrastructure, do not close the hypothesis.** The
+mechanism is real, tested, safe to merge (inert by default), and an
+improvement over what existed. The oracle's continued failure means
+H010's own originally-stated success criterion is not yet met, so this
+stays open rather than being marked TESTED/CLOSED outright.

@@ -3356,3 +3356,68 @@ response is not explained and flagged for later, not blocking the ship
 decision. Movement-side novelty proceeds as its own hypothesis, H012,
 now unblocked. Full detail in `research/hypotheses/
 H011_information_directed_targeting.md`.
+
+## 2026-09-16/17 — H010 Stage 2: wired live, two real bugs caught, one claim stays open
+
+**Hypothesis.** Per both reviewers' converged sequencing and the
+follow-up council review: wire the proven Stage-1 position-graph model
+into the live router (`_route_to`/`_route_for`), gated on the same
+n=30 regression design used for H011.
+
+**Built.** `PositionModel.observe()` in `_learn_from`; `_route_to`/
+`_route_for` prefer `plan_graph` over the offset model when the graph
+has real edges from the current position, falling back otherwise. 290
+tests initially.
+
+**Bug 1 (no persistence), found via a live oracle retest.** The router
+honoured a first step correctly -- a real change, the old model never
+did this (0/1,244 in H009's own measurement) -- but never completed a
+multi-step walk: `_route_to` recomputed a fresh path every decision
+with no memory, so a single non-moving interruption (an epsilon click)
+erased all progress. Fixed: `Route.next_action` generalised to prefer a
+real graph edge for the exact current position; a new persistent
+`self.precondition_route`, separate from `_maintain_route`'s own,
+continues across decisions unless the target changes or the position
+drifts from what it expected. Verified via unit tests and a live trace
+showing the agent chain multiple route steps and survive an
+interruption that derailed the pre-fix code. 294 tests.
+
+**Bug 2 (a live crash), found only by insisting on the full statistical
+sweep rather than trusting the smaller live check.** The first n=30
+treatment run crashed on 5 of 30 seeds: a stored route's next action
+fell out of legality/coverage between decisions and `Route.next_action`
+had no fallback -- a defensive check that `_maintain_route`, the
+agent's OTHER routing system, already had and this one never copied.
+The entire first treatment run, crashed seeds and clean-looking ones
+alike, was discarded as invalid rather than salvaged, since it ran
+under code proven capable of crashing. Fixed by mirroring
+`_maintain_route`'s exact three-part check and hardening `next_action`
+itself to degrade rather than raise. Two regression tests reproduce the
+crash; all five previously-crashed seeds verified clean after the fix.
+296 tests.
+
+**The corrected n=30 sweep** (seeds 501-530, 6 games, `ARC_PROPOSER=1`
+-- the only condition this code is ever reached under; off by default
+in the real submission): parity games ar25/m0r0/ls20/dc22 unchanged;
+sp80 dropped exactly 1 clear (18->17), at the literal edge of the
+">1" gate, not past it; cd82 (the target) moved +1 (6->7). Aggregate
+across the 6 games: median 0.186->0.173, mean 0.210->0.203, sign test
+p=0.63 -- flat to slightly negative, not significant, diluted by five
+games that have nothing to gain from a position-dependent model.
+
+**Council review** (2026-09-17, full 5-advisor + peer-review cycle)
+caught what my own read of this result had started to blur: the oracle
+test that originally motivated this whole thread (H007+H009+H010
+together) was retested after both bugs were fixed and STILL did not
+close end-to-end -- seeds 1 and 3 still expired unmet. Four of five
+peer reviewers flagged that "ship the fix" and "the original defect is
+confirmed resolved" were being treated as the same claim when the
+evidence only supports the first.
+
+**Decision.** Ship the infrastructure -- the mechanism is real, tested,
+and inert by default, so merging it carries zero risk to the actual
+submission. Do not close H010 as tested: its own stated success
+criterion (the oracle's joint-satisfaction rate rising on the
+walk-blocked seeds) was not met, and the reason is a separate,
+undiagnosed coverage issue, not either bug fixed here. Full detail in
+`research/hypotheses/H010_position_graph_model.md`.

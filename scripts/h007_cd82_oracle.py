@@ -73,7 +73,12 @@ STRIP = 2                # the swatch strip: its marker is the selection state
 SWATCH_A = (37, 4)       # centre of swatch #3 (fill colour 0)
 SWATCH_B = (43, 4)       # centre of swatch #4 (fill colour 15, selected at start)
 ACTION = "ACTION5"
-INJECT_AFTER_CALLS = 20
+import os as _os
+# H010 Stage 2 retest (2026-09-16): overridable via env, since H009's own
+# live-viability curve found the position graph barely covered this early
+# (1 of 10 seeds usable by decision 25) -- a later injection is a fairer
+# test of whether the wired router can use it once it has warmed up.
+INJECT_AFTER_CALLS = int(_os.environ.get("H007_INJECT_AFTER", "20"))
 FORCED_CLICKS = (SWATCH_A, SWATCH_B, SWATCH_A)   # K0 -> K1 -> K0 -> K1
 
 
@@ -152,14 +157,14 @@ def run(seed: int, max_steps: int = 200, verbose: bool = False):
         h = st["h"]
         if h is not None and h.status == _hypothesis.LIVE:
             why = getattr(action, "reasoning", "")
+            tier = agent._decision.get("tier")
+            if verbose and n >= INJECT_AFTER_CALLS:
+                pos = agent.moves.displacement
+                print(f"[step {n}] tier={tier} action={action.name} pos={pos} why={str(why)[:70]}")
             if isinstance(why, str) and "acting to put" in why:
                 st["acted"] += 1
-                print(f"[step {n}] {why}")
             if isinstance(why, str) and why.startswith("hypothesis:"):
                 st["met_steps"].append((n, action.name, agent._precondition_met(h)))
-                if verbose:
-                    tail = why.split(" — ")[-1] if " — " in why else why.split(", step")[-1]
-                    print(f"[step {n}] {action.name} met={agent._precondition_met(h)} :: {tail[:110]}")
         return action
 
     agent.choose_action = wrapped

@@ -100,7 +100,7 @@ from constants import (
     VANISH_WEIGHT,
 )
 from constraints import StaminaDetector, ObstacleMap
-from control import MoveModel
+from control import MoveModel, PositionModel
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +142,13 @@ class MyAgent(Agent):
 
         # ── Layers ──────────────────────────────────────────────────────
         self.moves = MoveModel()
+        # H010: (position, action) -> position', learned online — the
+        # generalisation of MoveModel's one-offset-per-action model for
+        # controls whose motion depends on where they stand (H009: cd82's
+        # orbit). Fed from the same observe_translation evidence, never a
+        # new perception signal. Persists across RESET like MoveModel's
+        # own game-level knowledge; cleared on a new level in _reset_level.
+        self.position_model = PositionModel()
         self.obstacles = ObstacleMap()
         self.stamina = StaminaDetector()
         self.regions = entities.RegionTracker()
@@ -200,6 +207,17 @@ class MyAgent(Agent):
         self.interest = InterestMap()
         self.clicks = ClickTargeting()
         self.route = navigation.Route()
+        # H010 Stage 2: a SEPARATE persistent route for hypothesis-
+        # precondition/distance routing (_route_to/_route_for), never
+        # shared with `self.route` above (a different consumer,
+        # `_maintain_route`, with its own target and its own tier).
+        # Needed because a path recomputed from scratch every decision
+        # is derailed by a single interrupting action even when that
+        # action never moved anything — an epsilon click, say — which
+        # is exactly what made the honoured-first-step fix (H009/H010)
+        # fail to complete a multi-step walk live: nothing remembered
+        # the route existed one decision later.
+        self.precondition_route = navigation.Route()
         # Why the current route exists. Read only while a route is live
         # (`_maintain_route` returns False before consulting it otherwise),
         # so a value left behind by a cleared plan is never acted on.
@@ -305,6 +323,7 @@ class MyAgent(Agent):
         self.moves.reset_position()
         self.clicks.reset_attempt()
         self.route.clear()
+        self.precondition_route.clear()
         self.predictor.new_attempt()
         # Tell the tracker, so the next frame is matched against the
         # attempt's starting layout and identities survive the teleport.
@@ -356,7 +375,9 @@ class MyAgent(Agent):
         # (measured: 13 phantom beliefs on cd82 at the level-2 boundary).
         self._tracked_live = {}
         self.moves.reset_position()
+        self.position_model.clear()
         self.route.clear()
+        self.precondition_route.clear()
         self.clicks.reset_attempt()
         self._interaction_sites.clear()
         self._background = None
@@ -491,6 +512,7 @@ class MyAgent(Agent):
                 self.moves.observe_translation(
                     action, offset, size, pre_anchor, self.game_id
                 )
+                self.position_model.observe(origin, action, self.moves.displacement)
                 # Recording only (see __init__). One extra `lost_and_gained`
                 # pass, and only on steps where a translation was already
                 # confirmed, rather than widening `detect_translation`'s
@@ -521,6 +543,7 @@ class MyAgent(Agent):
                     self.moves.observe_translation(
                         action, offset, size, pre_anchor, self.game_id
                     )
+                    self.position_model.observe(origin, action, self.moves.displacement)
                     self._controlled_by_action[action.name] = _colour
 
             if moved is None:
@@ -1018,9 +1041,79 @@ class MyAgent(Agent):
             self._last_click = click
         return action, f"acting to put #{member} into state {token} ({name})"
 
+    def _plan_route(self, target, candidates):
+        """Actions from here to `target` (displacement space): the
+        position-graph model (H010) if it has a path from where we
+        actually stand, the offset model otherwise.
+
+        `plan_graph` never extrapolates to a position it has not itself
+        observed a transition from (unlike `plan`'s optimistic
+        offset-everywhere assumption — H009's own finding about why that
+        assumption was confidently wrong on cd82), so an empty result
+        here means "not learned yet", not "unreachable" — falling back
+        to `plan` is the graceful degrade, not a last resort reserved for
+        when the graph is missing entirely.
+        """
+        edges = {k: v for k, v in self.position_model.edges.items() if k[1] in candidates}
+        if edges:
+            path = navigation.plan_graph(self.moves.displacement, target, edges, self.obstacles.is_blocked)
+            if path:
+                return path
+        moves = {act: off for act, off in self.moves.learned_moves.items() if act in candidates}
+        if not moves:
+            return None
+        return navigation.plan(self.moves.displacement, target, moves, self.obstacles.is_blocked)
+
+    def _advance_route(self, target, candidates) -> tuple[GameAction | None, int]:
+        """Next action toward `target` (displacement space) and how many
+        steps remain after it, continuing `self.precondition_route` when
+        it is still the same target and has not drifted, planning fresh
+        otherwise. (None, 0) when no route exists.
+
+        H010 Stage 2 found `_route_to`/`_route_for` needed this: a path
+        recomputed from scratch every decision is thrown away by a single
+        intervening decision even when that decision never moved anything
+        — an epsilon click, say — which was exactly what let a route the
+        planner had correctly found (H009/H010's own fix working) still
+        fail to complete live: nothing remembered it had existed one
+        decision later. `has_drifted` is the one check that tells apart
+        "nothing happened, keep going" from "we ended up somewhere else,
+        replan" — a non-moving interruption leaves the position exactly
+        where the route expects, so it resumes; a moving one is correctly
+        caught and replanned, not silently followed off course.
+        """
+        position = self.moves.displacement
+        route = self.precondition_route
+        edges = {k: v for k, v in self.position_model.edges.items() if k[1] in candidates}
+        moves = {act: off for act, off in self.moves.learned_moves.items() if act in candidates}
+        # Same three-part check `_maintain_route` already uses for its own
+        # route, plus the graph: a stored route is only worth continuing
+        # if its next step is still legal, still known to SOME model (an
+        # action can drop out of `candidates` between decisions, or a
+        # position-graph-only step can be planned and then, on
+        # continuation, land somewhere neither model has evidence for —
+        # the crash this check exists to prevent, found live on cd82
+        # 2026-09-17), and the position hasn't drifted from what it expects.
+        fresh = not (
+            route
+            and route.target == target
+            and route.actions[0] in candidates
+            and (route.actions[0] in moves or (position, route.actions[0]) in edges)
+            and not route.has_drifted(position)
+        )
+        if fresh:
+            path = self._plan_route(target, candidates)
+            if not path:
+                route.clear()
+                return None, 0
+            route.set(path, target)
+        action = route.next_action(position, moves, edges)
+        return action, len(route)
+
     def _route_to(self, target_id: int, candidates, side: str = ""):
-        """First step of a path that brings the controlled thing next to
-        `target_id` — on `side` of it when given — or (None, "")."""
+        """Next action of a persistent path that brings the controlled
+        thing next to `target_id` — on `side` of it when given — or
+        (None, "")."""
         pixel = self.belief._beliefs[target_id].centroid if target_id in self.belief._beliefs else None
         if pixel is not None and side and target_id in self.regions._tracked:
             # Aim past the member's edge on that side by the two half-extents.
@@ -1030,17 +1123,17 @@ class MyAgent(Agent):
             axis, sign = (0, -1) if side == "-x" else (0, 1) if side == "+x" else (1, -1) if side == "-y" else (1, 1)
             pixel = list(pixel); pixel[axis] += sign * int(half_m[axis] + half_c); pixel = tuple(pixel)
         target = self.moves.to_relative(pixel) if pixel is not None else None
-        if target is None or not self.moves.learned_moves:
+        if target is None or not (self.moves.learned_moves or self.position_model.edges):
+            self.precondition_route.clear()
             return None, ""
-        moves = {act: off for act, off in self.moves.learned_moves.items() if act in candidates}
-        path = navigation.plan(self.moves.displacement, target, moves, self.obstacles.is_blocked)
-        if not path:
+        action, left = self._advance_route(target, candidates)
+        if action is None:
             return None, ""
-        return path[0], f"moving to satisfy the precondition (#{target_id}, {len(path)} steps)"
+        return action, f"moving to satisfy the precondition (#{target_id}, {left} steps left)"
 
     def _route_for(self, h, candidates):
-        """First step of a path that brings the controlled thing to the
-        other member of a distance hypothesis, or (None, "")."""
+        """Next action of a persistent path that brings the controlled
+        thing to the other member of a distance hypothesis, or (None, "")."""
         control = {b.region_id for b in self.belief.by_role(belief.CONTROL)}
         _rel, a, b = h.key
         if a in control and b not in control:
@@ -1053,11 +1146,10 @@ class MyAgent(Agent):
         target = self.moves.to_relative(pixel) if pixel is not None else None
         if target is None:
             return None, ""
-        moves = {act: off for act, off in self.moves.learned_moves.items() if act in candidates}
-        path = navigation.plan(self.moves.displacement, target, moves, self.obstacles.is_blocked)
-        if not path:
+        action, left = self._advance_route(target, candidates)
+        if action is None:
             return None, ""
-        return path[0], f"; routed toward #{target_id} ({len(path)} steps)"
+        return action, f"; routed toward #{target_id} ({left} steps left)"
 
     def _maintain_route(self, candidates, moves, position) -> bool:
         """Keep the route honest, and report whether it deserves priority.

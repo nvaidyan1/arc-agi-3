@@ -741,14 +741,43 @@ one sequence, folded in here:
    paint action now forms, given the click-coverage change alone. If
    not, the residual gap is in tally/lever-formation logic, a smaller
    follow-up than assumed.
-4. **H010 Stage 2**, once H011 (and H012, if it ships) are parity-clean:
-   wire `PositionModel.observe` into `_learn_from`; prefer `plan_graph`
+4. **H010 Stage 2 — resequenced ahead of H012, 2026-09-16, by user
+   decision after a council review.** The line above originally read
+   "once H011 (and H012, if it ships) are parity-clean," written as a
+   sequential dependency following both reviewers' converged ordering.
+   That wording was ambiguous — genuinely unclear whether H012 had to
+   ship first or only had to clear its own bar if it happened to be
+   built — and on inspection the sequencing was a preference, not a
+   technical requirement: H009's own live-viability experiment already
+   showed the position graph builds fast enough to be usable in 8-9 of
+   10 seeds under the CURRENT exploration policy, with no dependency on
+   H012 at all. H012 remains valuable for closing the coverage gap on
+   the 1-2 seeds that don't finish exploring the orbit, but it is not a
+   prerequisite. Wiring proceeds now, independent of H012's status.
+
+   Wire `PositionModel.observe` into `_learn_from`; prefer `plan_graph`
    over `plan` when it has edges from the current position, falling
-   back otherwise. Same regression design and hard gate as above,
-   n>=30 on sp80/ls20/ar25/m0r0/dc22. Success criterion (both
-   reviewers): the "path found but immediately dropped" failure H009
-   documented disappears, and the H007 two-condition oracle's joint-
-   satisfaction rate rises on the seeds that were walk-blocked.
+   back otherwise. Same regression design and hard gate as H011:
+   n>=30 seed-paired, whole 25-game sweep, checked first for parity on
+   sp80/ls20/ar25/m0r0/dc22 specifically, gate ">1 level-1 clear per 30
+   sweeps" regression. Success criterion (both reviewers): the "path
+   found but immediately dropped" failure H009 documented disappears,
+   and the H007 two-condition oracle's joint-satisfaction rate rises on
+   the seeds that were walk-blocked.
+   **Done 2026-09-16/17, shipped, kept open.** Wiring built; found and
+   fixed two real bugs along the way (no route persistence across
+   decisions; a live KeyError crash the corrected n=30 sweep caught after
+   the first run had to be discarded entirely). Corrected sweep: parity
+   games ar25/m0r0/ls20/dc22 unchanged, sp80 -1 (at the gate's exact
+   edge, not past it), cd82 +1; 6-game aggregate flat-to-slightly-
+   negative, not significant. The "path found but immediately dropped"
+   half of the success criterion is met (proven via unit tests + a live
+   trace). The oracle's joint-satisfaction half is NOT met — a council
+   review (2026-09-17) caught that this stage's own draft conclusion was
+   at risk of conflating "the fix is real" with "the founding defect is
+   resolved." Shipped as tested, safe, inert-by-default infrastructure;
+   NOT marked closed, since its own stated success criterion only half
+   held. Full detail in `research/hypotheses/H010_position_graph_model.md`.
 5. **Phase 4 (new, not yet built)**: gate a hypothesis's live action
    budget on a short internal residual rollout (H008's predictor,
    extended a few steps) showing the residual is expected to fall

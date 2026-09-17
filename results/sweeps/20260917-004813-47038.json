@@ -1,0 +1,6911 @@
+{
+  "schema_version": 1,
+  "run_id": "20260917-004813-47038",
+  "recorded_at": "2026-09-17T04:48:52+00:00",
+  "config": {
+    "max_steps": 400,
+    "games_requested": [
+      "ar25",
+      "m0r0",
+      "dc22",
+      "sp80",
+      "ls20",
+      "cd82"
+    ],
+    "seed": 507,
+    "flags": {
+      "shift_fallback": true,
+      "belief_target": false,
+      "route_per_level": false
+    },
+    "git": {
+      "sha": "e238f320e1b9389a51417d66e68ffaff569aeb48",
+      "dirty": true,
+      "subject": "H011 Stage 2 ships: click-targeting blend passes the n=30 parity gate"
+    }
+  },
+  "aggregate_score": 0.17265141174551668,
+  "observed": {
+    "ar25": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 2041054183,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 390,
+        "entity": {
+          "hits": 2648,
+          "misses": 437,
+          "undecidable": 0,
+          "abstained": 377,
+          "accuracy": 0.858,
+          "coverage": 0.891,
+          "brier": 0.11
+        },
+        "pair": {
+          "hits": 40433,
+          "misses": 3700,
+          "undecidable": 1639,
+          "abstained": 11898,
+          "accuracy": 0.916,
+          "coverage": 0.788,
+          "brier": 0.062
+        },
+        "by_action": {
+          "ACTION2": {
+            "entity": [
+              1184,
+              223
+            ],
+            "pair": [
+              19056,
+              1684
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              123,
+              1
+            ],
+            "pair": [
+              1654,
+              49
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              404,
+              99
+            ],
+            "pair": [
+              5940,
+              743
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              543,
+              49
+            ],
+            "pair": [
+              8232,
+              716
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              240,
+              47
+            ],
+            "pair": [
+              3553,
+              402
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              89,
+              0
+            ],
+            "pair": [
+              1032,
+              0
+            ]
+          },
+          "ACTION7": {
+            "entity": [
+              65,
+              18
+            ],
+            "pair": [
+              966,
+              106
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            7890,
+            513
+          ],
+          "distance": [
+            6749,
+            1654
+          ],
+          "palette_diff": [
+            8948,
+            0
+          ],
+          "containment": [
+            15327,
+            1479
+          ],
+          "shape_diff": [
+            202,
+            0
+          ],
+          "palette_missing": [
+            1090,
+            0
+          ],
+          "part_size_diff": [
+            227,
+            54
+          ]
+        },
+        "conditional": [
+          26950,
+          2427
+        ],
+        "unconditional": [
+          13483,
+          1273
+        ],
+        "moving": {
+          "entity": [
+            1543,
+            309
+          ],
+          "pair": [
+            5302,
+            1321
+          ]
+        },
+        "moved": {
+          "entity": [
+            1543,
+            302
+          ],
+          "pair": [
+            5302,
+            2532
+          ]
+        },
+        "cells": {
+          "ACTION2 containment": [
+            1666,
+            729
+          ],
+          "ACTION2 distance": [
+            588,
+            717
+          ],
+          "ACTION2 part_size_diff": [
+            81,
+            34
+          ],
+          "ACTION5 containment": [
+            134,
+            0
+          ],
+          "ACTION5 distance": [
+            8,
+            37
+          ],
+          "ACTION2 count_diff": [
+            0,
+            204
+          ],
+          "ACTION1 containment": [
+            887,
+            250
+          ],
+          "ACTION1 distance": [
+            300,
+            326
+          ],
+          "ACTION1 count_diff": [
+            10,
+            133
+          ],
+          "ACTION1 part_size_diff": [
+            30,
+            7
+          ],
+          "ACTION4 count_diff": [
+            2,
+            109
+          ],
+          "ACTION4 distance": [
+            332,
+            308
+          ],
+          "ACTION4 containment": [
+            691,
+            315
+          ],
+          "ACTION4 part_size_diff": [
+            10,
+            11
+          ],
+          "ACTION3 distance": [
+            171,
+            201
+          ],
+          "ACTION3 containment": [
+            379,
+            153
+          ],
+          "ACTION7 distance": [
+            11,
+            65
+          ],
+          "ACTION3 count_diff": [
+            0,
+            47
+          ],
+          "ACTION7 count_diff": [
+            0,
+            9
+          ],
+          "ACTION7 containment": [
+            0,
+            32
+          ],
+          "ACTION3 part_size_diff": [
+            2,
+            1
+          ],
+          "ACTION5 part_size_diff": [
+            0,
+            1
+          ],
+          "ACTION5 count_diff": [
+            0,
+            11
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 2648,
+            "misses": 437,
+            "undecidable": 0,
+            "abstained": 203,
+            "accuracy": 0.858,
+            "coverage": 0.938
+          },
+          "3": {
+            "hits": 2090,
+            "misses": 680,
+            "undecidable": 79,
+            "abstained": 346,
+            "accuracy": 0.755,
+            "coverage": 0.889
+          },
+          "10": {
+            "hits": 1147,
+            "misses": 1011,
+            "undecidable": 245,
+            "abstained": 428,
+            "accuracy": 0.532,
+            "coverage": 0.834
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": [
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          15,
+          null,
+          "live",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION1",
+          26,
+          5,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          27,
+          22,
+          "falsified",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            7,
+            6
+          ],
+          "ACTION2",
+          9,
+          null,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            7,
+            11
+          ],
+          "ACTION2",
+          36,
+          36,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            7
+          ],
+          "ACTION2",
+          29,
+          32,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            7
+          ],
+          "ACTION2",
+          29,
+          32,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:+y",
+            1
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION2",
+          33,
+          18,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            7,
+            6
+          ],
+          "ACTION2",
+          45,
+          45,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            4,
+            6
+          ],
+          "ACTION2",
+          45,
+          null,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION1",
+          26,
+          11,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            7,
+            6
+          ],
+          "ACTION2",
+          45,
+          45,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:-y",
+            7
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          15,
+          null,
+          "live",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            6
+          ],
+          "ACTION4",
+          23,
+          23,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            1,
+            6
+          ],
+          "ACTION2",
+          45,
+          45,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            6
+          ],
+          "ACTION4",
+          23,
+          23,
+          "falsified",
+          6,
+          0,
+          [
+            "adjacent:+y",
+            1
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            1,
+            6
+          ],
+          "ACTION2",
+          45,
+          27,
+          "falsified",
+          4,
+          0,
+          [
+            "adjacent:-y",
+            1
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            6,
+            7
+          ],
+          "ACTION4",
+          23,
+          27,
+          "falsified",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            11
+          ],
+          "ACTION1",
+          22,
+          22,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            7,
+            12
+          ],
+          "ACTION2",
+          23,
+          21,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            12,
+            16
+          ],
+          "ACTION2",
+          1,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION2",
+          30,
+          11,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION1",
+          26,
+          8,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          6,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          18,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            6,
+            7
+          ],
+          "ACTION1",
+          108,
+          63,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            6,
+            7
+          ],
+          "ACTION1",
+          108,
+          63,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:-x",
+            6
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            7,
+            10
+          ],
+          "ACTION2",
+          8,
+          null,
+          "live",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION1",
+          28,
+          32,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION2",
+          56,
+          38,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          6,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            4,
+            1
+          ],
+          "ACTION2",
+          189,
+          189,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            4,
+            1
+          ],
+          "ACTION2",
+          189,
+          189,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:-y",
+            1
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            7,
+            19
+          ],
+          "ACTION2",
+          27,
+          10,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            7,
+            10
+          ],
+          "ACTION2",
+          2,
+          2,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            10,
+            1
+          ],
+          "ACTION1",
+          162,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            19
+          ],
+          "ACTION3",
+          14,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          28,
+          10,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          45,
+          33,
+          "live",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          16,
+          10,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          33,
+          15,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION2",
+          21,
+          7,
+          "falsified",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            6,
+            7
+          ],
+          "ACTION1",
+          108,
+          63,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            6,
+            7
+          ],
+          "ACTION1",
+          108,
+          63,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:-x",
+            6
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          22,
+          10,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            7,
+            6
+          ],
+          "ACTION2",
+          45,
+          45,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          16,
+          10,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            7,
+            6
+          ],
+          "ACTION2",
+          45,
+          45,
+          "live",
+          3,
+          0,
+          [
+            "adjacent:-y",
+            6
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          16,
+          10,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            7,
+            6
+          ],
+          "ACTION2",
+          45,
+          45,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            7,
+            6
+          ],
+          "ACTION2",
+          45,
+          45,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:-y",
+            6
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            4,
+            6
+          ],
+          "ACTION2",
+          45,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            4,
+            6
+          ],
+          "ACTION2",
+          45,
+          null,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:-y",
+            6
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          9,
+          null,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            6,
+            7
+          ],
+          "ACTION4",
+          26,
+          23,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:-x",
+            6
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          22,
+          10,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          27,
+          24,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          16,
+          10,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            6,
+            7
+          ],
+          "ACTION1",
+          63,
+          63,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          54,
+          30,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ]
+      ]
+    },
+    "cd82": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1374974131,
+      "levels_completed": 1,
+      "actions": 401,
+      "completion_action_indices": [
+        215
+      ],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 4120,
+          "misses": 430,
+          "undecidable": 0,
+          "abstained": 660,
+          "accuracy": 0.905,
+          "coverage": 0.873,
+          "brier": 0.061
+        },
+        "pair": {
+          "hits": 135601,
+          "misses": 8520,
+          "undecidable": 683,
+          "abstained": 26444,
+          "accuracy": 0.941,
+          "coverage": 0.845,
+          "brier": 0.032
+        },
+        "by_action": {
+          "ACTION3": {
+            "entity": [
+              673,
+              103
+            ],
+            "pair": [
+              22095,
+              1713
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              1194,
+              92
+            ],
+            "pair": [
+              39425,
+              2345
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              216,
+              15
+            ],
+            "pair": [
+              7042,
+              109
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              1088,
+              115
+            ],
+            "pair": [
+              36536,
+              2510
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              474,
+              49
+            ],
+            "pair": [
+              14463,
+              1257
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              475,
+              56
+            ],
+            "pair": [
+              16040,
+              586
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            23094,
+            249
+          ],
+          "distance": [
+            21484,
+            1859
+          ],
+          "palette_diff": [
+            30819,
+            0
+          ],
+          "containment": [
+            41397,
+            5289
+          ],
+          "shape_diff": [
+            1064,
+            0
+          ],
+          "palette_missing": [
+            14956,
+            0
+          ],
+          "part_size_diff": [
+            2787,
+            1123
+          ]
+        },
+        "conditional": [
+          93145,
+          5249
+        ],
+        "unconditional": [
+          42456,
+          3271
+        ],
+        "moving": {
+          "entity": [
+            753,
+            340
+          ],
+          "pair": [
+            8716,
+            6279
+          ]
+        },
+        "moved": {
+          "entity": [
+            753,
+            216
+          ],
+          "pair": [
+            8716,
+            5450
+          ]
+        },
+        "cells": {
+          "ACTION3 containment": [
+            437,
+            901
+          ],
+          "ACTION3 part_size_diff": [
+            93,
+            210
+          ],
+          "ACTION6 containment": [
+            29,
+            63
+          ],
+          "ACTION6 part_size_diff": [
+            7,
+            17
+          ],
+          "ACTION2 distance": [
+            1668,
+            361
+          ],
+          "ACTION2 containment": [
+            1634,
+            1618
+          ],
+          "ACTION2 part_size_diff": [
+            344,
+            345
+          ],
+          "ACTION3 distance": [
+            73,
+            602
+          ],
+          "ACTION1 distance": [
+            1552,
+            352
+          ],
+          "ACTION1 containment": [
+            1287,
+            1721
+          ],
+          "ACTION1 part_size_diff": [
+            277,
+            352
+          ],
+          "ACTION6 count_diff": [
+            0,
+            28
+          ],
+          "ACTION6 distance": [
+            0,
+            1
+          ],
+          "ACTION4 distance": [
+            331,
+            444
+          ],
+          "ACTION4 containment": [
+            552,
+            625
+          ],
+          "ACTION4 part_size_diff": [
+            133,
+            130
+          ],
+          "ACTION5 containment": [
+            244,
+            361
+          ],
+          "ACTION5 distance": [
+            0,
+            99
+          ],
+          "ACTION5 part_size_diff": [
+            55,
+            69
+          ],
+          "ACTION5 count_diff": [
+            0,
+            57
+          ],
+          "ACTION1 count_diff": [
+            0,
+            85
+          ],
+          "ACTION2 count_diff": [
+            0,
+            21
+          ],
+          "ACTION4 count_diff": [
+            0,
+            58
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4120,
+            "misses": 430,
+            "undecidable": 0,
+            "abstained": 416,
+            "accuracy": 0.905,
+            "coverage": 0.916
+          },
+          "3": {
+            "hits": 3143,
+            "misses": 812,
+            "undecidable": 17,
+            "abstained": 870,
+            "accuracy": 0.795,
+            "coverage": 0.82
+          },
+          "10": {
+            "hits": 2220,
+            "misses": 852,
+            "undecidable": 66,
+            "abstained": 1270,
+            "accuracy": 0.723,
+            "coverage": 0.708
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": [
+        [
+          [
+            "containment",
+            31,
+            32
+          ],
+          "ACTION2",
+          54,
+          53,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            31,
+            32
+          ],
+          "ACTION2",
+          52,
+          52,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            30,
+            32
+          ],
+          "ACTION5",
+          24,
+          24,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          26,
+          17,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          15,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          15,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          15,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            30,
+            28
+          ],
+          "ACTION2",
+          30,
+          30,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          15,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            30,
+            28
+          ],
+          "ACTION2",
+          30,
+          30,
+          "falsified",
+          4,
+          0,
+          [
+            "adjacent:-x",
+            30
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          26,
+          17,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            26,
+            28
+          ],
+          "ACTION2",
+          43,
+          43,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            26,
+            28
+          ],
+          "ACTION2",
+          43,
+          43,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          26,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            26,
+            28
+          ],
+          "ACTION2",
+          43,
+          43,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            26,
+            28
+          ],
+          "ACTION2",
+          43,
+          43,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            26,
+            28
+          ],
+          "ACTION2",
+          43,
+          43,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          26,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            23,
+            28
+          ],
+          "ACTION1",
+          24,
+          24,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            30,
+            29
+          ],
+          "ACTION2",
+          85,
+          85,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          19,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            29,
+            31
+          ],
+          "ACTION2",
+          100,
+          100,
+          "live",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          37,
+          17,
+          "falsified",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          15,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            28
+          ],
+          "ACTION1",
+          37,
+          16,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          15,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            28
+          ],
+          "ACTION1",
+          37,
+          16,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          15,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            28
+          ],
+          "ACTION1",
+          37,
+          16,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          15,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            28
+          ],
+          "ACTION1",
+          38,
+          38,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            32,
+            28
+          ],
+          "ACTION4",
+          30,
+          43,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            28
+          ],
+          "ACTION1",
+          37,
+          30,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            29,
+            32
+          ],
+          "ACTION2",
+          34,
+          24,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            28
+          ],
+          "ACTION1",
+          37,
+          38,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            29,
+            32
+          ],
+          "ACTION3",
+          34,
+          33,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            28
+          ],
+          "ACTION1",
+          37,
+          16,
+          "live",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            28,
+            32
+          ],
+          "ACTION2",
+          35,
+          14,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            28,
+            32
+          ],
+          "ACTION2",
+          35,
+          14,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION1",
+          36,
+          17,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            28,
+            32
+          ],
+          "ACTION2",
+          35,
+          14,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            32,
+            31
+          ],
+          "ACTION5",
+          35,
+          10,
+          "falsified",
+          7,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            26,
+            31
+          ],
+          "ACTION5",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ]
+      ]
+    },
+    "dc22": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1388139880,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 4252,
+          "misses": 507,
+          "undecidable": 0,
+          "abstained": 247,
+          "accuracy": 0.893,
+          "coverage": 0.951,
+          "brier": 0.058
+        },
+        "pair": {
+          "hits": 139701,
+          "misses": 5457,
+          "undecidable": 429,
+          "abstained": 8503,
+          "accuracy": 0.962,
+          "coverage": 0.945,
+          "brier": 0.022
+        },
+        "by_action": {
+          "ACTION2": {
+            "entity": [
+              1159,
+              135
+            ],
+            "pair": [
+              38238,
+              1313
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              1055,
+              122
+            ],
+            "pair": [
+              35167,
+              1273
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              927,
+              105
+            ],
+            "pair": [
+              30233,
+              1223
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              929,
+              137
+            ],
+            "pair": [
+              30503,
+              1567
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              182,
+              8
+            ],
+            "pair": [
+              5560,
+              81
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            23347,
+            79
+          ],
+          "distance": [
+            22911,
+            515
+          ],
+          "palette_diff": [
+            31660,
+            0
+          ],
+          "containment": [
+            42710,
+            4142
+          ],
+          "shape_diff": [
+            1780,
+            0
+          ],
+          "palette_missing": [
+            16468,
+            0
+          ],
+          "part_size_diff": [
+            825,
+            721
+          ]
+        },
+        "conditional": [
+          3629,
+          179
+        ],
+        "unconditional": [
+          136072,
+          5278
+        ],
+        "moving": {
+          "entity": [
+            335,
+            284
+          ],
+          "pair": [
+            2166,
+            1967
+          ]
+        },
+        "moved": {
+          "entity": [
+            335,
+            282
+          ],
+          "pair": [
+            2166,
+            3490
+          ]
+        },
+        "cells": {
+          "ACTION2 containment": [
+            1108,
+            1043
+          ],
+          "ACTION2 distance": [
+            0,
+            86
+          ],
+          "ACTION2 part_size_diff": [
+            236,
+            184
+          ],
+          "ACTION1 containment": [
+            25,
+            1010
+          ],
+          "ACTION1 distance": [
+            0,
+            53
+          ],
+          "ACTION1 part_size_diff": [
+            5,
+            192
+          ],
+          "ACTION3 containment": [
+            419,
+            1182
+          ],
+          "ACTION3 distance": [
+            1,
+            172
+          ],
+          "ACTION3 part_size_diff": [
+            67,
+            195
+          ],
+          "ACTION4 containment": [
+            0,
+            867
+          ],
+          "ACTION4 distance": [
+            1,
+            175
+          ],
+          "ACTION4 part_size_diff": [
+            0,
+            145
+          ],
+          "ACTION6 containment": [
+            245,
+            40
+          ],
+          "ACTION6 distance": [
+            8,
+            29
+          ],
+          "ACTION6 part_size_diff": [
+            51,
+            5
+          ],
+          "ACTION3 count_diff": [
+            0,
+            18
+          ],
+          "ACTION4 count_diff": [
+            0,
+            36
+          ],
+          "ACTION1 count_diff": [
+            0,
+            18
+          ],
+          "ACTION6 count_diff": [
+            0,
+            7
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 4252,
+            "misses": 507,
+            "undecidable": 0,
+            "abstained": 117,
+            "accuracy": 0.893,
+            "coverage": 0.976
+          },
+          "3": {
+            "hits": 3612,
+            "misses": 874,
+            "undecidable": 10,
+            "abstained": 286,
+            "accuracy": 0.805,
+            "coverage": 0.94
+          },
+          "10": {
+            "hits": 2964,
+            "misses": 898,
+            "undecidable": 45,
+            "abstained": 546,
+            "accuracy": 0.767,
+            "coverage": 0.876
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": []
+    },
+    "ls20": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 426367505,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 394,
+        "entity": {
+          "hits": 3584,
+          "misses": 296,
+          "undecidable": 0,
+          "abstained": 162,
+          "accuracy": 0.924,
+          "coverage": 0.96,
+          "brier": 0.057
+        },
+        "pair": {
+          "hits": 77131,
+          "misses": 2798,
+          "undecidable": 8193,
+          "abstained": 6586,
+          "accuracy": 0.965,
+          "coverage": 0.924,
+          "brier": 0.025
+        },
+        "by_action": {
+          "ACTION3": {
+            "entity": [
+              1637,
+              120
+            ],
+            "pair": [
+              33699,
+              1277
+            ]
+          },
+          "ACTION1": {
+            "entity": [
+              296,
+              58
+            ],
+            "pair": [
+              6978,
+              400
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              249,
+              45
+            ],
+            "pair": [
+              5722,
+              353
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              1402,
+              73
+            ],
+            "pair": [
+              30732,
+              768
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            12937,
+            133
+          ],
+          "distance": [
+            11322,
+            1748
+          ],
+          "palette_diff": [
+            16966,
+            0
+          ],
+          "containment": [
+            25295,
+            845
+          ],
+          "palette_missing": [
+            7792,
+            0
+          ],
+          "part_size_diff": [
+            2819,
+            72
+          ]
+        },
+        "conditional": [
+          64557,
+          2035
+        ],
+        "unconditional": [
+          12574,
+          763
+        ],
+        "moving": {
+          "entity": [
+            1680,
+            250
+          ],
+          "pair": [
+            10274,
+            1567
+          ]
+        },
+        "moved": {
+          "entity": [
+            1680,
+            188
+          ],
+          "pair": [
+            10274,
+            1475
+          ]
+        },
+        "cells": {
+          "ACTION3 distance": [
+            1616,
+            776
+          ],
+          "ACTION3 containment": [
+            2803,
+            421
+          ],
+          "ACTION1 distance": [
+            196,
+            261
+          ],
+          "ACTION1 containment": [
+            412,
+            119
+          ],
+          "ACTION1 part_size_diff": [
+            36,
+            0
+          ],
+          "ACTION2 distance": [
+            189,
+            217
+          ],
+          "ACTION2 containment": [
+            360,
+            110
+          ],
+          "ACTION2 part_size_diff": [
+            32,
+            6
+          ],
+          "ACTION2 count_diff": [
+            0,
+            20
+          ],
+          "ACTION1 count_diff": [
+            0,
+            20
+          ],
+          "ACTION3 part_size_diff": [
+            179,
+            46
+          ],
+          "ACTION4 distance": [
+            1598,
+            494
+          ],
+          "ACTION4 containment": [
+            2629,
+            195
+          ],
+          "ACTION4 part_size_diff": [
+            224,
+            20
+          ],
+          "ACTION4 count_diff": [
+            0,
+            59
+          ],
+          "ACTION3 count_diff": [
+            0,
+            34
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 3584,
+            "misses": 296,
+            "undecidable": 0,
+            "abstained": 116,
+            "accuracy": 0.924,
+            "coverage": 0.971
+          },
+          "3": {
+            "hits": 3170,
+            "misses": 433,
+            "undecidable": 48,
+            "abstained": 267,
+            "accuracy": 0.88,
+            "coverage": 0.931
+          },
+          "10": {
+            "hits": 2350,
+            "misses": 726,
+            "undecidable": 157,
+            "abstained": 399,
+            "accuracy": 0.764,
+            "coverage": 0.885
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": [
+        [
+          [
+            "distance",
+            3,
+            5
+          ],
+          "ACTION1",
+          20,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          14,
+          14,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            3,
+            5
+          ],
+          "ACTION1",
+          21,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            3,
+            5
+          ],
+          "ACTION1",
+          21,
+          20,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION2",
+          34,
+          24,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            3,
+            5
+          ],
+          "ACTION1",
+          26,
+          20,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION2",
+          34,
+          24,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            3,
+            5
+          ],
+          "ACTION1",
+          26,
+          20,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION2",
+          34,
+          18,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            3,
+            5
+          ],
+          "ACTION1",
+          36,
+          6,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          46,
+          16,
+          "live",
+          7,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          30,
+          20,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          2,
+          0,
+          [
+            "apart:+x",
+            0
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          30,
+          24,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          30,
+          22,
+          "live",
+          2,
+          0,
+          [
+            "apart:+x",
+            0
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          30,
+          22,
+          "live",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          16,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          30,
+          24,
+          "falsified",
+          6,
+          0,
+          [
+            "apart:+x",
+            0
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          20,
+          20,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            6
+          ],
+          "ACTION3",
+          16,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            6
+          ],
+          "ACTION3",
+          20,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION4",
+          18,
+          14,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          40,
+          22,
+          "live",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION4",
+          18,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION4",
+          18,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION4",
+          18,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION4",
+          18,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION4",
+          18,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION4",
+          18,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION4",
+          18,
+          16,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          34,
+          22,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION4",
+          18,
+          14,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          34,
+          22,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          30,
+          22,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          30,
+          22,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          24,
+          22,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION4",
+          18,
+          14,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          40,
+          34,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION2",
+          21,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          34,
+          20,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          24,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            6
+          ],
+          "ACTION3",
+          20,
+          16,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            6
+          ],
+          "ACTION3",
+          20,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            6
+          ],
+          "ACTION3",
+          20,
+          16,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            6
+          ],
+          "ACTION3",
+          20,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            6
+          ],
+          "ACTION3",
+          20,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            6
+          ],
+          "ACTION3",
+          20,
+          20,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            6
+          ],
+          "ACTION3",
+          20,
+          16,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            7
+          ],
+          "ACTION4",
+          18,
+          16,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          44,
+          34,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION4",
+          18,
+          18,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            5
+          ],
+          "ACTION3",
+          50,
+          22,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          34,
+          20,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            0,
+            4
+          ],
+          "ACTION3",
+          24,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION4",
+          18,
+          14,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ]
+      ]
+    },
+    "m0r0": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 285836210,
+      "levels_completed": 0,
+      "actions": 401,
+      "completion_action_indices": [],
+      "prediction": {
+        "steps": 396,
+        "entity": {
+          "hits": 2199,
+          "misses": 975,
+          "undecidable": 0,
+          "abstained": 221,
+          "accuracy": 0.693,
+          "coverage": 0.935,
+          "brier": 0.173
+        },
+        "pair": {
+          "hits": 54676,
+          "misses": 5261,
+          "undecidable": 302,
+          "abstained": 5616,
+          "accuracy": 0.912,
+          "coverage": 0.914,
+          "brier": 0.049
+        },
+        "by_action": {
+          "ACTION1": {
+            "entity": [
+              106,
+              80
+            ],
+            "pair": [
+              2583,
+              355
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              932,
+              528
+            ],
+            "pair": [
+              25291,
+              2634
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              584,
+              206
+            ],
+            "pair": [
+              13914,
+              1144
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              86,
+              37
+            ],
+            "pair": [
+              1923,
+              183
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              239,
+              66
+            ],
+            "pair": [
+              5481,
+              484
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              252,
+              58
+            ],
+            "pair": [
+              5484,
+              461
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            9116,
+            69
+          ],
+          "distance": [
+            8302,
+            883
+          ],
+          "palette_diff": [
+            12970,
+            0
+          ],
+          "containment": [
+            14061,
+            4309
+          ],
+          "shape_diff": [
+            1294,
+            0
+          ],
+          "palette_missing": [
+            7570,
+            0
+          ],
+          "part_size_diff": [
+            1363,
+            0
+          ]
+        },
+        "conditional": [
+          49741,
+          4769
+        ],
+        "unconditional": [
+          4935,
+          492
+        ],
+        "moving": {
+          "entity": [
+            295,
+            211
+          ],
+          "pair": [
+            779,
+            1186
+          ]
+        },
+        "moved": {
+          "entity": [
+            295,
+            773
+          ],
+          "pair": [
+            779,
+            4084
+          ]
+        },
+        "cells": {
+          "ACTION4 containment": [
+            102,
+            2152
+          ],
+          "ACTION4 distance": [
+            42,
+            482
+          ],
+          "ACTION3 containment": [
+            13,
+            959
+          ],
+          "ACTION3 distance": [
+            317,
+            173
+          ],
+          "ACTION2 containment": [
+            0,
+            90
+          ],
+          "ACTION2 distance": [
+            53,
+            60
+          ],
+          "ACTION1 containment": [
+            63,
+            226
+          ],
+          "ACTION1 distance": [
+            58,
+            105
+          ],
+          "ACTION6 containment": [
+            131,
+            458
+          ],
+          "ACTION6 distance": [
+            0,
+            26
+          ],
+          "ACTION5 containment": [
+            0,
+            424
+          ],
+          "ACTION5 distance": [
+            0,
+            37
+          ],
+          "ACTION1 count_diff": [
+            0,
+            24
+          ],
+          "ACTION3 count_diff": [
+            0,
+            12
+          ],
+          "ACTION2 count_diff": [
+            0,
+            33
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 2199,
+            "misses": 975,
+            "undecidable": 0,
+            "abstained": 155,
+            "accuracy": 0.693,
+            "coverage": 0.953
+          },
+          "3": {
+            "hits": 1117,
+            "misses": 1866,
+            "undecidable": 12,
+            "abstained": 288,
+            "accuracy": 0.374,
+            "coverage": 0.912
+          },
+          "10": {
+            "hits": 645,
+            "misses": 1868,
+            "undecidable": 40,
+            "abstained": 569,
+            "accuracy": 0.257,
+            "coverage": 0.815
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": [
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            4
+          ],
+          "ACTION4",
+          26,
+          26,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            2,
+            6
+          ],
+          "ACTION4",
+          52,
+          48,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:+y",
+            2
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            2,
+            6
+          ],
+          "ACTION4",
+          52,
+          48,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            2,
+            0
+          ],
+          "ACTION4",
+          48,
+          44,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:+y",
+            2
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            2,
+            0
+          ],
+          "ACTION4",
+          48,
+          44,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            1,
+            6
+          ],
+          "ACTION4",
+          44,
+          40,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:+y",
+            1
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            1,
+            6
+          ],
+          "ACTION4",
+          44,
+          40,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            8
+          ],
+          "ACTION3",
+          14,
+          7,
+          "falsified",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            8
+          ],
+          "ACTION4",
+          33,
+          22,
+          "falsified",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            5
+          ],
+          "ACTION1",
+          26,
+          16,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            4
+          ],
+          "ACTION4",
+          23,
+          23,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            8
+          ],
+          "ACTION3",
+          17,
+          17,
+          "falsified",
+          3,
+          0,
+          [
+            "apart:+x",
+            8
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            8
+          ],
+          "ACTION3",
+          17,
+          17,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION4",
+          32,
+          22,
+          "falsified",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            4
+          ],
+          "ACTION4",
+          23,
+          23,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            5
+          ],
+          "ACTION1",
+          21,
+          16,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION4",
+          37,
+          22,
+          "falsified",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            4
+          ],
+          "ACTION4",
+          23,
+          23,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            8
+          ],
+          "ACTION3",
+          21,
+          17,
+          "falsified",
+          4,
+          0,
+          [
+            "apart:+x",
+            8
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            8
+          ],
+          "ACTION3",
+          21,
+          17,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION4",
+          32,
+          22,
+          "falsified",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            4
+          ],
+          "ACTION4",
+          23,
+          23,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            8
+          ],
+          "ACTION3",
+          17,
+          17,
+          "falsified",
+          3,
+          0,
+          [
+            "apart:+x",
+            8
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            8
+          ],
+          "ACTION3",
+          17,
+          17,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION4",
+          27,
+          22,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            4
+          ],
+          "ACTION4",
+          28,
+          23,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION4",
+          27,
+          27,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            5
+          ],
+          "ACTION1",
+          26,
+          16,
+          "falsified",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            4
+          ],
+          "ACTION1",
+          17,
+          17,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            4
+          ],
+          "ACTION4",
+          28,
+          23,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            5,
+            7
+          ],
+          "ACTION1",
+          46,
+          41,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            5
+          ],
+          "ACTION4",
+          37,
+          27,
+          "falsified",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            1,
+            4
+          ],
+          "ACTION1",
+          27,
+          17,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            4,
+            5
+          ],
+          "ACTION4",
+          20,
+          10,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            2,
+            4
+          ],
+          "ACTION4",
+          28,
+          23,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ]
+      ]
+    },
+    "sp80": {
+      "state": "GameState.NOT_FINISHED",
+      "seed": 1556923743,
+      "levels_completed": 1,
+      "actions": 401,
+      "completion_action_indices": [
+        100
+      ],
+      "prediction": {
+        "steps": 382,
+        "entity": {
+          "hits": 3356,
+          "misses": 247,
+          "undecidable": 0,
+          "abstained": 506,
+          "accuracy": 0.931,
+          "coverage": 0.877,
+          "brier": 0.051
+        },
+        "pair": {
+          "hits": 74638,
+          "misses": 1610,
+          "undecidable": 2176,
+          "abstained": 14983,
+          "accuracy": 0.979,
+          "coverage": 0.836,
+          "brier": 0.016
+        },
+        "by_action": {
+          "ACTION1": {
+            "entity": [
+              919,
+              92
+            ],
+            "pair": [
+              20669,
+              511
+            ]
+          },
+          "ACTION4": {
+            "entity": [
+              760,
+              27
+            ],
+            "pair": [
+              16644,
+              311
+            ]
+          },
+          "ACTION2": {
+            "entity": [
+              696,
+              59
+            ],
+            "pair": [
+              14729,
+              389
+            ]
+          },
+          "ACTION3": {
+            "entity": [
+              817,
+              54
+            ],
+            "pair": [
+              19796,
+              364
+            ]
+          },
+          "ACTION5": {
+            "entity": [
+              109,
+              15
+            ],
+            "pair": [
+              1579,
+              29
+            ]
+          },
+          "ACTION6": {
+            "entity": [
+              55,
+              0
+            ],
+            "pair": [
+              1221,
+              6
+            ]
+          }
+        },
+        "by_relation": {
+          "count_diff": [
+            13494,
+            206
+          ],
+          "distance": [
+            12601,
+            1099
+          ],
+          "palette_diff": [
+            15956,
+            0
+          ],
+          "containment": [
+            27096,
+            304
+          ],
+          "shape_diff": [
+            978,
+            0
+          ],
+          "palette_missing": [
+            4512,
+            0
+          ],
+          "part_size_diff": [
+            1,
+            1
+          ]
+        },
+        "conditional": [
+          44580,
+          805
+        ],
+        "unconditional": [
+          30058,
+          805
+        ],
+        "moving": {
+          "entity": [
+            993,
+            176
+          ],
+          "pair": [
+            6172,
+            681
+          ]
+        },
+        "moved": {
+          "entity": [
+            993,
+            161
+          ],
+          "pair": [
+            6172,
+            993
+          ]
+        },
+        "cells": {
+          "ACTION1 distance": [
+            436,
+            307
+          ],
+          "ACTION1 containment": [
+            1331,
+            106
+          ],
+          "ACTION4 distance": [
+            170,
+            233
+          ],
+          "ACTION4 containment": [
+            1169,
+            53
+          ],
+          "ACTION2 distance": [
+            354,
+            281
+          ],
+          "ACTION2 containment": [
+            1039,
+            56
+          ],
+          "ACTION3 containment": [
+            1250,
+            83
+          ],
+          "ACTION3 distance": [
+            225,
+            255
+          ],
+          "ACTION1 count_diff": [
+            0,
+            98
+          ],
+          "ACTION2 count_diff": [
+            18,
+            52
+          ],
+          "ACTION3 count_diff": [
+            0,
+            26
+          ],
+          "ACTION5 count_diff": [
+            0,
+            6
+          ],
+          "ACTION5 distance": [
+            0,
+            17
+          ],
+          "ACTION5 containment": [
+            86,
+            6
+          ],
+          "ACTION4 count_diff": [
+            0,
+            24
+          ],
+          "ACTION6 containment": [
+            82,
+            0
+          ],
+          "ACTION6 distance": [
+            11,
+            6
+          ],
+          "ACTION4 part_size_diff": [
+            0,
+            1
+          ],
+          "ACTION3 part_size_diff": [
+            1,
+            0
+          ]
+        },
+        "horizon": {
+          "1": {
+            "hits": 3356,
+            "misses": 247,
+            "undecidable": 0,
+            "abstained": 272,
+            "accuracy": 0.931,
+            "coverage": 0.93
+          },
+          "3": {
+            "hits": 2661,
+            "misses": 361,
+            "undecidable": 87,
+            "abstained": 550,
+            "accuracy": 0.881,
+            "coverage": 0.846
+          },
+          "10": {
+            "hits": 1613,
+            "misses": 340,
+            "undecidable": 193,
+            "abstained": 737,
+            "accuracy": 0.826,
+            "coverage": 0.726
+          }
+        }
+      },
+      "llm_stats": null,
+      "llm_trace": null,
+      "hypothesis_log": [
+        [
+          [
+            "distance",
+            22,
+            23
+          ],
+          "ACTION4",
+          8,
+          8,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            22,
+            25
+          ],
+          "ACTION2",
+          14,
+          14,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            22,
+            26
+          ],
+          "ACTION2",
+          27,
+          26,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            22
+          ],
+          "ACTION1",
+          34,
+          32,
+          "falsified",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            18,
+            22
+          ],
+          "ACTION1",
+          18,
+          24,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            22
+          ],
+          "ACTION1",
+          14,
+          10,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            22,
+            23
+          ],
+          "ACTION2",
+          40,
+          36,
+          "falsified",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            22
+          ],
+          "ACTION1",
+          20,
+          22,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            22,
+            24
+          ],
+          "ACTION2",
+          44,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            22
+          ],
+          "ACTION1",
+          36,
+          16,
+          "live",
+          7,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            22
+          ],
+          "ACTION1",
+          10,
+          10,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            22
+          ],
+          "ACTION1",
+          36,
+          16,
+          "falsified",
+          8,
+          0,
+          [
+            "apart:+y",
+            15
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            22
+          ],
+          "ACTION1",
+          14,
+          10,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            22,
+            23
+          ],
+          "ACTION2",
+          40,
+          36,
+          "falsified",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            24,
+            20
+          ],
+          "ACTION1",
+          128,
+          128,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            23,
+            20
+          ],
+          "ACTION1",
+          128,
+          128,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            24,
+            20
+          ],
+          "ACTION1",
+          128,
+          112,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:+x",
+            24
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            18,
+            29
+          ],
+          "ACTION1",
+          14,
+          14,
+          "live",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            23,
+            20
+          ],
+          "ACTION1",
+          128,
+          48,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:+x",
+            23
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            22
+          ],
+          "ACTION1",
+          18,
+          null,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION4",
+          16,
+          10,
+          "falsified",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            18,
+            29
+          ],
+          "ACTION1",
+          20,
+          20,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            29
+          ],
+          "ACTION3",
+          36,
+          20,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            19,
+            20
+          ],
+          "ACTION1",
+          48,
+          48,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            21
+          ],
+          "ACTION4",
+          18,
+          16,
+          "live",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            29
+          ],
+          "ACTION3",
+          36,
+          null,
+          "live",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            19,
+            20
+          ],
+          "ACTION1",
+          48,
+          null,
+          "expired",
+          8,
+          0,
+          [
+            "adjacent:+x",
+            19
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            22
+          ],
+          "ACTION1",
+          30,
+          10,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            22
+          ],
+          "ACTION1",
+          22,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            22
+          ],
+          "ACTION4",
+          40,
+          36,
+          "falsified",
+          5,
+          0,
+          [
+            "apart:-x",
+            19
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            22
+          ],
+          "ACTION4",
+          40,
+          40,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            22
+          ],
+          "ACTION1",
+          18,
+          22,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            22,
+            24
+          ],
+          "ACTION2",
+          44,
+          44,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            24,
+            20
+          ],
+          "ACTION1",
+          80,
+          80,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            29
+          ],
+          "ACTION3",
+          20,
+          10,
+          "live",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION4",
+          28,
+          24,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            24,
+            20
+          ],
+          "ACTION1",
+          80,
+          80,
+          "live",
+          4,
+          0,
+          [
+            "adjacent:+x",
+            24
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            20
+          ],
+          "ACTION4",
+          22,
+          18,
+          "falsified",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            22
+          ],
+          "ACTION1",
+          36,
+          32,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            21
+          ],
+          "ACTION3",
+          18,
+          18,
+          "live",
+          1,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            22,
+            23
+          ],
+          "ACTION2",
+          20,
+          8,
+          "live",
+          4,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            22
+          ],
+          "ACTION1",
+          42,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            21
+          ],
+          "ACTION3",
+          18,
+          18,
+          "live",
+          2,
+          0,
+          [
+            "adjacent:+x",
+            17
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            20,
+            21
+          ],
+          "ACTION2",
+          20,
+          20,
+          "falsified",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            20,
+            21
+          ],
+          "ACTION2",
+          20,
+          20,
+          "falsified",
+          5,
+          0,
+          [
+            "adjacent:+x",
+            20
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            22
+          ],
+          "ACTION1",
+          32,
+          null,
+          "live",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            29
+          ],
+          "ACTION3",
+          20,
+          null,
+          "live",
+          5,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            15,
+            22
+          ],
+          "ACTION1",
+          36,
+          null,
+          "live",
+          6,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            17,
+            29
+          ],
+          "ACTION3",
+          10,
+          10,
+          "falsified",
+          3,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION4",
+          40,
+          null,
+          "expired",
+          8,
+          0,
+          null,
+          false,
+          "enumerator"
+        ],
+        [
+          [
+            "distance",
+            19,
+            29
+          ],
+          "ACTION4",
+          40,
+          null,
+          "expired",
+          8,
+          0,
+          [
+            "apart:-x",
+            19
+          ],
+          true,
+          "enumerator"
+        ],
+        [
+          [
+            "containment",
+            24,
+            21
+          ],
+          "ACTION3",
+          16,
+          null,
+          "live",
+          2,
+          0,
+          null,
+          false,
+          "enumerator"
+        ]
+      ]
+    }
+  },
+  "scored": [
+    {
+      "game_id": "ar25-0c556536",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 5,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        32,
+        50,
+        75,
+        37,
+        89,
+        159,
+        233,
+        73
+      ],
+      "message": null
+    },
+    {
+      "game_id": "m0r0-492f87ba",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 2,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        30,
+        111,
+        203,
+        26,
+        500,
+        237
+      ],
+      "message": null
+    },
+    {
+      "game_id": "dc22-fdcac232",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        59,
+        102,
+        67,
+        98,
+        324,
+        578
+      ],
+      "message": null
+    },
+    {
+      "game_id": "sp80-589a99af",
+      "score": 0.7242857142857143,
+      "levels_completed": 1,
+      "actions": 401,
+      "resets": 9,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        15.21,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        100,
+        301,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        39,
+        58,
+        25,
+        148,
+        96,
+        152
+      ],
+      "message": null
+    },
+    {
+      "game_id": "ls20-9607627b",
+      "score": 0.0,
+      "levels_completed": 0,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        401,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        22,
+        123,
+        73,
+        84,
+        96,
+        192,
+        186
+      ],
+      "message": null
+    },
+    {
+      "game_id": "cd82-fb555c5d",
+      "score": 0.3116227561873857,
+      "levels_completed": 1,
+      "actions": 401,
+      "resets": 3,
+      "state": "GameState.GAME_OVER",
+      "completed": false,
+      "level_scores": [
+        6.5440778799351005,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "level_actions": [
+        215,
+        186,
+        0,
+        0,
+        0,
+        0
+      ],
+      "level_baseline_actions": [
+        55,
+        8,
+        41,
+        21,
+        23,
+        23
+      ],
+      "message": null
+    }
+  ],
+  "notes": null
+}
